@@ -177,17 +177,17 @@ class CIntersectionFinder
   void FindInt(int4 QB,int4 QE,int4 l,PSeg s);
   void FindIntI(int4 r_index,int4 stack_pos,PSeg seg);
   void FindIntL(int4 QB,int4 QE,int4 segm_numb);
-  int4 InsDel(int4 n,int4 stack_pos,int4 LS);
-  int4 Merge(int4 QB,int4 QE,int4 LE);
-  int4 Split(int4 &step_index,int4 L_size);
+  int4 InsDel(int4 n,int4 stack_pos,int4 LSize);
+  int4 Merge(int4 QB,int4 QE,int4 LSize);
+  int4 Split(int4 &step_index,int4 LSize);
   void AllocMem(int4 n);
 
   //same for optimal algorithm
   void optFindInt(int4 QB,int4 QE,int4 l,PSeg s);
   void optFindIntI(int4 r_index,int4 stack_pos,PSeg seg);
-  int4 optInsDel(int4 n,int4 stack_pos,int4 LS);
-  int4 optMerge(int4 QB,int4 QE,int4 LE);
-  int4 optSplit(int4 father_first_step, int4 &step_index,int4 L_size);
+  int4 optInsDel(int4 n,int4 stack_pos,int4 LSize);
+  int4 optMerge(int4 QB,int4 QE,int4 LSize);
+  int4 optSplit(int4 father_first_step, int4 &step_index,int4 LSize);
   void optAllocMem(int4 n);
 
   //additional functions for fast parallel algorithm
