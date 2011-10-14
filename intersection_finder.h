@@ -113,7 +113,6 @@ class CIntersectionFinder
 
 
   SegmentInfo * L,* R,* Q;
-  int4 *SIS_Stack;
   EndIndexes *Pairs;
   TSegmEnd *ENDS;
   int4 *Loc;
