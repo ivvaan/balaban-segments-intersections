@@ -114,6 +114,12 @@ int4 below(REAL X,TLineSegment1* s1,TLineSegment1* s2)
 
 int4 IntPoint(TLineSegment1* s1,TLineSegment1* s2,TPlaneVect *p)
   { 
+  REAL b1=max(s1->org.x,s2->org.x);
+  REAL b2=min(s1->org.x+s1->shift.x,s2->org.x+s2->shift.x);
+  if(b1>=b2)return 0;
+  b1=max(s1->org.y,s2->org.y);
+  b2=min(s1->org.y+s1->shift.y,s2->org.y+s2->shift.y);
+  if(b1>=b2)return 0;
   TPlaneVect delt=s2->org-s1->org;
   REAL prod=s1->shift%s2->shift,mul;
   if (((mul=s1->shift%delt)>0)^(mul+prod>0))
