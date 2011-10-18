@@ -53,12 +53,22 @@ struct IStackRec
   inline void Set(int4 Q,int4 R){Q_pos=Q;right_bound=R;}
   };
 
-struct SegmentInfo
+/*struct SegmentInfo
   {
   PSeg segment;
   EndIndexes * end_indexes;
   SegmentInfo(PSeg s=NULL,EndIndexes *ei=NULL):segment(s),end_indexes(ei){};
   };
+ 
+#define GETPSEG(s) (s.segment)
+#define GETEIP(s) (s.end_indexes)*/
+
+typedef int4 SegmentInfo;
+
+#define GETPSEG(s) (Scoll[s])
+#define GETEIP(s) (Pairs+s)
+
+//typedef int4 SegmentInfo;
 
 struct TEnd
   {
@@ -89,11 +99,12 @@ class TSegmEnd:public TEnd
 class CSegmCompare
   {
   public:
+    PSeg *Scoll;
     FBelow _Below;
     REAL x;
     CSegmCompare(){};
-    CSegmCompare(FBelow _b,REAL _x){_Below=_b;x=_x;};
-    bool lt(SegmentInfo s1,SegmentInfo s2){return _Below(x,s1.segment,s2.segment);}
+    CSegmCompare(PSeg *sc,FBelow _b,REAL _x){Scoll=sc;_Below=_b;x=_x;};
+    bool lt(SegmentInfo s1,SegmentInfo s2){return _Below(x,GETPSEG(s1),GETPSEG(s2));}
   };
 
 
@@ -148,17 +159,17 @@ class CIntersectionFinder
   //helpers for segment functions
   inline int4 IntersectionsInCurStripe(SegmentInfo  s1,PSeg s2)
     {
-    return _FindAndRegIPointsInStripe(B,E,s1 . segment,s2,_reg_obj);
+    return _FindAndRegIPointsInStripe(B,E,GETPSEG(s1),s2,_reg_obj);
     };
 
   inline int4 IsIntersectInCurStripe(SegmentInfo  s1,PSeg s2)
     {
-    return _IsIntersetInStripe(B,E,s1 . segment,s2);
+    return _IsIntersetInStripe(B,E,GETPSEG(s1),s2);
     };
 
   inline int4 Intersections(SegmentInfo  s1,PSeg s2)
     {
-    return _FindAndRegIPoints(s1 . segment,s2,_reg_obj);
+    return _FindAndRegIPoints(GETPSEG(s1),s2,_reg_obj);
     };
 
   inline void ExchangeLR()
