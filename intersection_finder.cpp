@@ -77,9 +77,9 @@ void CIntersectionFinder::FindIntL(int4 QB,int4 QE,int4 segm_numb)
   {
   for (int4 i=0;i<segm_numb;i++)
     {
-    PSeg s=L[i].segment;
+    PSeg s=GETPSEG(L[i]);
     int4 loc=Loc[i];
-    if (L[i].end_indexes->E<RBoundIdx) //if segment is not covering the stripe
+    if (GETEIP(L[i])->E<RBoundIdx) //if segment is not covering the stripe
       {
       FindInt(QB,QE,loc,s);// find intersections
       }
@@ -119,7 +119,7 @@ void CIntersectionFinder::optFindIntI(int4 r_index,int4 stack_pos,PSeg seg)
         {
         m=(r+l)>>1;//        m=(r+l)/2;
         //my_counter[0]++;
-        if(_Under(Q[m].segment,seg))
+        if(_Under(GETPSEG(Q[m]),seg))
           l=m;
         else
           r=m;
@@ -150,7 +150,7 @@ void CIntersectionFinder::FindIntI(int4 r_index,int4 stack_pos,PSeg seg)
       {
       m=(r+l)>>1;//        m=(r+l)/2;
       //my_counter[0]++;
-      if(_Under(Q[m].segment,seg))
+      if(_Under(GETPSEG(Q[m]),seg))
         l=m;
       else
         r=m;
@@ -165,22 +165,24 @@ int4 CIntersectionFinder::InsDel(int4 end_index,int4 stack_pos,int4 LSize)
   {
   int4 j,i;
   TSegmEnd *current_end=ENDS+end_index;
-  PSeg seg=current_end->s.segment;
+  
   if (current_end->islast) // if endpoint - delete
     {
-    i=0; L[LSize].segment=seg;
-    while(L[i].segment!=seg)i++;
+    int4 sn=L[LSize]=current_end->s;
+    i=0; 
+    while(L[i]!=sn)i++;
     LSize--;
     for (j=i;j<LSize;j++)L[j]=L[j+1];
     }
   else// if startpoint - insert
     {
-    for (i=LSize-1;(i>-1)&& (!_Under(L[i].segment,seg));i--)
+    PSeg seg=GETPSEG(current_end->s);
+    for (i=LSize-1;(i>-1)&& (!_Under(GETPSEG(L[i]),seg));i--)
       L[i+1]=L[i];
     L[i+1]=current_end->s;
     LSize++;
 
-    FindIntI(current_end->s.end_indexes->E,stack_pos,seg);// get internal intersections
+    FindIntI(GETEIP(current_end->s)->E,stack_pos,seg);// get internal intersections
     }
     return LSize;
   }
@@ -190,22 +192,24 @@ int4 CIntersectionFinder::optInsDel(int4 end_index,int4 stack_pos,int4 LSize)
   {
   int4 j,i;
   TSegmEnd *current_end=ENDS+end_index;
-  PSeg seg=current_end->s.segment;
+  
   if (current_end->islast)
     {
-    i=0; L[LSize].segment=seg;
-    while(L[i].segment!=seg)i++;
+    int4 sn=L[LSize]=current_end->s;
+    i=0; 
+    while(L[i]!=sn)i++;
     LSize--;
     for (j=i;j<LSize;j++)L[j]=L[j+1];
     }
   else
     {
-    for (i=LSize-1;(i>-1)&& (!_Under(L[i].segment,seg));i--)
+    PSeg seg=GETPSEG(current_end->s);
+    for (i=LSize-1;(i>-1)&& (!_Under(GETPSEG(L[i]),seg));i--)
       L[i+1]=L[i];
     L[i+1]=current_end->s;
     LSize++;
 
-    optFindIntI(current_end->s.end_indexes->E,stack_pos,seg);
+    optFindIntI(GETEIP(current_end->s)->E,stack_pos,seg);
     }
     return LSize;
   }
@@ -217,7 +221,7 @@ int4 CIntersectionFinder::Merge(int4 QB,int4 QE,int4 LSize)
   {
   int4 LB=0,new_L_size=0;
   while ((QB<=QE)&&(LB<LSize))
-    if (_Below(E,L[LB].segment,Q[QB].segment))
+    if (_Below(E,GETPSEG(L[LB]),GETPSEG(Q[QB])))
       {
       Loc[LB]=QB-1;
       R[new_L_size++]=L[LB++];
@@ -240,7 +244,7 @@ int4 CIntersectionFinder::optMerge(int4 QB,int4 QE,int4 LSize)
   {
   int4 LB=0,new_L_size=0;
   while ((QB<=QE)&&(LB<LSize))
-    if (_Below(E,L[LB].segment,Q[QB].segment))
+    if (_Below(E,GETPSEG(L[LB]),GETPSEG(Q[QB])))
       {
       Loc[LB]=QB-1;
       R[new_L_size++]=L[LB++];
@@ -276,10 +280,10 @@ int4 CIntersectionFinder::Split(int4 &step_index,int4 LSize)
   father_last_step=step_index; new_L_size=0;
   for (j=0;j<LSize;j++)
     {
-    if(L[j].end_indexes->E>=RBoundIdx)//segment is covering current stripe
+    if(GETEIP(L[j])->E>=RBoundIdx)//segment is covering current stripe
       {
       int4 step=step_index;
-      PSeg s=L[j] . segment;
+      PSeg s=GETPSEG(L[j]);
       while((father_last_step<step)&&(IntersectionsInCurStripe(Q[step],s)))
         step--;
       if(step_index!=step)
@@ -314,10 +318,10 @@ int4 CIntersectionFinder::optSplit(int4 cur_father_pos,int4 &step_index,int4 LSi
 
   while ((cur_L_pos<LSize)&&(cur_father_pos<=father_last_step))
     {
-    PSeg s=L[cur_L_pos] . segment;
-    if(_Below(B,s,Q[cur_father_pos].segment)) // current segment below candidate to inherit
+    PSeg s=GETPSEG(L[cur_L_pos]);
+    if(_Below(B,s,GETPSEG(Q[cur_father_pos]))) // current segment below candidate to inherit
       {
-      if(L[cur_L_pos].end_indexes->E>=RBoundIdx) // current segment covering strip
+      if(GETEIP(L[cur_L_pos])->E>=RBoundIdx) // current segment covering strip
         {
         if(
           ( (step_index>father_last_step)&&(IsIntersectInCurStripe(Q[step_index],s) ))
@@ -354,9 +358,9 @@ int4 CIntersectionFinder::optSplit(int4 cur_father_pos,int4 &step_index,int4 LSi
       };
     }    
   for(;cur_L_pos<LSize;cur_L_pos++)  // father stair case is over. we are adding rest segments the same manner as in suboptimal case
-    if(L[cur_L_pos].end_indexes->E>=RBoundIdx)//segment is covering current stripe
+    if(GETEIP(L[cur_L_pos])->E>=RBoundIdx)//segment is covering current stripe
       {
-      if((step_index>father_last_step)&&(IsIntersectInCurStripe(Q[step_index],L[cur_L_pos] . segment)))// if it intesects last stair
+      if((step_index>father_last_step)&&(IsIntersectInCurStripe(Q[step_index],GETPSEG(L[cur_L_pos]))))// if it intesects last stair
         {  // add it to new L
         R[new_L_size]=L[cur_L_pos];
         Loc[new_L_size++]=step_index;
@@ -398,7 +402,7 @@ void CIntersectionFinder::SearchInStrip(int4 QP,int4 lsize)
     }
   // at this point we can just place Q starting from QP+1 to L and sort it
   for(QP=0;QP<ls;QP++)L[QP]=q[QP];
-  fastsort(CSegmCompare(_Below ,E),L,ls);
+  fastsort(CSegmCompare(Scoll,_Below ,E),L,ls);
   }
 
 // main function to find intersections for fast algorithm
@@ -440,8 +444,8 @@ int4 CIntersectionFinder::FindR( int4 ladder_start_index,int4 interval_left_inde
   LBoundIdx=interval_left_index; RBoundIdx=interval_right_index;
   B=ENDS[interval_left_index].x;   E=ENDS[interval_right_index].x;
   LSize=Merge(ladder_start_index--,ladder_cur_index,RSize=LSize);
-  for (int4 i=0;i<RSize;i++)   if (R[i] .end_indexes->B>interval_left_index) 
-    FindInt(ladder_start_index,ladder_cur_index,Loc[i],R[i].segment);
+  for (int4 i=0;i<RSize;i++)   if (GETEIP(R[i])->B>interval_left_index) 
+    FindInt(ladder_start_index,ladder_cur_index,Loc[i],GETPSEG(R[i]));
   return LSize;
   };
 
@@ -466,7 +470,7 @@ int4 CIntersectionFinder::optFindR(int4 father_first_step, int4 ladder_start_ind
     {// if new staircase is big use optimal variant
     LSize=optSplit(father_first_step,ladder_cur_index,LSize);
     for (int4 i=0;i<LSize;i++)  
-      optFindInt(ladder_start_index,ladder_cur_index,Loc[i],L[i].segment);
+      optFindInt(ladder_start_index,ladder_cur_index,Loc[i],GETPSEG(L[i]));
     }
   else
     {// if new staircase is small use fast variant
@@ -497,14 +501,14 @@ int4 CIntersectionFinder::optFindR(int4 father_first_step, int4 ladder_start_ind
   if(father_first_step+inherit_each<ladder_cur_index)
     {// if new staircase is big use optimal variant
     LSize=optMerge(ladder_start_index--,ladder_cur_index,RSize=LSize);
-    for (int4 i=0;i<RSize;i++)   if (R[i] .end_indexes->B>interval_left_index) 
-      optFindInt(ladder_start_index,ladder_cur_index,Loc[i],R[i].segment);
+    for (int4 i=0;i<RSize;i++)   if (GETEIP(R[i])->B>interval_left_index) 
+      optFindInt(ladder_start_index,ladder_cur_index,Loc[i],GETPSEG(R[i]));
     }
   else
     { // if new staircase is small use fast variant
     LSize=Merge(ladder_start_index--,ladder_cur_index,RSize=LSize);
-    for (int4 i=0;i<RSize;i++)   if (R[i] .end_indexes->B>interval_left_index) 
-      FindInt(ladder_start_index,ladder_cur_index,Loc[i],R[i].segment);
+    for (int4 i=0;i<RSize;i++)   if (GETEIP(R[i])->B>interval_left_index) 
+      FindInt(ladder_start_index,ladder_cur_index,Loc[i],GETPSEG(R[i]));
     }
     return LSize;
   };
@@ -603,25 +607,27 @@ void CIntersectionFinder::prepare_ends_and_pairs(int4 n)
   REAL x,y;
   for (i=0,j=0;i<n;i++)
     {
-    ENDS[j].s.segment=Scoll[i];
-    ENDS[j].s.end_indexes=Pairs+i;
+    ENDS[j].s=i;
+//    GETPSEG(ENDS[j].s)=Scoll[i];
+//    ENDS[j].s.end_indexes=Pairs+i;
     _BegPoint(Scoll[i],ENDS[j].x,y);
     //      _BegPoint(Scoll[i],ENDS[j].x,ENDS[j].y);
     ENDS[j].islast=0;
     j++;
     _EndPoint(Scoll[i],ENDS[j].x,y);
     //      _EndPoint(Scoll[i],ENDS[j].x,ENDS[j].y);
-    ENDS[j].s.segment=Scoll[i];
-    ENDS[j].s.end_indexes=Pairs+i;
+    ENDS[j].s=i;
+//    GETPSEG(ENDS[j].s)=Scoll[i];
+//    ENDS[j].s.end_indexes=Pairs+i;
     ENDS[j].islast=1;
     j++;
     }
   fastsort(ENDS,j);
   for (int4 i=0;i<2*n;i++)
     if (ENDS[i].islast)
-      ENDS[i].s.end_indexes -> E=i;
+      GETEIP(ENDS[i].s) -> E=i;
     else
-      ENDS[i].s.end_indexes -> B=i;
+      GETEIP(ENDS[i].s) -> B=i;
   };
 
 CIntersectionFinder::CIntersectionFinder()
@@ -670,9 +676,9 @@ void CIntersectionFinder::balaban_fast(int4 n,PSeg _Scoll[])
   AllocMem(n);
   prepare_ends_and_pairs(n);
 
-  if (ENDS[0].s.segment==ENDS[2*n-1].s.segment)
+  if (ENDS[0].s==ENDS[2*n-1].s)
     {
-    PSeg s=ENDS[0].s.segment;
+    PSeg s=GETPSEG(ENDS[0].s);
     for(int4 i=0;i<n;i++)  if (s!=Scoll[i]) _FindAndRegIPoints(s,Scoll[i],_reg_obj);
     LSize=0;
     }
@@ -698,9 +704,9 @@ void CIntersectionFinder::balaban_optimal(int4 n,PSeg _Scoll[])
   optAllocMem(n);
   prepare_ends_and_pairs(n);
 
-  if (ENDS[0].s.segment==ENDS[2*n-1].s.segment)
+  if (ENDS[0].s==ENDS[2*n-1].s)
     {
-    PSeg s=ENDS[0].s.segment;
+    PSeg s=GETPSEG(ENDS[0].s);
     for(int4 i=0;i<n;i++)  if (s!=Scoll[i]) _FindAndRegIPoints(s,Scoll[i],_reg_obj);
     LSize=0;
     }
@@ -728,14 +734,10 @@ int4 CIntersectionFinder::CalcLAt(int4 end_index)
 
     cur_ends=Pairs+i;
     if((cur_ends->B<=end_index)&&(cur_ends->E>end_index))
-      {
-      L[LSize].segment=Scoll[i];
-      L[LSize].end_indexes=cur_ends;
-      LSize++;
-      }
+      L[LSize++]=i;
     }
 
-  fastsort(CSegmCompare(_Below ,ENDS[end_index].x),L,LSize);
+  fastsort(CSegmCompare(Scoll,_Below ,ENDS[end_index].x),L,LSize);
   return LSize;
 
   };   
