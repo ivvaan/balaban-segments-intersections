@@ -394,15 +394,22 @@ void CIntersectionFinder::SearchInStrip(int4 QP,int4 lsize)
   {
   int4 NQP=QP;
   int4 ls=lsize;
-  SegmentInfo *q=Q+QP+1;
-  while (lsize=Split(NQP,lsize))
+  if(lsize=Split(NQP,lsize))
     {
-    FindIntL(QP,NQP,lsize);
-    QP=NQP;
+    SegmentInfo *q=Q+QP+1;
+      do
+      {
+        FindIntL(QP,NQP,lsize);
+        QP=NQP;
+      }
+      while (lsize=Split(NQP,lsize));
+      // at this point we can just place Q starting from QP+1 to L and sort it
+      for(QP=0;QP<ls;QP++)L[QP]=q[QP];
+      fastsort(CSegmCompare(Scoll,_Below ,E),L,ls);
     }
-  // at this point we can just place Q starting from QP+1 to L and sort it
-  for(QP=0;QP<ls;QP++)L[QP]=q[QP];
-  fastsort(CSegmCompare(Scoll,_Below ,E),L,ls);
+  else//if first Split retuns 0 just return R back to L. Executed in 99% 
+    ExchangeLR();
+
   }
 
 // main function to find intersections for fast algorithm
