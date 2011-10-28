@@ -178,7 +178,7 @@ class CIntersectionFinder
     L=R; R=tmp;
     };
   //common  functions
-  void SearchInStrip(int4 QP,int4 LSize);
+  int4 SearchInStrip(int4 QP,int4 Size);
   void FreeMem();
   void prepare_ends(int4 n);
   void prepare_ends_and_pairs(int4 n);
@@ -187,17 +187,17 @@ class CIntersectionFinder
   void FindInt(int4 QB,int4 QE,int4 l,PSeg s);
   void FindIntI(int4 r_index,int4 stack_pos,PSeg seg);
   void FindIntL(int4 QB,int4 QE,int4 segm_numb);
-  int4 InsDel(int4 n,int4 stack_pos,int4 LSize);
-  int4 Merge(int4 QB,int4 QE,int4 LSize);
-  int4 Split(int4 &step_index,int4 LSize);
+  int4 InsDel(int4 n,int4 stack_pos,int4 Size);
+  int4 Merge(int4 QB,int4 QE,int4 Size);
+  int4 Split(int4 &step_index,int4 Size);
   void AllocMem(int4 n);
 
   //same for optimal algorithm
   void optFindInt(int4 QB,int4 QE,int4 l,PSeg s);
   void optFindIntI(int4 r_index,int4 stack_pos,PSeg seg);
-  int4 optInsDel(int4 n,int4 stack_pos,int4 LSize);
-  int4 optMerge(int4 QB,int4 QE,int4 LSize);
-  int4 optSplit(int4 father_first_step, int4 &step_index,int4 LSize);
+  int4 optInsDel(int4 n,int4 stack_pos,int4 Size);
+  int4 optMerge(int4 QB,int4 QE,int4 Size);
+  int4 optSplit(int4 father_first_step, int4 &step_index,int4 Size);
   void optAllocMem(int4 n);
 
   //additional functions for fast parallel algorithm
@@ -222,11 +222,11 @@ class CIntersectionFinder
       FUnder under,PRegObj reg_obj,int4 is_line);
 
     void balaban_fast(int4 n,PSeg _Scoll[]);
-    int4 FindR(int4 ladder_start_index,int4 interval_left_index,int4 interval_right_index,int4 stack_pos,int4 LSize);
+    int4 FindR(int4 ladder_start_index,int4 interval_left_index,int4 interval_right_index,int4 stack_pos,int4 Size);
 
     void balaban_optimal(int4 n,PSeg _Scoll[]);
     int4 optFindR(int4 father_first_step,int4 ladder_start_index,int4 interval_left_index,int4 interval_right_index,
-      int4 stack_pos,int4 LSize);
+      int4 stack_pos,int4 Size);
 
     void fast_parallel(int4 n,PSeg _Scoll[],PRegObj add_reg);
     void Run(){ FindR(-1,0,   run_to  ,-1,1); }
