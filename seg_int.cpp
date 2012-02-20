@@ -52,8 +52,9 @@ int main(int argc, char* argv[])
   int4 alg=31, seg_type=2, n = 20000, d=0;
   REAL p=1.0;
   double exec_time[16],nInt[16];
-  char *ss="lLa",*sd="rmsp";
+  char *ss="Lla",*sd="rmsp";
   BOOL mute=FALSE;
+  //int4 *NN={,16000000}
 
 #ifdef _DEBUG
   _CrtSetDbgFlag(_CRTDBG_CHECK_ALWAYS_DF);
@@ -97,15 +98,15 @@ int main(int argc, char* argv[])
             {
             alg=atoi(argv[i]+2);
             if((alg<1)||(alg>31))
-              {alg=4; printf("some error in -t param. 4 used instead.\n");}
+              {alg=4; printf("some error in -a param. 4 used instead.\n");}
             }
             break;
           case 's':
             {
             switch(argv[i][2])
               {
-              case 'l':seg_type=line1;break;
-              case 'L':seg_type=line2;break;
+              case 'L':seg_type=line1;break;
+              case 'l':seg_type=line2;break;
               case 'a':seg_type=arc;break;
               default:
                 {
@@ -153,12 +154,20 @@ int main(int argc, char* argv[])
           }
         }
     }
-  if(!mute)printf("actual param string is: -t%i -s%c -d%c -n%i -p%f\n", alg, ss[seg_type], sd[d], n, p);
+  if(!mute)printf("actual param string is: -a%i -s%c -d%c -n%i -p%f\n", alg, ss[seg_type], sd[d], n, p);
   if((seg_type==arc)&&(d==mixed)) {printf("-sa -dm is not compartible!/n"); return 0;}
-
+  /*for(n=10000;n<150001;n+=10000)
+    {
+     double nint,et;
+     PSeg *coll=create_test_collection(seg_type,n,d,p);
+     et=_benchmark(n,coll,seg_type,fast,nint); 
+     delete_test_collection(seg_type,coll);
+         
+     printf("n%i;i%12.0f;t%5.2f;%5.3f;%5.3f;%5.3f\n",n,nint,et,counters[0],counters[1],counters[2]);
+    }
+  return 0;*/
   PSeg *coll=create_test_collection(seg_type,n,d,p);
-
-
+   
   if(alg&fast)
     {
     exec_time[fast]=_benchmark(n,coll,seg_type,fast,nInt[fast]);
@@ -208,7 +217,7 @@ int main(int argc, char* argv[])
   /*printf("ratio fast  =%6.3f\n",0.5*(n*exec_time[fast]*(n-1))/(exec_time[triv]*nInt[fast]));*/
 
   delete_test_collection(seg_type,coll);
-  //getchar();
+  getchar();
   return 0;
   }
 
