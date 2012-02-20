@@ -117,9 +117,6 @@ int4 IntPoint(TLineSegment1* s1,TLineSegment1* s2,TPlaneVect *p)
   REAL b1=max(s1->org.x,s2->org.x);
   REAL b2=min(s1->org.x+s1->shift.x,s2->org.x+s2->shift.x);
   if(b1>=b2)return 0;
-  b1=max(s1->org.y,s2->org.y);
-  b2=min(s1->org.y+s1->shift.y,s2->org.y+s2->shift.y);
-  if(b1>=b2)return 0;
   TPlaneVect delt=s2->org-s1->org;
   REAL prod=s1->shift%s2->shift,mul;
   if (((mul=s1->shift%delt)>0)^(mul+prod>0))
@@ -398,8 +395,8 @@ class SegmentFunctions
   public:
     static void regigister_intersection(void *r,PSeg s1,PSeg s2,int4 nInt,TPlaneVect *points)
       {
-      /*    int4 n1=(SEGMENT*)s1-(SEGMENT*)first_segment_ptr,n2=(SEGMENT*)s2-(SEGMENT*)first_segment_ptr;
-      printf("found intersection s1=%i, s2=%i\n",n1,n2);*/
+      /*int4 n1=(SEGMENT*)s1-(SEGMENT*)first_segment_ptr,n2=(SEGMENT*)s2-(SEGMENT*)first_segment_ptr;
+      printf("found intersection s1=%i, s2=%i\n",n1,n2);//*/
       (*(double *)r)+=nInt;
       };
 
