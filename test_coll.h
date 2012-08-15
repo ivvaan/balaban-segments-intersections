@@ -30,7 +30,8 @@ enum _Algorithm
   simple_sweep=2,
   fast=4,
   optimal=8,
-  fast_parallel=16
+  fast_parallel=16,
+  bentley_ottmann=32
   };
 
 enum _Segment
