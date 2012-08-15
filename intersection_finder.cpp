@@ -21,9 +21,10 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "utils.h"
 #include "intersection_finder.h"
+//#include <stdio.h>
 
 
-//#define IS_LINE_SEGMENTS is_line_segments
+#define IS_LINE_SEGMENTS is_line_segments
 //#define IS_LINE_SEGMENTS true
 
 #define IS_ORIGINAL(v) (v<1)
@@ -34,7 +35,7 @@ void CIntersectionFinder::FindInt(int4 QB,int4 QE,int4 l,PSeg s)
   int4 c=l;
   while ((c>QB) && (IntersectionsInCurStripe(Q[c],s))) //first get intersections below
     c--;
-  if(is_line_segments&&(c!=l))return; //if found and segment is line it can't be any more
+  if(IS_LINE_SEGMENTS&&(c!=l))return; //if found and segment is line it can't be any more
   c=l+1;
   while ((c<=QE) && (IntersectionsInCurStripe(Q[c],s))) // get intersections above
     c++;
@@ -56,7 +57,7 @@ void CIntersectionFinder::optFindInt(int4 QB,int4 QE,int4 l,PSeg s)
     c--;  
     }
   int_numb+=l-c;
-  if(is_line_segments&&(c!=l))return;
+  if(IS_LINE_SEGMENTS&&(c!=l))return;
   c=++l;
   while (c<=QE)
     {
@@ -77,14 +78,14 @@ void CIntersectionFinder::FindIntL(int4 QB,int4 QE,int4 segm_numb)
   {
   for (int4 i=0;i<segm_numb;i++)
     {
-    PSeg s=GETPSEG(L[i]);
+    PSeg s=Scoll[L[i]];
     int4 loc=Loc[i];
-    if (GETEIP(L[i])->E<RBoundIdx) //if segment is not covering the stripe
+    if (SegmentBE[L[i]].E<RBoundIdx) //if segment is not covering the stripe
       {
       FindInt(QB,QE,loc,s);// find intersections
       }
     else // segment is covering the stripe
-      if(!is_line_segments)// for line segments all intersections already found 
+      if(!IS_LINE_SEGMENTS)// for line segments all intersections already found 
         {// if segment is not line then find intersections above (below found in Split)
         int4 c=++loc;
         while ((c<=QE) && (IntersectionsInCurStripe(Q[c],s)))  c++;
@@ -94,7 +95,7 @@ void CIntersectionFinder::FindIntL(int4 QB,int4 QE,int4 segm_numb)
 
   }
 
-// optFindIntI - finds and reports intersections of the segment seg with ancestor staircases (listed in I_Stack)
+// optFindIntI - finds and reports intersections of the segment seg with ancestor staircases (listed in program stack)
 // from bottom of the hierarchy to top starting from first staircase for which seg is internal
 void CIntersectionFinder::optFindIntI(int4 r_index,ProgramStackRec *stack_pos,PSeg seg)
   {
@@ -116,8 +117,8 @@ void CIntersectionFinder::optFindIntI(int4 r_index,ProgramStackRec *stack_pos,PS
       while((r-l)>1)// binary search
         {
         m=(r+l)>>1;//        m=(r+l)/2;
-        //my_counter[0]++;
-        if(_Under(GETPSEG(Q[m]),seg))
+        INC_COUNTER(0);
+        if(_Under(Scoll[Q[m]],seg))
           l=m;
         else
           r=m;
@@ -129,7 +130,7 @@ void CIntersectionFinder::optFindIntI(int4 r_index,ProgramStackRec *stack_pos,PS
   }
 
 
-// FindIntI - finds and reports intersections of the segment seg with ancestor staircases (listed in I_Stack)
+// FindIntI - finds and reports intersections of the segment seg with ancestor staircases (listed in program stack)
 // from top of the hierarchy to bottom stopping on last staircase for which seg is internal
 void CIntersectionFinder::FindIntI(int4 r_index,ProgramStackRec * stack_pos,PSeg seg)
   {
@@ -143,8 +144,8 @@ void CIntersectionFinder::FindIntI(int4 r_index,ProgramStackRec * stack_pos,PSeg
       while((r-l)>1)// binary search
         {
         m=(r+l)>>1;//        m=(r+l)/2;
-        //my_counter[0]++;
-        if(_Under(GETPSEG(Q[m]),seg))
+        INC_COUNTER(0);
+        if(_Under(Scoll[Q[m]],seg))
           l=m;
         else
           r=m;
@@ -159,26 +160,27 @@ void CIntersectionFinder::FindIntI(int4 r_index,ProgramStackRec * stack_pos,PSeg
 //retuns new L size
 int4 CIntersectionFinder::InsDel(int4 end_index,ProgramStackRec * stack_pos,int4 Size)
   {
-  int4 j,i;
+  int4 i;
   TSegmEnd *current_end=ENDS+end_index;
   ExchangeLR();  
   if (current_end->islast) // if endpoint - delete
     {
+
     int4 sn=L[Size]=current_end->s;
-    i=0; 
-    while(L[i]!=sn)i++;
+    for(i=0;L[i]!=sn;i++); 
+    //_ASSERTE(i!=Size);
     Size--;
-    for (j=i;j<Size;j++)L[j]=L[j+1];
+    for (;i<Size;i++)L[i]=L[i+1];
     }
   else// if startpoint - insert
     {
-    PSeg seg=GETPSEG(current_end->s);
-    for (i=Size-1;(i>-1)&& (!_Under(GETPSEG(L[i]),seg));i--)
+    PSeg seg=Scoll[current_end->s];
+    for (i=Size-1;(i>-1)&& (!_Under(Scoll[L[i]],seg));i--)
       L[i+1]=L[i];
     L[i+1]=current_end->s;
     Size++;
 
-    FindIntI(GETEIP(current_end->s)->E,stack_pos,seg);// get internal intersections
+    FindIntI(SegmentBE[current_end->s].E,stack_pos,seg);// get internal intersections
     }
     return Size;
   }
@@ -186,26 +188,26 @@ int4 CIntersectionFinder::InsDel(int4 end_index,ProgramStackRec * stack_pos,int4
 // see InsDel comments
 int4 CIntersectionFinder::optInsDel(int4 end_index,ProgramStackRec *stack_pos,int4 Size)
   {
-  int4 j,i;
+  int4 i;
   TSegmEnd *current_end=ENDS+end_index;
   ExchangeLR();
   if (current_end->islast)
     {
     int4 sn=L[Size]=current_end->s;
-    i=0; 
-    while(L[i]!=sn)i++;
+    for(i=0;L[i]!=sn;i++); 
+     //_ASSERTE(i!=Size);
     Size--;
-    for (j=i;j<Size;j++)L[j]=L[j+1];
+    for (;i<Size;i++)L[i]=L[i+1];
     }
   else
     {
-    PSeg seg=GETPSEG(current_end->s);
-    for (i=Size-1;(i>-1)&& (!_Under(GETPSEG(L[i]),seg));i--)
+    PSeg seg=Scoll[current_end->s];
+    for (i=Size-1;(i>-1)&& (!_Under(Scoll[L[i]],seg));i--)
       L[i+1]=L[i];
     L[i+1]=current_end->s;
     Size++;
 
-    optFindIntI(GETEIP(current_end->s)->E,stack_pos,seg);
+    optFindIntI(SegmentBE[current_end->s].E,stack_pos,seg);
     }
     return Size;
   }
@@ -219,10 +221,10 @@ int4 CIntersectionFinder::Merge(int4 QB,int4 QE,int4 Size)
   int4 cur_stair=QB;
   while ((cur_stair<QE)&&(LB<Size))
     {
-    PSeg s=GETPSEG(R[LB]);
-    if (_Below(E,s,GETPSEG(Q[cur_stair+1])))
+    PSeg s=Scoll[R[LB]];
+    if (_Below(E,s,Scoll[Q[cur_stair+1]]))
       {
-      if (GETEIP(R[LB])->B>LBoundIdx) FindInt(QB,QE,cur_stair,s);      
+      if (SegmentBE[R[LB]].B>LBoundIdx) FindInt(QB,QE,cur_stair,s);      
       L[new_size++]=R[LB++];
       }
     else
@@ -230,7 +232,7 @@ int4 CIntersectionFinder::Merge(int4 QB,int4 QE,int4 Size)
     }
   while (LB<Size)
     {
-    if (GETEIP(R[LB])->B>LBoundIdx) FindInt(QB,QE,QE,GETPSEG(R[LB]));      
+    if (SegmentBE[R[LB]].B>LBoundIdx) FindInt(QB,QE,QE,Scoll[R[LB]]);      
     L[new_size++]=R[LB++];
     }
   while (cur_stair<QE)
@@ -246,10 +248,10 @@ int4 CIntersectionFinder::optMerge(int4 QB,int4 QE,int4 Size)
   int4 cur_stair=QB;
   while ((cur_stair<QE)&&(LB<Size))
     {
-    PSeg s=GETPSEG(R[LB]);
-    if (_Below(E,s,GETPSEG(Q[cur_stair+1])))
+    PSeg s=Scoll[R[LB]];
+    if (_Below(E,s,Scoll[Q[cur_stair+1]]))
       {
-      if (GETEIP(R[LB])->B>LBoundIdx) optFindInt(QB,QE,cur_stair,s);      
+      if (SegmentBE[R[LB]].B>LBoundIdx) optFindInt(QB,QE,cur_stair,s);      
       L[new_size++]=R[LB++];
       }
     else
@@ -261,7 +263,7 @@ int4 CIntersectionFinder::optMerge(int4 QB,int4 QE,int4 Size)
     }  
     while (LB<Size)
       {
-      if (GETEIP(R[LB])->B>LBoundIdx) optFindInt(QB,QE,QE,GETPSEG(R[LB]));      
+      if (SegmentBE[R[LB]].B>LBoundIdx) optFindInt(QB,QE,QE,Scoll[R[LB]]);      
       L[new_size++]=R[LB++];
       }
     while (cur_stair<QE)
@@ -284,10 +286,10 @@ int4 CIntersectionFinder::Split(int4 &step_index,int4 Size)
   father_last_step=step_index; new_L_size=0;
   for (j=0;j<Size;j++)
     {
-    if(GETEIP(L[j])->E>=RBoundIdx)//segment is covering current stripe
+    if(SegmentBE[L[j]].E>=RBoundIdx)//segment is covering current stripe
       {
       int4 step=step_index;
-      PSeg s=GETPSEG(L[j]);
+      PSeg s=Scoll[L[j]];
       while((father_last_step<step)&&(IntersectionsInCurStripe(Q[step],s)))
         step--;
       if(step_index!=step)
@@ -322,10 +324,10 @@ int4 CIntersectionFinder::optSplit(int4 cur_father_pos,int4 &step_index,int4 Siz
 
   while ((cur_L_pos<Size)&&(cur_father_pos<=father_last_step))
     {
-    PSeg s=GETPSEG(L[cur_L_pos]);
-    if(_Below(B,s,GETPSEG(Q[cur_father_pos]))) // current segment below candidate to inherit
+    PSeg s=Scoll[L[cur_L_pos]];
+    if(_Below(B,s,Scoll[Q[cur_father_pos]])) // current segment below candidate to inherit
       {
-      if(GETEIP(L[cur_L_pos])->E>=RBoundIdx) // current segment covering strip
+      if(SegmentBE[L[cur_L_pos]].E>=RBoundIdx) // current segment covering strip
         {
         if(
           ( (step_index>father_last_step)&&(IsIntersectInCurStripe(Q[step_index],s) ))
@@ -362,9 +364,9 @@ int4 CIntersectionFinder::optSplit(int4 cur_father_pos,int4 &step_index,int4 Siz
       };
     }    
   for(;cur_L_pos<Size;cur_L_pos++)  // father stair case is over. we are adding rest segments the same manner as in suboptimal case
-    if(GETEIP(L[cur_L_pos])->E>=RBoundIdx)//segment is covering current stripe
+    if(SegmentBE[L[cur_L_pos]].E>=RBoundIdx)//segment is covering current stripe
       {
-      if((step_index>father_last_step)&&(IsIntersectInCurStripe(Q[step_index],GETPSEG(L[cur_L_pos]))))// if it intesects last stair
+      if((step_index>father_last_step)&&(IsIntersectInCurStripe(Q[step_index],Scoll[L[cur_L_pos]])))// if it intesects last stair
         {  // add it to new L
         R[new_L_size]=L[cur_L_pos];
         Loc[new_L_size++]=step_index;
@@ -408,7 +410,7 @@ int4 CIntersectionFinder::SearchInStrip(int4 QP,int4 Size)
         QP=NQP;
       }
       while (size=Split(NQP,size));
-      // at this point we can just place Q starting from QP+1 to L and sort it
+      // at this point we can just place Q starting from QP+1 to R and sort it
       for(QP=0;QP<Size;QP++)R[QP]=q[QP];
       fastsort(CSegmCompare(Scoll,_Below ,E),R,Size);
     }
@@ -424,7 +426,7 @@ int4 CIntersectionFinder::FindR( int4 ladder_start_index,int4 interval_left_inde
   if (interval_right_index-interval_left_index==1)
      return SearchInStrip(ladder_start_index,Size);
   ProgramStackRec stack_rec(ladder_start_index);
-  int_numb=0;
+  int_numb=0;// variable to count intersections on Split stage
   if (Size>0)
     {
     Size=Split(stack_rec.Q_pos,Size);
@@ -434,9 +436,9 @@ int4 CIntersectionFinder::FindR( int4 ladder_start_index,int4 interval_left_inde
       stack_pos=stack_rec.Set(stack_pos,interval_right_index);
       }
     };
-  if (int_numb>Size)
+  if (int_numb>Size) //if found a lot of intersections repeat FindR
     Size=FindR(stack_rec.Q_pos,interval_left_index,interval_right_index,stack_pos,Size);
-  else
+  else //cut stripe on the middle
     {
     int4 m=(interval_left_index+interval_right_index)/2; 
     Size=FindR(stack_rec.Q_pos,interval_left_index,m,stack_pos,Size);
@@ -458,12 +460,12 @@ int4 CIntersectionFinder::optFindR(int4 father_first_step, int4 ladder_start_ind
   if (interval_right_index-interval_left_index==1)
      return SearchInStrip(ladder_start_index,Size);
   ProgramStackRec stack_rec(ladder_start_index);
-  int_numb=0;
+  int_numb=0;// variable to count intersections on Split stage
   if(father_first_step+inherit_each<stack_rec.Q_pos)
     {// use optimal variant if new staircase is big
     Size=optSplit(father_first_step,stack_rec.Q_pos,Size);
     for (int4 i=0;i<Size;i++)  
-      optFindInt(ladder_start_index,stack_rec.Q_pos,Loc[i],GETPSEG(L[i]));
+      optFindInt(ladder_start_index,stack_rec.Q_pos,Loc[i],Scoll[L[i]]);
     }
   else
     {// use fast variant if new staircase is small 
@@ -475,9 +477,9 @@ int4 CIntersectionFinder::optFindR(int4 father_first_step, int4 ladder_start_ind
     }           
   if((ladder_start_index<stack_rec.Q_pos))
     stack_pos=stack_rec.Set(stack_pos,interval_right_index);
-  if (int_numb>Size+1)
+  if (int_numb>Size+1) //if found a lot of intersections repeat optFindR
     Size=optFindR(ladder_start_index+1, stack_rec.Q_pos,interval_left_index,interval_right_index,stack_pos,Size);
-  else
+  else //cut stripe on the middle
     {
     int4 m=(interval_left_index+interval_right_index)/2; 
     Size=optFindR(ladder_start_index+1,stack_rec.Q_pos,interval_left_index,m,stack_pos,Size);
@@ -502,7 +504,7 @@ void CIntersectionFinder::FreeMem()
   {
 #define MY_FREE_ARR_MACRO(a) if(a){delete[] a;a=NULL;}
   MY_FREE_ARR_MACRO(Q);
-  MY_FREE_ARR_MACRO(Pairs);
+  MY_FREE_ARR_MACRO(SegmentBE);
   MY_FREE_ARR_MACRO(L);
   MY_FREE_ARR_MACRO(R);
   MY_FREE_ARR_MACRO(ENDS);
@@ -511,36 +513,29 @@ void CIntersectionFinder::FreeMem()
 
   };
 
-void CIntersectionFinder::AllocMem(int4 n)
+void CIntersectionFinder::AllocMem(int4 for_optimal)
   {
-  Pairs=new EndIndexes [n];
-  L=new SegmentInfo  [n+1];
-  R=new SegmentInfo  [n+1];
-  ENDS=new TSegmEnd[2*n];
-  Loc=new int4[n];
-  Q=new SegmentInfo  [n];
-
+  SegmentBE=new EndIndexes [nTotSegm];
+  L=new SegmentInfo  [nTotSegm+1];
+  R=new SegmentInfo  [nTotSegm+1];
+  ENDS=new TSegmEnd[2*nTotSegm];
+  int4 needed=nTotSegm;
+  if(for_optimal)
+    {
+     // for optimal alg it needs additional space reserve nTotSegm/(inherit_each-1)+inherit_each+1 to store inherited stairs
+      needed=nTotSegm+nTotSegm/(inherit_each-1)+inherit_each+1;
+      father_loc=new int4[needed];
+    }
+  Loc=new int4[needed];
+  Q=new SegmentInfo  [needed];
   };
-
-void CIntersectionFinder::optAllocMem(int4 n)
-  {
-  Pairs=new EndIndexes [n];
-  L=new SegmentInfo  [n+1];
-  R=new SegmentInfo  [n+1];
-  ENDS=new TSegmEnd[2*n];
-  // for optimal alg it needs additional space reserve n/(inherit_each-1)+inherit_each+1 to store inherited stairs
-  Loc=new int4[n+n/(inherit_each-1)+inherit_each+1];
-  Q=new SegmentInfo  [n+n/(inherit_each-1)+inherit_each+1];
-  father_loc=new int4[n+n/(inherit_each-1)+inherit_each+1];
-  };
-
 
 CIntersectionFinder *CIntersectionFinder::clone(PRegObj robj)
   {
   CIntersectionFinder *res=new CIntersectionFinder();
   res->nTotSegm=nTotSegm;
   res->Scoll=Scoll;
-  res->Pairs=Pairs;
+  res->SegmentBE=SegmentBE;
   res->ENDS=ENDS;
   res->L=new SegmentInfo  [nTotSegm+1];
   res->L[0]=L[0];
@@ -558,14 +553,15 @@ CIntersectionFinder *CIntersectionFinder::clone(PRegObj robj)
     _EndPoint,
     _Under,
     robj,
-    is_line_segments);
+    IS_LINE_SEGMENTS,
+   NULL);
   return res;       
   };
 
 void CIntersectionFinder::unclone()
   {
 
-  Pairs=NULL;
+  SegmentBE=NULL;
   ENDS=NULL;
 
   MY_FREE_ARR_MACRO(Q);
@@ -577,38 +573,42 @@ void CIntersectionFinder::unclone()
   nTotSegm=0;
   };
 
-void CIntersectionFinder::prepare_ends_and_pairs(int4 n)
+int4 CIntersectionFinder::prepare_ends(int4 n)
   {
   int4 i,j,k;
   REAL x,y;
   for (i=0,j=0;i<n;i++)
     {
     ENDS[j].s=i;
-//    GETPSEG(ENDS[j].s)=Scoll[i];
-//    ENDS[j].s.end_indexes=Pairs+i;
     _BegPoint(Scoll[i],ENDS[j].x,y);
-    //      _BegPoint(Scoll[i],ENDS[j].x,ENDS[j].y);
     ENDS[j].islast=0;
     j++;
     _EndPoint(Scoll[i],ENDS[j].x,y);
-    //      _EndPoint(Scoll[i],ENDS[j].x,ENDS[j].y);
     ENDS[j].s=i;
-//    GETPSEG(ENDS[j].s)=Scoll[i];
-//    ENDS[j].s.end_indexes=Pairs+i;
     ENDS[j].islast=1;
     j++;
     }
   fastsort(ENDS,j);
   for (int4 i=0;i<2*n;i++)
     if (ENDS[i].islast)
-      GETEIP(ENDS[i].s) -> E=i;
+      SegmentBE[ENDS[i].s].E=i;
     else
-      GETEIP(ENDS[i].s) -> B=i;
+      SegmentBE[ENDS[i].s].B=i;
+
+  if (ENDS[0].s==ENDS[2*n-1].s)
+    {
+    PSeg s=Scoll[ENDS[0].s];
+    for(int4 i=0;i<n;i++)  if (s!=Scoll[i]) _FindAndRegIPoints(s,Scoll[i],_reg_obj);
+    return 0;
+    }
+  L[0]=ENDS[0].s; 
+  return 1;
+      
   };
 
 CIntersectionFinder::CIntersectionFinder()
   {
-  Pairs=NULL;
+  SegmentBE=NULL;
   _reg_obj=NULL;
   Q=NULL;
   L=NULL;
@@ -629,7 +629,8 @@ void CIntersectionFinder::set_segm_fuctions(
   FGetPoint endPoint,
   FUnder under,
   PRegObj reg_obj,
-  int4 is_line)
+  int4 is_line,
+  FFindAndRegIPointOnRightOfSWL findAndRegIPointOnRightOfSWL)
   {
   _Below=below;
   _FindAndRegIPoints=findAndRegIPoints;
@@ -640,61 +641,33 @@ void CIntersectionFinder::set_segm_fuctions(
   _Under=under;
   _reg_obj=reg_obj;
   is_line_segments=is_line;
+  _FindAndRegIPointOnRightOfSWL=findAndRegIPointOnRightOfSWL;
   }
-
+  
 void CIntersectionFinder::balaban_fast(int4 n,PSeg _Scoll[])
   {
-  int4 Size;
-
-  Scoll=_Scoll;
-  nTotSegm=n;
-  AllocMem(n);
-  prepare_ends_and_pairs(n);
-
-  if (ENDS[0].s==ENDS[2*n-1].s)
-    {
-    PSeg s=GETPSEG(ENDS[0].s);
-    for(int4 i=0;i<n;i++)  if (s!=Scoll[i]) _FindAndRegIPoints(s,Scoll[i],_reg_obj);
-    Size=0;
-    }
-  else
-    {
-    L[0]=ENDS[0].s; 
-    Size=1;
-    }
+  Scoll=_Scoll;  nTotSegm=n;
+  AllocMem(FALSE);
+  
+  int4 l_size=prepare_ends(n);
   ProgramStackRec stack_rec(-1,2*n);  //need to be initialized this way
-  Size=FindR(-1,0,  n  ,&stack_rec,Size);
-  Size=InsDel(n,&stack_rec,Size);
-  Size=FindR(-1,n,2*n-1,&stack_rec, Size);
+  l_size=FindR(-1,0,  n  ,&stack_rec,l_size);
+  l_size=InsDel(n,&stack_rec,l_size);
+  l_size=FindR(-1,n,2*n-1,&stack_rec, l_size);
 
   FreeMem();
   }
 
 void CIntersectionFinder::balaban_optimal(int4 n,PSeg _Scoll[])
   {
-  int4 Size;
-
-  Scoll=_Scoll;
-  nTotSegm=n;
-  optAllocMem(n);
-  prepare_ends_and_pairs(n);
-
-  if (ENDS[0].s==ENDS[2*n-1].s)
-    {
-    PSeg s=GETPSEG(ENDS[0].s);
-    for(int4 i=0;i<n;i++)  if (s!=Scoll[i]) _FindAndRegIPoints(s,Scoll[i],_reg_obj);
-    Size=0;
-    }
-  else
-    {
-    L[0]=ENDS[0].s; 
-    Size=1;
-    }
-
+  Scoll=_Scoll;  nTotSegm=n;
+  AllocMem(TRUE);
+  
+  int4 l_size=prepare_ends(n);
   ProgramStackRec stack_rec(inherit_each,2*n);  //need to be initialized this way  
-  Size=optFindR(inherit_each+1,inherit_each,0,  n ,&stack_rec,Size);
-  Size=optInsDel(n,&stack_rec,Size);
-  Size=optFindR(inherit_each+1,inherit_each,n,2*n-1,&stack_rec,Size);
+  l_size=optFindR(inherit_each+1,inherit_each,0,  n ,&stack_rec,l_size);
+  l_size=optInsDel(n,&stack_rec,l_size);
+  l_size=optFindR(inherit_each+1,inherit_each,n,2*n-1,&stack_rec,l_size);
 
   FreeMem();
   }
@@ -707,7 +680,7 @@ int4 CIntersectionFinder::CalcLAt(int4 end_index)
   for(i=0;i<nTotSegm;i++)
     {
 
-    cur_ends=Pairs+i;
+    cur_ends=SegmentBE+i;
     if((cur_ends->B<=end_index)&&(cur_ends->E>end_index))
       L[Size++]=i;
     }
@@ -716,6 +689,52 @@ int4 CIntersectionFinder::CalcLAt(int4 end_index)
   return Size;
 
   };   
+  
+#ifdef WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+DWORD WINAPI thread_routine(void *param)
+  {
+  ((CIntersectionFinder *)param)->Run();
+  return 0;
+  }    
+#endif
+
+void CIntersectionFinder::fast_parallel(int4 n,PSeg _Scoll[],PRegObj add_reg)
+  {
+#ifdef WIN32 //compiling for Windows CreateThread supported
+  int4 Size,m;
+  HANDLE hThread;
+  DWORD tID;    
+
+  Scoll=_Scoll;
+  nTotSegm=n;
+  AllocMem(n);
+  prepare_ends(n);
+
+  CIntersectionFinder *intersection_finder=clone(add_reg);
+  intersection_finder->L[0]=ENDS[0].s;
+  m=n*1.05;
+  intersection_finder->run_to=m;
+  hThread=CreateThread(NULL,0,thread_routine,(void *)intersection_finder,0,&tID);
+  if(hThread) 
+    {
+    Size=CalcLAt(m);
+    ProgramStackRec stack_rec(-1,2*nTotSegm); 
+    FindR(-1,m,2*n-1,&stack_rec, Size);    
+    WaitForSingleObject(hThread,INFINITE);
+    CloseHandle(hThread);
+    }
+  intersection_finder->unclone();
+  delete intersection_finder;
+  FreeMem();
+
+#else //compiling for some another enviroment just call balaban_fast. Rewrite thread creation to use parallel version 
+  // somethere else (not Windows)
+  balaban_fast( n, _Scoll);
+#endif    
+  }
+  
 
 void CIntersectionFinder::trivial(int4 n,PSeg sgm[])
   { 
@@ -771,49 +790,227 @@ void CIntersectionFinder::simple_sweep(int4 n,PSeg Scoll[])
   delete []sgm;
   }
 
-#ifdef WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-DWORD WINAPI thread_routine(void *param)
+  
+// Bentley & Ottmann algorithm
+ void CIntersectionFinder::SweepLineInsert(int4 s)
+   {
+     TBinTreeNode *inserted=SweepLine+s;
+     inserted->segment=inserted->seg_node_idx=s;
+     if(SweepLine[swl_root].segment==-1){swl_root=s;return;}
+     int4 cur_node=swl_root;
+     int4 onleft;
+     int4 cur_seg=SweepLine[cur_node].segment;
+     while(cur_seg!=-1)
+       {
+         if(onleft=_Below(sweep_line_x,Scoll[s],Scoll[cur_seg]))
+           {
+             inserted->next=cur_node;
+             cur_node=SweepLine[cur_node].left;
+           }
+         else
+           {
+             inserted->prev=cur_node;
+             cur_node=SweepLine[cur_node].right;
+           };  
+         cur_seg=SweepLine[cur_node].segment; 
+       };
+     if(onleft)
+       SweepLine[inserted->next].left=s;
+     else
+       SweepLine[inserted->prev].right=s;
+       
+     SweepLine[inserted->next].prev=SweepLine[inserted->prev].next=s;
+     
+     IntOnRightOfSWL(SweepLine[inserted->prev].segment,s);
+     IntOnRightOfSWL(s,SweepLine[inserted->next].segment);
+   };
+   
+ void CIntersectionFinder::SweepLineDelete(int4 s)
+   {
+     static bool del_prev=true;
+     int4 cur_node=SweepLine[s].seg_node_idx;
+     TBinTreeNode *deleted=SweepLine+cur_node;
+     IntOnRightOfSWL(SweepLine[deleted->prev].segment,SweepLine[deleted->next].segment);
+     bool left_null,right_null;
+     while(deleted->segment!=-1)
+       {
+          left_null=SweepLine[deleted->left].segment==-1;
+          right_null=SweepLine[deleted->right].segment==-1;
+          if(left_null&&right_null)
+            {
+              SweepLine[deleted->prev].next=deleted->next;
+              SweepLine[deleted->next].prev=deleted->prev;
+              deleted->segment=-1;break;
+            }
+          else 
+              { 
+                  if((!left_null&&del_prev)||(!del_prev&&right_null))
+                    {
+                      deleted->segment=SweepLine[deleted->prev].segment;
+                      SweepLine[deleted->segment].seg_node_idx=cur_node;
+                      cur_node=deleted->prev;
+                    }
+                  else
+                    {
+                      deleted->segment=SweepLine[deleted->next].segment;
+                      SweepLine[deleted->segment].seg_node_idx=cur_node;
+                      cur_node=deleted->next;
+                    }  
+                 deleted=SweepLine+cur_node;
+             }   
+       }
+     del_prev=!del_prev;
+   };
+ 
+ void CIntersectionFinder::SweepLineExchange(int4 s1,int4 s2)
+   {
+          int4 node1=SweepLine[s1].seg_node_idx;
+          int4 node2=SweepLine[s2].seg_node_idx;
+          IntOnRightOfSWL(s1,SweepLine[SweepLine[node2].next].segment);
+          IntOnRightOfSWL(SweepLine[SweepLine[node1].prev].segment,s2);
+         // if(!IS_LINE_SEGMENTS)   IntOnRightOfSWL(s2,s1);
+          SweepLine[node1].segment=s2;
+          SweepLine[s2].seg_node_idx=node1;
+          SweepLine[node2].segment=s1;
+          SweepLine[s1].seg_node_idx=node2;
+   };
+   
+ void CIntersectionFinder::EventsDelMin()
+   {
+     Events[0]=Events[--events_n];
+     if(events_n<2) return;
+     int4 cur=0;
+     int4 son=2;
+     TEvent tmp;
+     do
+       {
+          if(Events[son-1].pt.x<Events[son].pt.x)
+             son--;
+          if(Events[cur].pt.x>Events[son].pt.x)  
+           {
+             tmp=Events[cur];Events[cur]=Events[son];Events[son]=tmp;
+             cur=son;
+             son=2+(cur<<1);
+           }
+         else break;  
+       }
+     while(son<events_n);
+     if(son==events_n)
+       {
+         son--;
+         if(Events[cur].pt.x>Events[son].pt.x)
+            {tmp=Events[cur];Events[cur]=Events[son];Events[son]=tmp;}
+       } 
+   };
+   
+ void CIntersectionFinder::EventsAddNew()
+   {
+     int4 cur=events_n++;
+     if(events_n==1)return;
+     int4 father;
+     TEvent tmp;
+     while(cur)
+       {
+         father=(cur-1)>>1;
+         if(Events[cur].pt.x<Events[father].pt.x)
+            {tmp=Events[cur];Events[cur]=Events[father];Events[father]=tmp;}
+         else
+           break;   
+         cur=father;
+       }
+   };
+   
+ void CIntersectionFinder::CheckEventsMem()
+   {
+     if(events_n+2>events_max)
+       {
+         events_max*=2;
+         TEvent *newEvents= new TEvent[events_max];
+         for(int4 i=0;i<events_n;i++)
+            newEvents[i]=Events[i];
+         delete[] Events;
+         Events=newEvents;
+       }
+   };
+  
+
+void CIntersectionFinder::IntOnRightOfSWL(int4 s1,int4 s2)// important s1<s2 
   {
-  ((CIntersectionFinder *)param)->Run();
-  return 0;
-  }    
-#endif
-
-void CIntersectionFinder::fast_parallel(int4 n,PSeg _Scoll[],PRegObj add_reg)
+    if((s1==-1)||(s2==-1))return;
+    CheckEventsMem();
+    TEvent *ev=Events+events_n;
+    if(_FindAndRegIPointOnRightOfSWL(sweep_line_x,Scoll[s1],Scoll[s2],NULL,ev->pt))// find and place to ev->pt
+      {
+        ev->s1=s1;
+        ev->s2=s2;
+        EventsAddNew();
+      }
+  };
+  
+void CIntersectionFinder::PrepareEvents()
   {
-#ifdef WIN32 //compiling for Windows CreateThread supported
-  int4 Size,m;
-  HANDLE hThread;
-  DWORD tID;    
+      TEvent *ev=Events;
+      for (int4 i=0;i<nTotSegm;i++)
+        {
+            _BegPoint(Scoll[i],ev->pt.x,ev->pt.y);
+            ev->s1=i;
+            ev->s2=-1;
+            EventsAddNew();
+            ev++;
+            _EndPoint(Scoll[i],ev->pt.x,ev->pt.y);
+            ev->s1=-1;
+            ev->s2=i;
+            EventsAddNew();
+            ev++;
+        }
+  };  
 
-  Scoll=_Scoll;
-  nTotSegm=n;
-  AllocMem(n);
-  prepare_ends_and_pairs(n);
-
-
-  CIntersectionFinder *intersection_finder=clone(add_reg);
-  intersection_finder->L[0]=ENDS[0].s;
-  m=n*1.05;
-  intersection_finder->run_to=m;
-  hThread=CreateThread(NULL,0,thread_routine,(void *)intersection_finder,0,&tID);
-  if(hThread) 
+void CIntersectionFinder::AllocBOMem()
+  {
+      swl_root=-1;
+      SweepLine=new TBinTreeNode[nTotSegm+1];
+      SweepLine++;
+      events_n=0;
+      Events=new TEvent[events_max=nTotSegm*3];
+  };
+ 
+void CIntersectionFinder::FreeBOMem()
+  {
+      if(SweepLine){SweepLine--;delete[] SweepLine; SweepLine=NULL;}
+      MY_FREE_ARR_MACRO(Events);
+      events_max=0;
+  };
+ 
+void CIntersectionFinder::bentley_ottmann(int4 n,PSeg _Scoll[]) 
+  {
+  if(!IS_LINE_SEGMENTS) return; //doesn't work correctly for nonline segments
+  Scoll=_Scoll;  nTotSegm=n;
+  AllocBOMem();
+  PrepareEvents();
+  int4 s1,s2;
+  while(events_n>0)
     {
-    Size=CalcLAt(m);
-    ProgramStackRec stack_rec(-1,2*nTotSegm); 
-    FindR(-1,m,2*n-1,&stack_rec, Size);    
-    WaitForSingleObject(hThread,INFINITE);
-    CloseHandle(hThread);
+      sweep_line_x=Events->pt.x;
+      s1=Events->s1;
+      s2=Events->s2;
+      if((s1!=-1)&&(s2!=-1))
+        _FindAndRegIPointOnRightOfSWL(sweep_line_x,Scoll[s1],Scoll[s2],_reg_obj,Events->pt);// register found intersection
+      EventsDelMin();  
+      while((s1==Events->s1)&&(s2==Events->s2))
+          {
+              s1=Events->s1;
+              s2=Events->s2;
+              EventsDelMin();
+          }
+      if(s1!=-1)
+        {
+          if(s2!=-1)
+            SweepLineExchange(s1,s2);
+          else  
+            SweepLineInsert(s1);
+        }
+      else  
+         SweepLineDelete(s2);
     }
-  intersection_finder->unclone();
-  delete intersection_finder;
-  FreeMem();
-
-#else //compiling for some another enviroment just call balaban_fast. Rewrite thread creation to use parallel version 
-  // somethere else (not Windows)
-  balaban_fast( n, _Scoll);
-#endif    
-  }
-
+  FreeBOMem();
+  };  
