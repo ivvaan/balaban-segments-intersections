@@ -393,7 +393,7 @@ template <class SEGMENT>
 class SegmentFunctions
   {
   public:
-    static void regigister_intersection(void *r,PSeg s1,PSeg s2,int4 nInt,TPlaneVect *points)
+    static void register_intersection(void *r,PSeg s1,PSeg s2,int4 nInt,TPlaneVect *points)
       {
       /*int4 n1=(SEGMENT*)s1-(SEGMENT*)first_segment_ptr,n2=(SEGMENT*)s2-(SEGMENT*)first_segment_ptr;
       printf("found intersection s1=%i, s2=%i\n",n1,n2);//*/
@@ -408,14 +408,54 @@ class SegmentFunctions
       {
       TPlaneVect p[2];
       int4 n=IntPoint((SEGMENT*)s1,(SEGMENT*)s2,p);
-      if(n)regigister_intersection(intersection_registrator,s1,s2,n,p);
+      if(n)register_intersection(intersection_registrator,s1,s2,n,p);
       return n; 
       };
+
+    static  int4 __FindAndRegIPointOnRightOfSWL(REAL swl_x,PSeg s1,PSeg s2,PRegObj intersection_registrator,TPlaneVect &int_point)
+      {
+       if(intersection_registrator)//just register intersection
+           register_intersection(intersection_registrator,s1,s2,1,&int_point);
+       else //find first intersection
+         {
+         
+              TPlaneVect p[2];
+              int4 n=IntPoint((SEGMENT*)s1,(SEGMENT*)s2,p);
+              if(n==0)return 0;
+              //doesn't work correctly for nonline segments
+/*              if(n==2)
+                {
+                  int4 f=0,l=1;
+                  if(p[0].x>p[1].x) {f=1;l=0;}
+                  if(p[f].x>swl_x)
+                    {
+                        int_point=p[f];
+                        return 1;
+                    }
+                  else
+                    if(p[l].x>swl_x)
+                        {
+                            int_point=p[l];
+                            return 1;
+                        } 
+                }
+              else*/
+                {
+                  if(p->x>swl_x)
+                    {
+                        int_point=*p;
+                        return 1;
+                    }
+                 }      
+         };
+        return 0;    
+      };
+      
     static int4 __FindAndRegIPointsInStripe(REAL b,REAL e, PSeg s1,PSeg s2,PRegObj intersection_registrator)
       {
       TPlaneVect p[2];
       int4 n=StripePoint(b,e,(SEGMENT*)s1,(SEGMENT*)s2,p);
-      if(n)regigister_intersection(intersection_registrator,s1,s2,n,p);
+      if(n)register_intersection(intersection_registrator,s1,s2,n,p);
       return n; 
       };
     static void __BegPoint(PSeg s,REAL &x,REAL &y)
@@ -483,7 +523,7 @@ void  delete_test_collection(int4 seg_type,PSeg *colls)
     }
   delete[]  colls; 
   };
-
+  
 double  find_intersections(int4 seg_type,int4 SN,PSeg *colls,int4 alg, double *counters)
   {
   if(colls==NULL) return 0;
@@ -502,7 +542,8 @@ double  find_intersections(int4 seg_type,int4 SN,PSeg *colls,int4 alg, double *c
         SegmentFunctions<TLineSegment1>::__EndPoint,
         SegmentFunctions<TLineSegment1>::__Under,
         &int_numb,
-        TLineSegment1::is_line);
+        TLineSegment1::is_line,
+        SegmentFunctions<TLineSegment1>::__FindAndRegIPointOnRightOfSWL);
       break;
     case line2:
       intersection_finder.set_segm_fuctions(
@@ -514,7 +555,8 @@ double  find_intersections(int4 seg_type,int4 SN,PSeg *colls,int4 alg, double *c
         SegmentFunctions<TLineSegment2>::__EndPoint,
         SegmentFunctions<TLineSegment2>::__Under,
         &int_numb,
-        TLineSegment2::is_line);
+        TLineSegment2::is_line,
+        SegmentFunctions<TLineSegment2>::__FindAndRegIPointOnRightOfSWL);
       break;
     case arc:
       intersection_finder.set_segm_fuctions(
@@ -526,7 +568,8 @@ double  find_intersections(int4 seg_type,int4 SN,PSeg *colls,int4 alg, double *c
         SegmentFunctions<TArcSegment>::__EndPoint,
         SegmentFunctions<TArcSegment>::__Under,
         &int_numb,
-        TArcSegment::is_line);
+        TArcSegment::is_line,
+        SegmentFunctions<TArcSegment>::__FindAndRegIPointOnRightOfSWL);
       break;
     }
 
@@ -537,6 +580,7 @@ double  find_intersections(int4 seg_type,int4 SN,PSeg *colls,int4 alg, double *c
     case fast: intersection_finder.balaban_fast(SN,colls); break;
     case optimal:intersection_finder.balaban_optimal(SN,colls);break;
     case fast_parallel:intersection_finder.fast_parallel(SN,colls,&int_numb1);break;
+    case bentley_ottmann:intersection_finder.bentley_ottmann(SN,colls);break;
     };
   memcpy(counters,intersection_finder.my_counter,sizeof(intersection_finder.my_counter));
   return int_numb+int_numb1;
