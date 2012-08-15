@@ -239,7 +239,7 @@ counters_mute=counters_string;
   /*printf("ratio fast  =%6.3f\n",0.5*(n*exec_time[fast]*(n-1))/(exec_time[triv]*nInt[fast]));*/
 
   delete_test_collection(seg_type,coll);
-  getchar();
+  //getchar();
   return 0;
   }
 
