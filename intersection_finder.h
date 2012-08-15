@@ -38,6 +38,10 @@ typedef int4 (*FIsIntersetInStripe)(REAL b,REAL e, PSeg s1,PSeg s2);//finds if s
 typedef void (*FGetPoint)(PSeg s,REAL &x,REAL &y);//puts a segment s end point coordinates into x and y
 typedef int4 (*FUnder)(PSeg s1,PSeg s2);//returns TRUE if s2 begin point is above s1
 
+typedef int4 (*FFindAndRegIPointOnRightOfSWL)(REAL swl_x,PSeg s1,PSeg s2,PRegObj intersection_registrator,TPlaneVect &int_point); 
+//finds first intersection on right of sweep line (swl_x), register it and place x coord to int_point_x
+
+
 const int4 undef_loc=-2147483648;
 const int4 inherit_each=32; // defines how often in optimal algorithm stairs are inherited,  one inherited per inherit_each
 
@@ -56,26 +60,24 @@ struct ProgramStackRec
   inline ProgramStackRec *Set(ProgramStackRec *p,int4 rb){ prev=p,right_bound=rb;return this;};
   };
 
-/*struct SegmentInfo
-  {
-  PSeg segment;
-  EndIndexes * end_indexes;
-  SegmentInfo(PSeg s=NULL,EndIndexes *ei=NULL):segment(s),end_indexes(ei){};
-  };
- 
-#define GETPSEG(s) (s.segment)
-#define GETEIP(s) (s.end_indexes)*/
-
 typedef int4 SegmentInfo;
 
-#define GETPSEG(s) (Scoll[s])
-#define GETEIP(s) (Pairs+s)
 
-//typedef int4 SegmentInfo;
+//uncomment line bellow to switch on counters
+//#define COUNTERS_ON
+
+#ifdef COUNTERS_ON
+#define INC_COUNTER(i) (my_counter[i]++)
+#define SET_COUNTER(i,value) my_counter[i]=value
+#define SET_COUNTER_IFGT(i,value) if(value>my_counter[i])my_counter[i]=value
+#else
+#define INC_COUNTER(i) 
+#define SET_COUNTER(i,value)
+#define SET_COUNTER_IFGT(i,value)
+#endif
 
 struct TEnd
   {
-  public:
     REAL x;
     // REAL y;
     int4 islast;
@@ -86,35 +88,56 @@ struct TEnd
       };
   };
 
-class TSEnd:public TEnd
+struct TSEnd:public TEnd
   {
-  public:
     PSeg s;
   };
 
-class TSegmEnd:public TEnd
+struct TSegmEnd:public TEnd
   {
-  public:
     SegmentInfo s;
   };
 
 
-class CSegmCompare
+struct CSegmCompare
   {
-  public:
     PSeg *Scoll;
     FBelow _Below;
     REAL x;
     CSegmCompare(){};
     CSegmCompare(PSeg *sc,FBelow _b,REAL _x){Scoll=sc;_Below=_b;x=_x;};
-    bool lt(SegmentInfo s1,SegmentInfo s2){return _Below(x,GETPSEG(s1),GETPSEG(s2));}
+    bool lt(SegmentInfo s1,SegmentInfo s2){return _Below(x,Scoll[s1],Scoll[s2]);}
   };
+  
+  
+//for Bentley & Ottmann algorithm
+  
+struct TBinTreeNode// for sweep line support 
+  {
+    int4 left,right,next,prev;
+    int4 segment;
+    int4 seg_node_idx;
+            // always should be 
+            //SweepLine[SweepLine[s].seg_node_idx].segment==s
+            //SweepLine[SweepLine[node].segment].seg_node_idx==node
+    TBinTreeNode()
+      {
+         segment=seg_node_idx=left=right=next=prev=-1;
+      };
+  }; 
+
+struct TEvent
+  {
+    TPlaneVect pt;
+    int4 s1,s2;
+  } ;  
 
 
 class CIntersectionFinder
   {
-  int4 is_line_segments;
-  int4 nTotSegm;
+  int4 is_line_segments;//shows if segments is straitline and more fast calculations are possible
+  
+  //begin functions to deal with segments
   PRegObj _reg_obj;
   FBelow _Below;
   FFindAndRegIPoints _FindAndRegIPoints;
@@ -124,10 +147,15 @@ class CIntersectionFinder
   FUnder _Under;
   // for optimal algorithm
   FIsIntersetInStripe _IsIntersetInStripe;
-
-
+  
+  //for Bentley & Ottmann alg
+  FFindAndRegIPointOnRightOfSWL _FindAndRegIPointOnRightOfSWL;
+  // end functions to deal with segments
+  
+  //begin strutures for Balaban algorithms
+  int4 nTotSegm;
   SegmentInfo * L,* R,* Q;
-  EndIndexes *Pairs;
+  EndIndexes *SegmentBE;
   TSegmEnd *ENDS;
   int4 *Loc;
   PSeg *Scoll;
@@ -140,23 +168,33 @@ class CIntersectionFinder
   int4 *father_loc;
   //for parallel version  
   int4 run_to;
+  //end strutures for Balaban algorithms
 
-  //functions
+  //begin strutures for Bentley & Ottmann algorithm
+  REAL sweep_line_x;
+  int4 swl_root;
+  TBinTreeNode *SweepLine;
+  int4 events_n,events_max;
+  TEvent *Events;
+//  int4 *SWL_stack;
+  //end strutures for Bentley & Ottmann algorithm
+  
+  //private functions for Balaban algorithms
 
   //helpers for segment functions
   inline int4 IntersectionsInCurStripe(SegmentInfo  s1,PSeg s2)
     {
-    return _FindAndRegIPointsInStripe(B,E,GETPSEG(s1),s2,_reg_obj);
+    return _FindAndRegIPointsInStripe(B,E,Scoll[s1],s2,_reg_obj);
     };
 
   inline int4 IsIntersectInCurStripe(SegmentInfo  s1,PSeg s2)
     {
-    return _IsIntersetInStripe(B,E,GETPSEG(s1),s2);
+    return _IsIntersetInStripe(B,E,Scoll[s1],s2);
     };
 
   inline int4 Intersections(SegmentInfo  s1,PSeg s2)
     {
-    return _FindAndRegIPoints(GETPSEG(s1),s2,_reg_obj);
+    return _FindAndRegIPoints(Scoll[s1],s2,_reg_obj);
     };
 
   inline void ExchangeLR()
@@ -166,9 +204,9 @@ class CIntersectionFinder
     };
   //common  functions
   int4 SearchInStrip(int4 QP,int4 Size);
+  void AllocMem(int4 n);
   void FreeMem();
-  void prepare_ends(int4 n);
-  void prepare_ends_and_pairs(int4 n);
+  int4 prepare_ends(int4 n);
 
   //functions for fast algorithm
   void FindInt(int4 QB,int4 QE,int4 l,PSeg s);
@@ -177,7 +215,6 @@ class CIntersectionFinder
   int4 InsDel(int4 n,ProgramStackRec * stack_pos,int4 Size);
   int4 Merge(int4 QB,int4 QE,int4 Size);
   int4 Split(int4 &step_index,int4 Size);
-  void AllocMem(int4 n);
 
   //same for optimal algorithm
   void optFindInt(int4 QB,int4 QE,int4 l,PSeg s);
@@ -185,17 +222,29 @@ class CIntersectionFinder
   int4 optInsDel(int4 n,ProgramStackRec *stack_pos,int4 Size);
   int4 optMerge(int4 QB,int4 QE,int4 Size);
   int4 optSplit(int4 father_first_step, int4 &step_index,int4 Size);
-  void optAllocMem(int4 n);
 
   //additional functions for fast parallel algorithm
   CIntersectionFinder *clone(PRegObj robj);
   void unclone();
   int4 CalcLAt(int4 end_index);
+  
+  //private functions for Bentley & Ottmann algorithm
+ void SweepLineInsert(int4 s);
+ void SweepLineDelete(int4 s);
+ void SweepLineExchange(int4 s1,int4 s2);
+ void IntOnRightOfSWL(int4 s1,int4 s2);
+ void PrepareEvents();
+ void EventsDelMin();
+ void EventsAddNew();
+ void CheckEventsMem();
+ void AllocBOMem();
+ void FreeBOMem();
+// void SweepLinePrint();
 
 
   public:
     // some counters to explore algorithm (not nessesary for functioning)
-    double my_counter[16];
+    double my_counter[8];
 
 
     CIntersectionFinder();
@@ -206,7 +255,8 @@ class CIntersectionFinder
       FFindAndRegIPointsInStripe findAndRegIPointsInStripe,
       FIsIntersetInStripe isIntersetInStripe,
       FGetPoint begPoint,FGetPoint endPoint,
-      FUnder under,PRegObj reg_obj,int4 is_line);
+      FUnder under,PRegObj reg_obj,int4 is_line,
+     FFindAndRegIPointOnRightOfSWL findAndRegIPointOnRightOfSWL);
 
     void balaban_fast(int4 n,PSeg _Scoll[]);
     int4 FindR(int4 ladder_start_index,int4 interval_left_index,int4 interval_right_index,ProgramStackRec *stack_pos,int4 Size);
@@ -221,8 +271,11 @@ class CIntersectionFinder
     // trivial algorithm
     void trivial(int4 n,PSeg sgm[]);
 
-    // simple sweepline algorithm (not Bently-Ottmann!)
+    // simple sweepline algorithm (not Bentley & Ottmann!)
     void simple_sweep(int4 n,PSeg Scoll[]);
+
+    //  Bentley & Ottmanns
+    void bentley_ottmann(int4 n,PSeg _Scoll[]);
 
   };
 
