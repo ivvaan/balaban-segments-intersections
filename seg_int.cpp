@@ -55,9 +55,11 @@ int main(int argc, char* argv[])
   int4 alg=63, seg_type=2, n = 20000, d=0;
   REAL p=1.0;
   double exec_time[33],nInt[33];
-  char *ss="Lla",*sd="rmsp";
-  BOOL mute=FALSE,print_counters=FALSE;
+  char *ss="Lla",*sd="rlmsp";
+  BOOL mute=FALSE,print_counters=FALSE,wait=FALSE;
   char counters_string[256],*pcs=NULL,*counters_mute;
+  int4 alg_list[]={ triv, simple_sweep, fast, optimal, fast_parallel, bentley_ottmann};
+  char *alg_names[]={"trivial","simple_sweep","fast","optimal","fast_parallel","bentley_ottmann"};
 
 #ifdef _DEBUG
   _CrtSetDbgFlag(_CRTDBG_CHECK_ALWAYS_DF);
@@ -75,8 +77,12 @@ counters_mute=counters_string;
 
   if (argc==1)
     {
-    printf("usage: seg_int -aA -sS -dD -nN -pP -m -c\n");
-    printf("example: seg_int -t14 -sa -dp -n20000 -p5.5\n");
+#ifdef COUNTERS_ON
+    printf("usage: seg_int -aA -sS -dD -nN -pP -m -w -c\n");
+#else    
+    printf("usage: seg_int -aA -sS -dD -nN -pP -m -w\n");
+#endif    
+    printf("example: seg_int -a14 -sa -dp -n20000 -p5.5\n");
     printf("-aA: type of algorithms tested\n");
     printf(" A=1: trivial\n");
     printf(" A=2: simple sweep\n");
@@ -92,15 +98,19 @@ counters_mute=counters_string;
     printf(" S=a: arcs\n");
     printf("-dD: type of distribution\n");
     printf(" D=r: random segments\n");
-    printf(" D=m: mixed long and short parallel segments\n");
+    printf(" D=l: random length x parallel segments\n");
+    printf(" D=m: mixed random length x parallel segments and very short x parallel segments\n");
     printf(" D=s: short segments\n");
     printf(" D=p: random segment with parameter defined length\n");
-    printf("Important! -sa -dm is not compartible!\n");
     printf("-nN: number of segments\n");
     printf("-pP: parameter value, must be positive\n");
-    printf("-m: if presented means 'mute' mode - few information printed\n");
-    printf("-c: counters are printed if presented\n");
-
+    printf("-m: if presented, means 'mute' mode - few information printed\n");
+    printf("-w: if presented, program wait until 'Enter' pressed before closing\n");
+#ifdef COUNTERS_ON
+    printf("-c: counters are printed, if presented\n");
+#endif    
+    printf("Important! -sa is not compartible with -dm -dl and bently_ottmann algorithm!\n");
+    return 0;
     }
   else
     {
@@ -136,6 +146,7 @@ counters_mute=counters_string;
             switch(argv[i][2])
               {
               case 'r':d=random;break;
+              case 'l':d=parallel;break;
               case 'm':d=mixed;break;
               case 's':d=small;break;
               case 'p':d=param_defined;break;
@@ -157,13 +168,18 @@ counters_mute=counters_string;
           case 'p':
             {
             p=fabs(atof(argv[i]+2));
-            if(p==0)
+            if(p<=0)
               {p=1.0; printf("some error in -p param. 1.0 used instead.\n");}
             }
             break;
           case 'm':
             {
             mute=TRUE;
+            }
+            break;
+          case 'w':
+            {
+            wait=TRUE;
             }
             break;
 #ifdef COUNTERS_ON
@@ -176,70 +192,26 @@ counters_mute=counters_string;
           }
         }
     }
-  if(!mute)printf("actual param string is: -a%i -s%c -d%c -n%i -p%f\n", alg, ss[seg_type], sd[d], n, p);
+  if(!mute)printf("actual params is: -a%i -s%c -d%c -n%i -p%f\n", alg, ss[seg_type], sd[d], n, p);
   if((seg_type==arc)&&(d==mixed)) {printf("-sa -dm is not compartible!/n"); return 0;}
+  if((seg_type==arc)&&(d==parallel)) {printf("-sa -dl is not compartible!/n"); return 0;}
   
   PSeg *coll=create_test_collection(seg_type,n,d,p);
-   
-  if(alg&fast)
+  for(int4 a=0;a<sizeof(alg_list)/sizeof(alg_list[0]);a++)
     {
-    exec_time[fast]=_benchmark(pcs,n,coll,seg_type,fast,nInt[fast]);
-    if(mute)
-      printf("a4;s%c;d%c;n%i;i%13.0f;t%8.2f;p%f;%s\n",ss[seg_type], sd[d],n,nInt[fast],exec_time[fast],p,counters_mute);
-    else
-      printf("fast   intersections=%13.0f time=%8.2f%s\n",nInt[fast],exec_time[fast],counters_string);
-    }
-
-  if(alg&optimal)
-    {
-    exec_time[optimal]=_benchmark(pcs,n,coll,seg_type,optimal,nInt[optimal]);
-    if(mute)
-      printf("a8;s%c;d%c;n%i;i%13.0f;t%8.2f;p%f;%s\n",ss[seg_type], sd[d],n,nInt[optimal],exec_time[optimal],p,counters_mute);
-    else
-      printf("optimal  intersections=%13.0f time=%8.2f%s\n",nInt[optimal],exec_time[optimal],counters_string);
-    }
-
-  if(alg&fast_parallel)
-    {
-    exec_time[fast_parallel]=_benchmark(pcs,n,coll,seg_type,fast_parallel,nInt[fast_parallel]);
-    if(mute)
-      printf("a16;s%c;d%c;n%i;i%13.0f;t%8.2f;p%f;%s\n",ss[seg_type], sd[d],n,nInt[fast_parallel],exec_time[fast_parallel],p,counters_mute);
-    else
-      printf("fast_parallel intersections=%13.0f time=%8.2f%s\n",nInt[fast_parallel],exec_time[fast_parallel],counters_string);
-    }
-
-  if(alg&bentley_ottmann)
-    {  
-    exec_time[bentley_ottmann]=_benchmark(pcs,n,coll,seg_type,bentley_ottmann,nInt[bentley_ottmann]);
-    if(mute)
-      printf("a32;s%c;d%c;n%i;i%13.0f;t%8.2f;p%f;%s\n",ss[seg_type], sd[d],n,nInt[bentley_ottmann],exec_time[bentley_ottmann],p,counters_mute);
-    else
-      printf("bentley_ottmann intersections=%13.0f time=%8.2f%s\n",nInt[bentley_ottmann],exec_time[bentley_ottmann],counters_string);
-    }
-
-
-  if(alg&simple_sweep)
-    {  
-    exec_time[simple_sweep]=_benchmark(pcs,n,coll,seg_type,simple_sweep,nInt[simple_sweep]);
-    if(mute)
-      printf("a2;s%c;d%c;n%i;i%13.0f;t%8.2f;p%f;%s\n",ss[seg_type], sd[d],n,nInt[simple_sweep],exec_time[simple_sweep],p,counters_mute);
-    else
-      printf("simple_sweep intersections=%13.0f time=%8.2f%s\n",nInt[simple_sweep],exec_time[simple_sweep],counters_string);
-    }
-
-  if(alg&triv)
-    {  
-    exec_time[triv]=_benchmark(pcs,n,coll,seg_type,triv,nInt[triv]);
-    if(mute)
-      printf("a1;s%c;d%c;n%i;i%13.0f;t%8.2f;p%f;%s\n",ss[seg_type], sd[d],n,nInt[triv],exec_time[triv],p,counters_mute);
-    else
-      printf("triv       intersections=%13.0f time=%8.2f%s\n",nInt[triv],exec_time[triv],counters_string);
-    }
-
-  /*printf("ratio fast  =%6.3f\n",0.5*(n*exec_time[fast]*(n-1))/(exec_time[triv]*nInt[fast]));*/
+      if(alg&alg_list[a])
+        {
+        exec_time[a]=_benchmark(pcs,n,coll,seg_type,alg_list[a],nInt[a]);
+        if(mute)
+          printf("a%i;s%c;d%c;n%i;i%13.0f;t%8.2f;p%f;%s\n",alg_list[a],ss[seg_type], sd[d],n,nInt[a],exec_time[a],p,counters_mute);
+        else
+          printf("%s intersections=%13.0f time=%8.2f%s\n",alg_names[a],nInt[a],exec_time[a],counters_string);
+        }
+     };
+  //printf("ratio fast  =%6.3f\n",0.5*(n*exec_time[2]*(n-1))/(exec_time[0]*nInt[2]));
 
   delete_test_collection(seg_type,coll);
-  //getchar();
+  if(wait)getchar();
   return 0;
   }
 
