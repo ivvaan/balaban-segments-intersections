@@ -117,7 +117,6 @@ void CIntersectionFinder::optFindIntI(int4 r_index,ProgramStackRec *stack_pos,PS
       while((r-l)>1)// binary search
         {
         m=(r+l)>>1;//        m=(r+l)/2;
-        INC_COUNTER(0);
         if(_Under(Scoll[Q[m]],seg))
           l=m;
         else
@@ -144,7 +143,6 @@ void CIntersectionFinder::FindIntI(int4 r_index,ProgramStackRec * stack_pos,PSeg
       while((r-l)>1)// binary search
         {
         m=(r+l)>>1;//        m=(r+l)/2;
-        INC_COUNTER(0);
         if(_Under(Scoll[Q[m]],seg))
           l=m;
         else
@@ -217,23 +215,27 @@ int4 CIntersectionFinder::optInsDel(int4 end_index,ProgramStackRec *stack_pos,in
 // in current staircase and appropriate intersections.
 int4 CIntersectionFinder::Merge(int4 QB,int4 QE,int4 Size)
   {
-  int4 LB=0,new_size=0;
+  int4 cur_R_pos=0,new_size=0;
   int4 cur_stair=QB;
-  while ((cur_stair<QE)&&(LB<Size))
+  int4 cur_seg;
+  PSeg s;
+  while ((cur_stair<QE)&&(cur_R_pos<Size))
     {
-    PSeg s=Scoll[R[LB]];
+    s=Scoll[cur_seg=R[cur_R_pos]];
     if (_Below(E,s,Scoll[Q[cur_stair+1]]))
       {
-      if (SegmentBE[R[LB]].B>LBoundIdx) FindInt(QB,QE,cur_stair,s);      
-      L[new_size++]=R[LB++];
+      if (SegmentBE[cur_seg].B>LBoundIdx) FindInt(QB,QE,cur_stair,s);      
+      L[new_size++]=cur_seg;
+      cur_R_pos++;
       }
     else
       L[new_size++]=Q[++cur_stair];
     }
-  while (LB<Size)
+  while (cur_R_pos<Size)
     {
-    if (SegmentBE[R[LB]].B>LBoundIdx) FindInt(QB,QE,QE,Scoll[R[LB]]);      
-    L[new_size++]=R[LB++];
+    cur_seg=R[cur_R_pos++];
+    if (SegmentBE[cur_seg].B>LBoundIdx) FindInt(QB,QE,QE,Scoll[cur_seg]);      
+    L[new_size++]=cur_seg;
     }
   while (cur_stair<QE)
     L[new_size++]=Q[++cur_stair];
@@ -244,15 +246,18 @@ int4 CIntersectionFinder::Merge(int4 QB,int4 QE,int4 Size)
 // Same as Merge but merges only original stairs
 int4 CIntersectionFinder::optMerge(int4 QB,int4 QE,int4 Size)
   {
-  int4 LB=0,new_size=0;
+  int4 cur_R_pos=0,new_size=0;
   int4 cur_stair=QB;
-  while ((cur_stair<QE)&&(LB<Size))
+  int4 cur_seg;
+  PSeg s;
+  while ((cur_stair<QE)&&(cur_R_pos<Size))
     {
-    PSeg s=Scoll[R[LB]];
+    s=Scoll[cur_seg=R[cur_R_pos]];
     if (_Below(E,s,Scoll[Q[cur_stair+1]]))
       {
-      if (SegmentBE[R[LB]].B>LBoundIdx) optFindInt(QB,QE,cur_stair,s);      
-      L[new_size++]=R[LB++];
+      if (SegmentBE[cur_seg].B>LBoundIdx) optFindInt(QB,QE,cur_stair,s);      
+      L[new_size++]=cur_seg;
+      cur_R_pos++;
       }
     else
       {
@@ -261,10 +266,11 @@ int4 CIntersectionFinder::optMerge(int4 QB,int4 QE,int4 Size)
         L[new_size++]=Q[cur_stair];
       }
     }  
-    while (LB<Size)
+    while (cur_R_pos<Size)
       {
-      if (SegmentBE[R[LB]].B>LBoundIdx) optFindInt(QB,QE,QE,Scoll[R[LB]]);      
-      L[new_size++]=R[LB++];
+      cur_seg=R[cur_R_pos++];
+      if (SegmentBE[cur_seg].B>LBoundIdx) optFindInt(QB,QE,QE,Scoll[cur_seg]);      
+      L[new_size++]=cur_seg;
       }
     while (cur_stair<QE)
       {
@@ -281,32 +287,31 @@ int4 CIntersectionFinder::optMerge(int4 QB,int4 QE,int4 Size)
 // covering current strip with the staircase stairs below.   
 int4 CIntersectionFinder::Split(int4 &step_index,int4 Size)
   {
-  int4 father_last_step,new_L_size,j;
-
-  father_last_step=step_index; new_L_size=0;
-  for (j=0;j<Size;j++)
+  int4 father_last_step=step_index,new_L_size=0,cur_L_pos;
+  int4 cur_seg;
+  for (cur_L_pos=0;cur_L_pos<Size;cur_L_pos++)
     {
-    if(SegmentBE[L[j]].E>=RBoundIdx)//segment is covering current stripe
+    cur_seg=L[cur_L_pos];
+    if(SegmentBE[cur_seg].E>=RBoundIdx)//segment is covering current stripe
       {
       int4 step=step_index;
-      PSeg s=Scoll[L[j]];
-      while((father_last_step<step)&&(IntersectionsInCurStripe(Q[step],s)))
+      while((father_last_step<step)&&(IntersectionsInCurStripe(Q[step],Scoll[cur_seg])))
         step--;
       if(step_index!=step)
         {
         int_numb+=step_index-step;
-        R[new_L_size]=L[j];
+        R[new_L_size]=cur_seg;
         Loc[new_L_size++]=step_index;
         }
       else
         {
         step_index++;
-        Q[step_index]=L[j];
+        Q[step_index]=cur_seg;
         }  
       }
     else
       {
-      R[new_L_size]=L[j];
+      R[new_L_size]=cur_seg;
       Loc[new_L_size++]=step_index;
       }
     }
@@ -317,82 +322,83 @@ int4 CIntersectionFinder::Split(int4 &step_index,int4 Size)
 // same as Split but  add a part of the parent staircase stairs (inherited stairs) to the new one.
 int4 CIntersectionFinder::optSplit(int4 cur_father_pos,int4 &step_index,int4 Size)
   {
-  int4 father_last_step,new_L_size,cur_L_pos;
-
-  father_last_step=step_index; 
-  new_L_size=cur_L_pos=0;
-
+  int4 father_last_step=step_index,new_L_size=0,cur_L_pos=0;
+  int4 cur_seg;
   while ((cur_L_pos<Size)&&(cur_father_pos<=father_last_step))
-    {
-    PSeg s=Scoll[L[cur_L_pos]];
-    if(_Below(B,s,Scoll[Q[cur_father_pos]])) // current segment below candidate to inherit
       {
-      if(SegmentBE[L[cur_L_pos]].E>=RBoundIdx) // current segment covering strip
-        {
-        if(
-          ( (step_index>father_last_step)&&(IsIntersectInCurStripe(Q[step_index],s) ))
-          || (IsIntersectInCurStripe(Q[cur_father_pos],s))
-          ) // current segment intersect last stair or candidate to inherit 
-          { //add it to new L (R)
-          R[new_L_size]=L[cur_L_pos];
+      cur_seg=L[cur_L_pos];
+      PSeg s=Scoll[cur_seg];
+      if(_Below(B,s,Scoll[Q[cur_father_pos]])) // current segment below candidate to inherit
+          {
+          if(SegmentBE[cur_seg].E>=RBoundIdx) // current segment covering strip
+              {
+              if(
+                  ( (step_index>father_last_step)&&(IsIntersectInCurStripe(Q[step_index],s) ))
+                  || (IsIntersectInCurStripe(Q[cur_father_pos],s))
+                  ) // current segment intersect last stair or candidate to inherit 
+                  { //add it to new L (R)
+                  R[new_L_size]=cur_seg;
+                  Loc[new_L_size++]=step_index;
+                  }
+              else
+                  { //add it to Q as original
+                  step_index++;
+                  // if segment is over this stair it is over over previous inherited segment in father staircase
+                  // negative value of  father_loc[step_index] means it is original segment ( always cur_father_pos  >  inherit_each )              
+                  father_loc[step_index]=inherit_each-cur_father_pos; 
+                  Q[step_index]=cur_seg;
+                  }  
+              }
+          else
+              {
+              R[new_L_size]=cur_seg;
+              Loc[new_L_size++]=step_index;
+              }
+          cur_L_pos++; // move to next in L
+          }
+      else
+          {  // add candidate to inherit to Q
+          step_index++;
+          // if segment is over this stair it is over the same inherited segment in father staircase  
+          // positive value of  father_loc[step_index] means it is inherited segment                  
+          father_loc[step_index]=cur_father_pos;
+          Q[step_index]=Q[cur_father_pos];
+          cur_father_pos+=inherit_each;
+          };
+      }    
+  for(;cur_L_pos<Size;cur_L_pos++)  // father stair case is over. we are adding rest segments the same manner as in suboptimal case
+      {
+      cur_seg=L[cur_L_pos];
+      if(SegmentBE[cur_seg].E>=RBoundIdx)//segment is covering current stripe
+          {
+          if((step_index>father_last_step)&&(IsIntersectInCurStripe(Q[step_index],Scoll[cur_seg])))// if it intesects last stair
+              {  // add it to new L
+              R[new_L_size]=cur_seg;
+              Loc[new_L_size++]=step_index;
+              }
+          else
+              {  // add it to Q
+              step_index++;
+              // negative value of  father_loc[step_index] means it is original segment ( always cur_father_pos  >  inherit_each )              
+              father_loc[step_index]=inherit_each-cur_father_pos;
+              Q[step_index]=cur_seg;
+              }  
+          }
+      else
+          { // add it to new L
+          R[new_L_size]=cur_seg;
           Loc[new_L_size++]=step_index;
           }
-        else
-          { //add it to Q as original
-          step_index++;
-          // if segment is over this stair it is over over previous inherited segment in father staircase
-          // negative value of  father_loc[step_index] means it is original segment ( always cur_father_pos  >  inherit_each )              
-          father_loc[step_index]=inherit_each-cur_father_pos; 
-          Q[step_index]=L[cur_L_pos];
-          }  
-        }
-      else
-        {
-        R[new_L_size]=L[cur_L_pos];
-        Loc[new_L_size++]=step_index;
-        }
-      cur_L_pos++; // move to next in L
-      }
-    else
-      {  // add candidate to inherit to Q
-      step_index++;
-      // if segment is over this stair it is over the same inherited segment in father staircase  
-      // positive value of  father_loc[step_index] means it is inherited segment                  
-      father_loc[step_index]=cur_father_pos;
-      Q[step_index]=Q[cur_father_pos];
-      cur_father_pos+=inherit_each;
       };
-    }    
-  for(;cur_L_pos<Size;cur_L_pos++)  // father stair case is over. we are adding rest segments the same manner as in suboptimal case
-    if(SegmentBE[L[cur_L_pos]].E>=RBoundIdx)//segment is covering current stripe
-      {
-      if((step_index>father_last_step)&&(IsIntersectInCurStripe(Q[step_index],Scoll[L[cur_L_pos]])))// if it intesects last stair
-        {  // add it to new L
-        R[new_L_size]=L[cur_L_pos];
-        Loc[new_L_size++]=step_index;
-        }
-      else
-        {  // add it to Q
-        step_index++;
-        // negative value of  father_loc[step_index] means it is original segment ( always cur_father_pos  >  inherit_each )              
-        father_loc[step_index]=inherit_each-cur_father_pos;
-        Q[step_index]=L[cur_L_pos];
-        }  
-      }
-    else
-      { // add it to new L
-      R[new_L_size]=L[cur_L_pos];
-      Loc[new_L_size++]=step_index;
-      }
-    for(;cur_father_pos<=father_last_step;cur_father_pos+=inherit_each) // L segments is over. We are adding rest inherited father segments to Q
+  for(;cur_father_pos<=father_last_step;cur_father_pos+=inherit_each) // L segments is over. We are adding rest inherited father segments to Q
       {
       step_index++;
       // positive value of  father_loc[step_index] means it is inherited segment                  
       father_loc[step_index]=cur_father_pos;
       Q[step_index]=Q[cur_father_pos];
       };
-    ExchangeLR();
-    return new_L_size;
+  ExchangeLR();
+  return new_L_size;
   };
 
 // SearchInStrip finds and reports all intersection in a stripe containing no segment ends
@@ -419,7 +425,7 @@ int4 CIntersectionFinder::SearchInStrip(int4 QP,int4 Size)
 
 // main function to find intersections for fast algorithm
 int4 CIntersectionFinder::FindR( int4 ladder_start_index,int4 interval_left_index,int4 interval_right_index,
-                                ProgramStackRec *stack_pos, int4 Size)
+                                ProgramStackRec *stack_pos, int4 Size,int4 call_numb)
   {
 //  int4 RSize;
   B=ENDS[interval_left_index].x;E=ENDS[RBoundIdx=interval_right_index].x; 
@@ -436,14 +442,14 @@ int4 CIntersectionFinder::FindR( int4 ladder_start_index,int4 interval_left_inde
       stack_pos=stack_rec.Set(stack_pos,interval_right_index);
       }
     };
-  if (int_numb>Size) //if found a lot of intersections repeat FindR
-    Size=FindR(stack_rec.Q_pos,interval_left_index,interval_right_index,stack_pos,Size);
+  if ((int_numb>Size)&&(call_numb<max_call)) //if found a lot of intersections repeat FindR
+    Size=FindR(stack_rec.Q_pos,interval_left_index,interval_right_index,stack_pos,Size,call_numb+1);
   else //cut stripe on the middle
     {
     int4 m=(interval_left_index+interval_right_index)/2; 
-    Size=FindR(stack_rec.Q_pos,interval_left_index,m,stack_pos,Size);
+    Size=FindR(stack_rec.Q_pos,interval_left_index,m,stack_pos,Size,0);
     Size=InsDel(m,stack_pos,Size);
-    Size=FindR(stack_rec.Q_pos,m,interval_right_index,stack_pos,Size);
+    Size=FindR(stack_rec.Q_pos,m,interval_right_index,stack_pos,Size,0);
     }
   if (ladder_start_index>=stack_rec.Q_pos) return Size;
   B=ENDS[LBoundIdx=interval_left_index].x;   E=ENDS[interval_right_index].x;
@@ -454,7 +460,7 @@ int4 CIntersectionFinder::FindR( int4 ladder_start_index,int4 interval_left_inde
 
 // main function to find intersections for optimal algorithm
 int4 CIntersectionFinder::optFindR(int4 father_first_step, int4 ladder_start_index,int4 interval_left_index,int4 interval_right_index,
-                                   ProgramStackRec *stack_pos,int4 Size)
+                                   ProgramStackRec *stack_pos,int4 Size,int4 call_numb)
   {
   B=ENDS[interval_left_index].x;E=ENDS[RBoundIdx=interval_right_index].x; 
   if (interval_right_index-interval_left_index==1)
@@ -477,14 +483,14 @@ int4 CIntersectionFinder::optFindR(int4 father_first_step, int4 ladder_start_ind
     }           
   if((ladder_start_index<stack_rec.Q_pos))
     stack_pos=stack_rec.Set(stack_pos,interval_right_index);
-  if (int_numb>Size+1) //if found a lot of intersections repeat optFindR
-    Size=optFindR(ladder_start_index+1, stack_rec.Q_pos,interval_left_index,interval_right_index,stack_pos,Size);
+  if ((int_numb>Size)&&(call_numb<max_call)) //if found a lot of intersections repeat optFindR
+    Size=optFindR(ladder_start_index+1, stack_rec.Q_pos,interval_left_index,interval_right_index,stack_pos,Size,call_numb+1);
   else //cut stripe on the middle
     {
     int4 m=(interval_left_index+interval_right_index)/2; 
-    Size=optFindR(ladder_start_index+1,stack_rec.Q_pos,interval_left_index,m,stack_pos,Size);
+    Size=optFindR(ladder_start_index+1,stack_rec.Q_pos,interval_left_index,m,stack_pos,Size,0);
     Size=optInsDel(m,stack_pos,Size);
-    Size=optFindR(ladder_start_index+1,stack_rec.Q_pos,m,interval_right_index,stack_pos,Size);
+    Size=optFindR(ladder_start_index+1,stack_rec.Q_pos,m,interval_right_index,stack_pos,Size,0);
     }
   if (ladder_start_index>=stack_rec.Q_pos) return Size;
   LBoundIdx=interval_left_index; 
@@ -649,11 +655,11 @@ void CIntersectionFinder::balaban_fast(int4 n,PSeg _Scoll[])
   Scoll=_Scoll;  nTotSegm=n;
   AllocMem(FALSE);
   
-  int4 l_size=prepare_ends(n);
+  int4 Size=prepare_ends(n);
   ProgramStackRec stack_rec(-1,2*n);  //need to be initialized this way
-  l_size=FindR(-1,0,  n  ,&stack_rec,l_size);
-  l_size=InsDel(n,&stack_rec,l_size);
-  l_size=FindR(-1,n,2*n-1,&stack_rec, l_size);
+  Size=FindR(-1,0,  n  ,&stack_rec,Size,0);
+  Size=InsDel(n,&stack_rec,Size);
+  Size=FindR(-1,n,2*n-1,&stack_rec, Size,0);
 
   FreeMem();
   }
@@ -663,11 +669,11 @@ void CIntersectionFinder::balaban_optimal(int4 n,PSeg _Scoll[])
   Scoll=_Scoll;  nTotSegm=n;
   AllocMem(TRUE);
   
-  int4 l_size=prepare_ends(n);
+  int4 Size=prepare_ends(n);
   ProgramStackRec stack_rec(inherit_each,2*n);  //need to be initialized this way  
-  l_size=optFindR(inherit_each+1,inherit_each,0,  n ,&stack_rec,l_size);
-  l_size=optInsDel(n,&stack_rec,l_size);
-  l_size=optFindR(inherit_each+1,inherit_each,n,2*n-1,&stack_rec,l_size);
+  Size=optFindR(inherit_each+1,inherit_each,0,  n ,&stack_rec,Size,0);
+  Size=optInsDel(n,&stack_rec,Size);
+  Size=optFindR(inherit_each+1,inherit_each,n,2*n-1,&stack_rec,Size,0);
 
   FreeMem();
   }
@@ -721,7 +727,7 @@ void CIntersectionFinder::fast_parallel(int4 n,PSeg _Scoll[],PRegObj add_reg)
     {
     Size=CalcLAt(m);
     ProgramStackRec stack_rec(-1,2*nTotSegm); 
-    FindR(-1,m,2*n-1,&stack_rec, Size);    
+    FindR(-1,m,2*n-1,&stack_rec, Size,0);    
     WaitForSingleObject(hThread,INFINITE);
     CloseHandle(hThread);
     }
@@ -868,7 +874,6 @@ void CIntersectionFinder::simple_sweep(int4 n,PSeg Scoll[])
           int4 node2=SweepLine[s2].seg_node_idx;
           IntOnRightOfSWL(s1,SweepLine[SweepLine[node2].next].segment);
           IntOnRightOfSWL(SweepLine[SweepLine[node1].prev].segment,s2);
-         // if(!IS_LINE_SEGMENTS)   IntOnRightOfSWL(s2,s1);
           SweepLine[node1].segment=s2;
           SweepLine[s2].seg_node_idx=node1;
           SweepLine[node2].segment=s1;
@@ -922,7 +927,7 @@ void CIntersectionFinder::simple_sweep(int4 n,PSeg Scoll[])
    
  void CIntersectionFinder::CheckEventsMem()
    {
-     if(events_n+2>events_max)
+     if(events_n+3>events_max)
        {
          events_max*=2;
          TEvent *newEvents= new TEvent[events_max];
@@ -939,11 +944,19 @@ void CIntersectionFinder::IntOnRightOfSWL(int4 s1,int4 s2)// important s1<s2
     if((s1==-1)||(s2==-1))return;
     CheckEventsMem();
     TEvent *ev=Events+events_n;
-    if(_FindAndRegIPointOnRightOfSWL(sweep_line_x,Scoll[s1],Scoll[s2],NULL,ev->pt))// find and place to ev->pt
+    int4 n;
+    if(n=_FindAndRegIPointOnRightOfSWL(sweep_line_x,Scoll[s1],Scoll[s2],NULL,&(ev->pt),&(ev[1].pt)))// find and place to ev->pt
       {
         ev->s1=s1;
         ev->s2=s2;
         EventsAddNew();
+/*        if(n==2)
+          {
+            ev++;
+            ev->s1=s1;
+            ev->s2=s2;
+            EventsAddNew();
+          }*/
       }
   };
   
@@ -994,7 +1007,7 @@ void CIntersectionFinder::bentley_ottmann(int4 n,PSeg _Scoll[])
       s1=Events->s1;
       s2=Events->s2;
       if((s1!=-1)&&(s2!=-1))
-        _FindAndRegIPointOnRightOfSWL(sweep_line_x,Scoll[s1],Scoll[s2],_reg_obj,Events->pt);// register found intersection
+        _FindAndRegIPointOnRightOfSWL(sweep_line_x,Scoll[s1],Scoll[s2],_reg_obj,&(Events->pt),NULL);// register found intersection
       EventsDelMin();  
       while((s1==Events->s1)&&(s2==Events->s2))
           {
