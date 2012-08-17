@@ -950,13 +950,13 @@ void CIntersectionFinder::IntOnRightOfSWL(int4 s1,int4 s2)// important s1<s2
         ev->s1=s1;
         ev->s2=s2;
         EventsAddNew();
-/*        if(n==2)
+        if(n==2)
           {
             ev++;
-            ev->s1=s1;
-            ev->s2=s2;
+            ev->s1=s2;
+            ev->s2=s1;
             EventsAddNew();
-          }*/
+          }
       }
   };
   
@@ -996,7 +996,6 @@ void CIntersectionFinder::FreeBOMem()
  
 void CIntersectionFinder::bentley_ottmann(int4 n,PSeg _Scoll[]) 
   {
-  if(!IS_LINE_SEGMENTS) return; //doesn't work correctly for nonline segments
   Scoll=_Scoll;  nTotSegm=n;
   AllocBOMem();
   PrepareEvents();
