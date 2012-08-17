@@ -109,7 +109,7 @@ counters_mute=counters_string;
 #ifdef COUNTERS_ON
     printf("-c: counters are printed, if presented\n");
 #endif    
-    printf("Important! -sa is not compartible with -dm -dl and bently_ottmann algorithm!\n");
+    printf("Important! -sa is not compartible with -dm and -dl options!\n");
     return 0;
     }
   else
