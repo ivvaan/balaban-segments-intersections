@@ -48,6 +48,8 @@ class TLineSegment1
       shift.x=rv.GetRandomDouble()-org.x;
       shift.y=rv.GetRandomDouble()-org.y;
       Refine();
+      if(parallel==type)
+        shift.y=0;
       if(mixed==type)
         {
         shift.y=0;
@@ -60,20 +62,20 @@ class TLineSegment1
         shift=par*shift;
         }
       };
-    /*virtual*/ TPlaneVect BegPoint()
+    TPlaneVect BegPoint()
       {return org;};
-    /*virtual*/ TPlaneVect EndPoint()
+    TPlaneVect EndPoint()
       {return org+shift;};
-    /*virtual*/ void BegPoint(REAL &x,REAL &y)
+    void BegPoint(REAL &x,REAL &y)
       {x=org.x;y=org.y;};
-    /*virtual*/ void EndPoint(REAL &x,REAL &y)
+    void EndPoint(REAL &x,REAL &y)
       {x=org.x+shift.x;y=org.y+shift.y;};
     int4 under(TPlaneVect &v) //segment placed under point v
       {REAL res=(v-org)%shift;
     //   if (fabs(res)==0.0) throw 1;
     return (res<=0);
       };
-    /*virtual*/ int4 upper(TPlaneVect &v)   
+    int4 upper(TPlaneVect &v)   
       {REAL res=(v-org)%shift;
     //   if (fabs(res)==0.0) throw 1;
     return (res>0);
@@ -178,9 +180,9 @@ class TLineSegment2
       };
 
 
-    /*virtual*/ TPlaneVect BegPoint()
+    TPlaneVect BegPoint()
       {return TPlaneVect(x1,a*x1+b);};
-    /*virtual*/ TPlaneVect EndPoint()
+    TPlaneVect EndPoint()
       {return TPlaneVect(x2,a*x2+b);};
     void BegPoint(REAL &x,REAL &y)
       {x=x1;y=a*x1+b;};
@@ -412,41 +414,32 @@ class SegmentFunctions
       return n; 
       };
 
-    static  int4 __FindAndRegIPointOnRightOfSWL(REAL swl_x,PSeg s1,PSeg s2,PRegObj intersection_registrator,TPlaneVect &int_point)
+    static  int4 __FindAndRegIPointOnRightOfSWL(REAL swl_x,PSeg s1,PSeg s2,PRegObj intersection_registrator,TPlaneVect *p1,TPlaneVect *p2)
       {
        if(intersection_registrator)//just register intersection
-           register_intersection(intersection_registrator,s1,s2,1,&int_point);
-       else //find first intersection
+           register_intersection(intersection_registrator,s1,s2,1,p1);
+       else //find  intersections
          {
          
               TPlaneVect p[2];
               int4 n=IntPoint((SEGMENT*)s1,(SEGMENT*)s2,p);
-              if(n==0)return 0;
-              //doesn't work correctly for nonline segments
-/*              if(n==2)
+              if(n&&(p->x>swl_x)) *p1=*p;
+              
+/*              if(n==0)return 0;
+              TPlaneVect *pt=p1;
+              int4 res=0;
+              if(p[0].x>swl_x)
                 {
-                  int4 f=0,l=1;
-                  if(p[0].x>p[1].x) {f=1;l=0;}
-                  if(p[f].x>swl_x)
-                    {
-                        int_point=p[f];
-                        return 1;
-                    }
-                  else
-                    if(p[l].x>swl_x)
-                        {
-                            int_point=p[l];
-                            return 1;
-                        } 
+                    *pt=p[0];
+                    pt=p2;
+                    res++;
                 }
-              else*/
+              if((n==2)&&(p[1].x>swl_x))
                 {
-                  if(p->x>swl_x)
-                    {
-                        int_point=*p;
-                        return 1;
-                    }
-                 }      
+                    *pt=p[1];
+                    res++;
+                } 
+               return res;   */  
          };
         return 0;    
       };
