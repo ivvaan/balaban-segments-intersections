@@ -423,23 +423,25 @@ class SegmentFunctions
          
               TPlaneVect p[2];
               int4 n=IntPoint((SEGMENT*)s1,(SEGMENT*)s2,p);
-              if(n&&(p->x>swl_x)) *p1=*p;
+//              if(n&&(p->x>swl_x)) *p1=*p;
               
-/*              if(n==0)return 0;
+              if(n==0)return 0;
               TPlaneVect *pt=p1;
               int4 res=0;
-              if(p[0].x>swl_x)
+              int4 f=0,l=1;
+              if((n==2)&&(p[0].x>p[1].x)){f=1;l=0;};
+              if(p[f].x>swl_x)
                 {
-                    *pt=p[0];
+                    *pt=p[f];
                     pt=p2;
                     res++;
                 }
-              if((n==2)&&(p[1].x>swl_x))
+              if((n==2)&&(p[l].x>swl_x))
                 {
-                    *pt=p[1];
+                    *pt=p[l];
                     res++;
                 } 
-               return res;   */  
+               return res;   
          };
         return 0;    
       };
