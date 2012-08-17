@@ -38,12 +38,13 @@ typedef int4 (*FIsIntersetInStripe)(REAL b,REAL e, PSeg s1,PSeg s2);//finds if s
 typedef void (*FGetPoint)(PSeg s,REAL &x,REAL &y);//puts a segment s end point coordinates into x and y
 typedef int4 (*FUnder)(PSeg s1,PSeg s2);//returns TRUE if s2 begin point is above s1
 
-typedef int4 (*FFindAndRegIPointOnRightOfSWL)(REAL swl_x,PSeg s1,PSeg s2,PRegObj intersection_registrator,TPlaneVect &int_point); 
+typedef int4 (*FFindAndRegIPointOnRightOfSWL)(REAL swl_x,PSeg s1,PSeg s2,PRegObj intersection_registrator,TPlaneVect *p1,TPlaneVect *p2); 
 //finds first intersection on right of sweep line (swl_x), register it and place x coord to int_point_x
 
 
 const int4 undef_loc=-2147483648;
 const int4 inherit_each=32; // defines how often in optimal algorithm stairs are inherited,  one inherited per inherit_each
+const int4 max_call=5; //max number of sequential recursive call (opt)FindR before dividing current strip
 
 
 struct EndIndexes
@@ -69,10 +70,12 @@ typedef int4 SegmentInfo;
 #ifdef COUNTERS_ON
 #define INC_COUNTER(i) (my_counter[i]++)
 #define SET_COUNTER(i,value) my_counter[i]=value
+#define ADD_COUNTER(i,value) my_counter[i]+=value
 #define SET_COUNTER_IFGT(i,value) if(value>my_counter[i])my_counter[i]=value
 #else
 #define INC_COUNTER(i) 
 #define SET_COUNTER(i,value)
+#define ADD_COUNTER(i,value)
 #define SET_COUNTER_IFGT(i,value)
 #endif
 
@@ -259,14 +262,14 @@ class CIntersectionFinder
      FFindAndRegIPointOnRightOfSWL findAndRegIPointOnRightOfSWL);
 
     void balaban_fast(int4 n,PSeg _Scoll[]);
-    int4 FindR(int4 ladder_start_index,int4 interval_left_index,int4 interval_right_index,ProgramStackRec *stack_pos,int4 Size);
+    int4 FindR(int4 ladder_start_index,int4 interval_left_index,int4 interval_right_index,ProgramStackRec *stack_pos,int4 Size,int4 call_numb);
 
     void balaban_optimal(int4 n,PSeg _Scoll[]);
     int4 optFindR(int4 father_first_step,int4 ladder_start_index,int4 interval_left_index,int4 interval_right_index,
-      ProgramStackRec *stack_pos,int4 Size);
+      ProgramStackRec *stack_pos,int4 Size,int4 call_numb);
 
     void fast_parallel(int4 n,PSeg _Scoll[],PRegObj add_reg);
-    void Run(){ ProgramStackRec stack_rec(-1,2*nTotSegm);  FindR(-1,0,   run_to  ,&stack_rec,1); }
+    void Run(){ ProgramStackRec stack_rec(-1,2*nTotSegm);  FindR(-1,0,   run_to  ,&stack_rec,1,0); }
 
     // trivial algorithm
     void trivial(int4 n,PSeg sgm[]);
