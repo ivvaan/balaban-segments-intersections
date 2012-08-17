@@ -40,7 +40,7 @@ enum _Segment
   };
 enum _Distribution
   {
-  random=0,mixed,small,param_defined
+  random=0,parallel,mixed,small,param_defined
   };
 
 
