@@ -38,8 +38,10 @@ typedef int4 (*FIsIntersetInStripe)(REAL b,REAL e, PSeg s1,PSeg s2);//finds if s
 typedef void (*FGetPoint)(PSeg s,REAL &x,REAL &y);//puts a segment s end point coordinates into x and y
 typedef int4 (*FUnder)(PSeg s1,PSeg s2);//returns TRUE if s2 begin point is above s1
 
-typedef int4 (*FFindAndRegIPointOnRightOfSWL)(REAL swl_x,PSeg s1,PSeg s2,PRegObj intersection_registrator,TPlaneVect *p1,TPlaneVect *p2); 
-//finds first intersection on right of sweep line (swl_x), register it and place x coord to int_point_x
+typedef int4 (*FFindAndRegIPointOnRightOfSWL)(REAL swl_x,PSeg s1,PSeg s2,TPlaneVect *p1,TPlaneVect *p2); 
+//finds  intersections on right of sweep line (swl_x), register it and place x coord to int_point_x
+typedef REAL (*FYAtX)(PSeg s,REAL X);
+typedef void (*FRegIntersection)(PRegObj intersection_registrator,PSeg s1,PSeg s2,int4 n,TPlaneVect *p);
 
 
 const int4 undef_loc=-2147483648;
@@ -148,16 +150,22 @@ class CIntersectionFinder
   FGetPoint _BegPoint;
   FGetPoint _EndPoint;
   FUnder _Under;
+
   // for optimal algorithm
   FIsIntersetInStripe _IsIntersetInStripe;
   
   //for Bentley & Ottmann alg
   FFindAndRegIPointOnRightOfSWL _FindAndRegIPointOnRightOfSWL;
+
+  //for strait line speedup test
+  FYAtX _YAtX;
+  FRegIntersection _RegIntersection;
   // end functions to deal with segments
   
   //begin strutures for Balaban algorithms
   int4 nTotSegm;
   SegmentInfo * L,* R,* Q;
+  REAL * QY;
   EndIndexes *SegmentBE;
   TSegmEnd *ENDS;
   int4 *Loc;
@@ -218,6 +226,7 @@ class CIntersectionFinder
   int4 InsDel(int4 n,ProgramStackRec * stack_pos,int4 Size);
   int4 Merge(int4 QB,int4 QE,int4 Size);
   int4 Split(int4 &step_index,int4 Size);
+  int4 fastSplit(int4 &step_index,int4 Size);
 
   //same for optimal algorithm
   void optFindInt(int4 QB,int4 QE,int4 l,PSeg s);
@@ -239,13 +248,16 @@ class CIntersectionFinder
  void PrepareEvents();
  void EventsDelMin();
  void EventsAddNew();
- void CheckEventsMem();
  void AllocBOMem();
  void FreeBOMem();
-// void SweepLinePrint();
 
 
   public:
+  BOOL dont_need_int_points;/*shows that we need only intersecting pairs and
+     don't need to know a point where the pair intersects */
+
+
+
     // some counters to explore algorithm (not nessesary for functioning)
     double my_counter[8];
 
@@ -258,8 +270,13 @@ class CIntersectionFinder
       FFindAndRegIPointsInStripe findAndRegIPointsInStripe,
       FIsIntersetInStripe isIntersetInStripe,
       FGetPoint begPoint,FGetPoint endPoint,
-      FUnder under,PRegObj reg_obj,int4 is_line,
-     FFindAndRegIPointOnRightOfSWL findAndRegIPointOnRightOfSWL);
+      FUnder under,
+      FFindAndRegIPointOnRightOfSWL findAndRegIPointOnRightOfSWL,
+      FYAtX yAtX,
+      FRegIntersection regIntersection,
+      PRegObj reg_obj,
+      int4 is_line
+     );
 
     void balaban_fast(int4 n,PSeg _Scoll[]);
     int4 FindR(int4 ladder_start_index,int4 interval_left_index,int4 interval_right_index,ProgramStackRec *stack_pos,int4 Size,int4 call_numb);
@@ -277,7 +294,7 @@ class CIntersectionFinder
     // simple sweepline algorithm (not Bentley & Ottmann!)
     void simple_sweep(int4 n,PSeg Scoll[]);
 
-    //  Bentley & Ottmanns
+    //  Bentley & Ottmann
     void bentley_ottmann(int4 n,PSeg _Scoll[]);
 
   };
