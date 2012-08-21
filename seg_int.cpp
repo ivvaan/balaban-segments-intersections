@@ -36,12 +36,12 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-double _benchmark(char *counters_string,int4 n,PSeg *coll,int4 s_type,int4 alg,double &res)
+double _benchmark(char *counters_string,int4 n,PSeg *coll,int4 s_type,int4 alg,BOOL dont_need_ip,double &res)
   {
   double start,stop;
   double c[8];
   start=clock();
-  res=find_intersections(s_type,n,coll,alg,c);
+  res=find_intersections(s_type,n,coll,alg,dont_need_ip,c);
   stop=clock();
   if(counters_string)
    sprintf(counters_string,"%13.0f;%13.0f;%13.0f;%13.0f;%13.0f;%13.0f;%13.0f;%13.0f",c[0],c[1],c[2],c[3],c[4],c[5],c[6],c[7]);
@@ -56,8 +56,8 @@ int main(int argc, char* argv[])
   REAL p=1.0;
   double exec_time[33],nInt[33];
   char *ss="Lla",*sd="rlmsp";
-  BOOL mute=FALSE,print_counters=FALSE,wait=FALSE;
-  char counters_string[256],*pcs=NULL,*counters_mute;
+  BOOL mute=FALSE,print_counters=FALSE,wait=FALSE,dont_need_ip=FALSE;
+  char counters_string[256],*pcs=NULL,*counters_mute,rpar[]="-r";
   int4 alg_list[]={ triv, simple_sweep, fast, optimal, fast_parallel, bentley_ottmann};
   char *alg_names[]={"trivial","simple_sweep","fast","optimal","fast_parallel","bentley_ottmann"};
 
@@ -78,9 +78,9 @@ counters_mute=counters_string;
   if (argc==1)
     {
 #ifdef COUNTERS_ON
-    printf("usage: seg_int -aA -sS -dD -nN -pP -m -w -c\n");
+    printf("usage: seg_int -aA -sS -dD -nN -pP -r -m -w -c\n");
 #else    
-    printf("usage: seg_int -aA -sS -dD -nN -pP -m -w\n");
+    printf("usage: seg_int -aA -sS -dD -nN -pP -r -m -w\n");
 #endif    
     printf("example: seg_int -a14 -sa -dp -n20000 -p5.5\n");
     printf("-aA: type of algorithms tested\n");
@@ -104,12 +104,13 @@ counters_mute=counters_string;
     printf(" D=p: random segment with parameter defined length\n");
     printf("-nN: number of segments\n");
     printf("-pP: parameter value, must be positive\n");
+    printf("-r: if presented, fast algorithm doesn't find intersection points but only intersecting pairs\n");
     printf("-m: if presented, means 'mute' mode - few information printed\n");
     printf("-w: if presented, program wait until 'Enter' pressed before closing\n");
 #ifdef COUNTERS_ON
     printf("-c: counters are printed, if presented\n");
 #endif    
-    printf("Important! -sa is not compartible with -dm and -dl options!\n");
+    printf("Important! -sa is not compartible with -dm, -dl and -r options!\n");
     return 0;
     }
   else
@@ -172,6 +173,11 @@ counters_mute=counters_string;
               {p=1.0; printf("some error in -p param. 1.0 used instead.\n");}
             }
             break;
+          case 'r':
+            {
+            dont_need_ip=TRUE;
+            }
+            break;
           case 'm':
             {
             mute=TRUE;
@@ -192,18 +198,18 @@ counters_mute=counters_string;
           }
         }
     }
-  if(!mute)printf("actual params is: -a%i -s%c -d%c -n%i -p%f\n", alg, ss[seg_type], sd[d], n, p);
+  if(!dont_need_ip)rpar[0]=0;
+  if(!mute)printf("actual params is: -a%i -s%c -d%c -n%i -p%f %s\n", alg, ss[seg_type], sd[d], n, p,rpar);
   if((seg_type==arc)&&(d==mixed)) {printf("-sa -dm is not compartible!/n"); return 0;}
   if((seg_type==arc)&&(d==parallel)) {printf("-sa -dl is not compartible!/n"); return 0;}
-  
   PSeg *coll=create_test_collection(seg_type,n,d,p);
   for(int4 a=0;a<sizeof(alg_list)/sizeof(alg_list[0]);a++)
     {
       if(alg&alg_list[a])
         {
-        exec_time[a]=_benchmark(pcs,n,coll,seg_type,alg_list[a],nInt[a]);
+        exec_time[a]=_benchmark(pcs,n,coll,seg_type,alg_list[a],dont_need_ip,nInt[a]);
         if(mute)
-          printf("a%i;s%c;d%c;n%i;i%13.0f;t%8.2f;p%f;%s\n",alg_list[a],ss[seg_type], sd[d],n,nInt[a],exec_time[a],p,counters_mute);
+          printf("a%i;s%c;d%c;r%i;n%i;i%13.0f;t%8.2f;p%f;%s\n",alg_list[a],ss[seg_type], sd[d],dont_need_ip,n,nInt[a],exec_time[a],p,counters_mute);
         else
           printf("%s intersections=%13.0f time=%8.2f%s\n",alg_names[a],nInt[a],exec_time[a],counters_string);
         }
@@ -211,7 +217,7 @@ counters_mute=counters_string;
   //printf("ratio fast  =%6.3f\n",0.5*(n*exec_time[2]*(n-1))/(exec_time[0]*nInt[2]));
 
   delete_test_collection(seg_type,coll);
-  if(wait)getchar();
+  if(wait){printf("press 'Enter' to continue"); getchar();}
   return 0;
   }
 
