@@ -32,17 +32,20 @@ typedef void (*PRegObj);
 
 
 typedef int4 (*FBelow)(REAL x,PSeg s1,PSeg s2);//retuns if s1 below s2 at x
-typedef int4 (*FFindAndRegIPoints)(PSeg s1,PSeg s2,PRegObj intersection_registrator);//finds all intersections of s1 and s2 and register it
-typedef int4 (*FFindAndRegIPointsInStripe)(REAL b,REAL e, PSeg s1,PSeg s2,PRegObj intersection_registrator);//finds all intersection points of s1 and s2 in the stripe b,e and register them
+typedef int4 (*FFindAndRegIPoints)(PSeg s1,PSeg s2,PRegObj intersection_registrator, BOOL no_ip);/*finds all intersections of s1 and s2 and 
+  register them. If no_ip is true function doesn't find and register intersection pointints but only pairs. */
+typedef int4 (*FFindAndRegIPointsInStripe)(REAL b,REAL e, PSeg s1,PSeg s2,PRegObj intersection_registrator, BOOL no_ip);/*finds all intersection points of s1 and s2 in the stripe b,e and 
+  register them. If no_ip is true function doesn't find and register intersection pointints but only pairs.*/
 typedef int4 (*FIsIntersetInStripe)(REAL b,REAL e, PSeg s1,PSeg s2);//finds if s1 and s2 in the stripe b,e have an intersection point (no registration)
 typedef void (*FGetPoint)(PSeg s,REAL &x,REAL &y);//puts a segment s end point coordinates into x and y
 typedef int4 (*FUnder)(PSeg s1,PSeg s2);//returns TRUE if s2 begin point is above s1
 
-typedef int4 (*FFindAndRegIPointOnRightOfSWL)(REAL swl_x,PSeg s1,PSeg s2,TPlaneVect *p1,TPlaneVect *p2); 
-//finds  intersections on right of sweep line (swl_x), register it and place x coord to int_point_x
-typedef REAL (*FYAtX)(PSeg s,REAL X);
-typedef void (*FRegIntersection)(PRegObj intersection_registrator,PSeg s1,PSeg s2,int4 n,TPlaneVect *p);
-
+typedef int4 (*FFindAndRegIPointOnRightOfSWL)(REAL swl_x,PSeg s1,PSeg s2,TPlaneVect *p1,TPlaneVect *p2);//finds  intersections on right of sweep line (swl_x), register it and place x coord to int_point_x
+typedef REAL (*FYAtX)(PSeg s,REAL X);//given X coord, returns Y coord of a segment s 
+typedef void (*FRegIntersection)(PRegObj intersection_registrator,PSeg s1,PSeg s2,int4 n,TPlaneVect *p);/* register intersections of segments s1 and s2. 
+  intersection_registrator - object used to register intersections (for example pointer to some list to add intersections found)
+  n - the number of the intesection points, p- pointer to intersection points array*/
+  
 
 const int4 undef_loc=-2147483648;
 const int4 inherit_each=32; // defines how often in optimal algorithm stairs are inherited,  one inherited per inherit_each
@@ -63,7 +66,7 @@ struct ProgramStackRec
   inline ProgramStackRec *Set(ProgramStackRec *p,int4 rb){ prev=p,right_bound=rb;return this;};
   };
 
-typedef int4 SegmentInfo;
+
 
 
 //uncomment line bellow to switch on counters
@@ -81,11 +84,23 @@ typedef int4 SegmentInfo;
 #define SET_COUNTER_IFGT(i,value)
 #endif
 
+typedef int4 SegmentInfo;
+
+struct no_ipSegmentInfo
+  {
+    int4 s;
+    REAL y;
+    bool operator<(const no_ipSegmentInfo &p)
+      {
+      return y<p.y;
+      };    
+  };
+
 struct TEnd
   {
     REAL x;
     // REAL y;
-    int4 islast;
+    bool islast;
     bool operator<(const TEnd &p)
       {
       return ((x<p.x)||
@@ -157,7 +172,7 @@ class CIntersectionFinder
   //for Bentley & Ottmann alg
   FFindAndRegIPointOnRightOfSWL _FindAndRegIPointOnRightOfSWL;
 
-  //for strait line speedup test
+  //for no_ip  strait line speedup 
   FYAtX _YAtX;
   FRegIntersection _RegIntersection;
   // end functions to deal with segments
@@ -165,7 +180,7 @@ class CIntersectionFinder
   //begin strutures for Balaban algorithms
   int4 nTotSegm;
   SegmentInfo * L,* R,* Q;
-  REAL * QY;
+  no_ipSegmentInfo * no_ipL,* no_ipR,* no_ipQ;
   EndIndexes *SegmentBE;
   TSegmEnd *ENDS;
   int4 *Loc;
@@ -174,7 +189,7 @@ class CIntersectionFinder
   long int_numb;
   int4 LBoundIdx,RBoundIdx;
   REAL B,E;
-
+  
   //for optimal algorithm
   int4 *father_loc;
   //for parallel version  
@@ -195,7 +210,7 @@ class CIntersectionFinder
   //helpers for segment functions
   inline int4 IntersectionsInCurStripe(SegmentInfo  s1,PSeg s2)
     {
-    return _FindAndRegIPointsInStripe(B,E,Scoll[s1],s2,_reg_obj);
+    return _FindAndRegIPointsInStripe(B,E,Scoll[s1],s2,_reg_obj,dont_need_int_points);
     };
 
   inline int4 IsIntersectInCurStripe(SegmentInfo  s1,PSeg s2)
@@ -205,7 +220,7 @@ class CIntersectionFinder
 
   inline int4 Intersections(SegmentInfo  s1,PSeg s2)
     {
-    return _FindAndRegIPoints(Scoll[s1],s2,_reg_obj);
+    return _FindAndRegIPoints(Scoll[s1],s2,_reg_obj,dont_need_int_points);
     };
 
   inline void ExchangeLR()
@@ -213,9 +228,14 @@ class CIntersectionFinder
     register SegmentInfo* tmp=L;
     L=R; R=tmp;
     };
-  //common  functions
+  inline void no_ipExchangeLR()
+    {
+    register no_ipSegmentInfo* tmp=no_ipL;
+    no_ipL=no_ipR; no_ipR=tmp;
+    };
+  //common  functions for fast and optomal algorithm
   int4 SearchInStrip(int4 QP,int4 Size);
-  void AllocMem(int4 n);
+  void AllocMem(int4 for_optimal);
   void FreeMem();
   int4 prepare_ends(int4 n);
 
@@ -226,7 +246,6 @@ class CIntersectionFinder
   int4 InsDel(int4 n,ProgramStackRec * stack_pos,int4 Size);
   int4 Merge(int4 QB,int4 QE,int4 Size);
   int4 Split(int4 &step_index,int4 Size);
-  int4 fastSplit(int4 &step_index,int4 Size);
 
   //same for optimal algorithm
   void optFindInt(int4 QB,int4 QE,int4 l,PSeg s);
@@ -235,7 +254,16 @@ class CIntersectionFinder
   int4 optMerge(int4 QB,int4 QE,int4 Size);
   int4 optSplit(int4 father_first_step, int4 &step_index,int4 Size);
 
-  //additional functions for fast parallel algorithm
+//functions for no_ip algorithm
+  void no_ipAllocMem();
+  void no_ipFindInt(int4 QB,int4 QE,int4 l,PSeg s);
+  void no_ipFindIntI(int4 r_index,ProgramStackRec * stack_pos,PSeg seg);
+  void no_ipFindIntL(int4 QB,int4 QE,int4 segm_numb);
+  int4 no_ipInsDel(int4 n,ProgramStackRec * stack_pos,int4 Size);
+  int4 no_ipMerge(int4 QB,int4 QE,int4 Size);
+  int4 no_ipSplit(int4 &step_index,int4 Size,int4 stripe_divided);
+  int4 no_ipSearchInStrip(int4 QP,int4 Size);
+//additional functions for fast parallel algorithm
   CIntersectionFinder *clone(PRegObj robj);
   void unclone();
   int4 CalcLAt(int4 end_index);
@@ -280,6 +308,9 @@ class CIntersectionFinder
 
     void balaban_fast(int4 n,PSeg _Scoll[]);
     int4 FindR(int4 ladder_start_index,int4 interval_left_index,int4 interval_right_index,ProgramStackRec *stack_pos,int4 Size,int4 call_numb);
+
+    void balaban_no_ip(int4 n,PSeg _Scoll[]);
+    int4 no_ipFindR(int4 ladder_start_index,int4 interval_left_index,int4 interval_right_index,ProgramStackRec *stack_pos,int4 Size,int4 call_numb);
 
     void balaban_optimal(int4 n,PSeg _Scoll[]);
     int4 optFindR(int4 father_first_step,int4 ladder_start_index,int4 interval_left_index,int4 interval_right_index,
