@@ -226,14 +226,10 @@ template<class order,class real> void fastsort(order &o,real *List,int4 n)
 template<class real> 
 class tuple{
 public:
-  union
-    {
-    real arr[1];
-    real x;};
+    real x;
     real y;
     tuple()
-      { arr[0]=0;
-    arr[1]=0;}
+      { x=0; y=0;}
     tuple(const real &xc,const real &yc):x(xc),y(yc){};
     int operator<(tuple<real>   & v2)
       { return ((x<v2.x)||(x==v2.x) && (y<v2.y));};
@@ -254,7 +250,7 @@ public:
     tuple<real> get_normalized()
       {
       real l=get_length();
-      return tuple<real>(x/l,y/l);;
+      return tuple<real>(x/l,y/l);
       };
   };
 
