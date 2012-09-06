@@ -115,17 +115,6 @@ int4 below(REAL X,TLineSegment1* s1,TLineSegment1* s2)
   y1=(s1->org.y*dx1+(X-s1->org.x)*dy1)*dx2;
   y2=(s2->org.y*dx2+(X-s2->org.x)*dy2)*dx1;
   return y1<y2;
-/*    if(s1->cash_pt.x!=X)
-    {
-      s1->cash_pt.x=X;
-      s1->cash_pt.y=(s1->org.y+(X-s1->org.x)*dy1/dx1);
-    }
-    if(s2->cash_pt.x!=X)
-    {
-      s2->cash_pt.x=X;
-      s2->cash_pt.y=(s2->org.y+(X-s2->org.x)*dy2/dx2);
-    }
-    return s1->cash_pt.y<s2->cash_pt.y;*/
   }
 
 
@@ -140,7 +129,7 @@ int4 IntPoint(TLineSegment1* s1,TLineSegment1* s2,TPlaneVect *p)
     if (((mul=delt%s2->shift)>0)^(mul-prod>0))
       {
       if (prod==0) return 0;
-      *p=s1->org+((REAL)fabs(mul/prod))*s1->shift;
+      if(p)*p=s1->org+((REAL)fabs(mul/prod))*s1->shift;
       return 1;
       }
     return 0;
@@ -238,8 +227,16 @@ int4 IntPoint(TLineSegment2* s1,TLineSegment2* s2,TPlaneVect *p)
   if(x1>=x2)return 0;
   REAL da=s1->a-s2->a;
   if(da==0)return 0;
-  p->x=(s2->b-s1->b)/da;
-  if ((p->x>=x1)&&(p->x<=x2)){p->y=p->x*s1->a+s1->b; return 1;}
+  if(p)
+    {
+       p->x=(s2->b-s1->b)/da;
+       if ((p->x>=x1)&&(p->x<=x2)){p->y=p->x*s1->a+s1->b; return 1;}
+    }
+  else
+    {
+      REAL x=(s2->b-s1->b)/da;
+      return ((x>=x1)&&(x<=x2));
+    }  
   return 0;
   } 
 
@@ -250,8 +247,16 @@ int4 StripePoint(REAL b,REAL e,TLineSegment2* s1,TLineSegment2* s2,TPlaneVect *p
   x1=max(x1,b);x2=min(x2,e);
   REAL da=s1->a-s2->a;
   if(da==0)return 0;
-  p->x=(s2->b-s1->b)/da;
-  if ((p->x>=x1)&&(p->x<=x2)){p->y=p->x*s1->a+s1->b; return 1;}
+  if(p)
+    {
+       p->x=(s2->b-s1->b)/da;
+       if ((p->x>=x1)&&(p->x<=x2)){p->y=p->x*s1->a+s1->b; return 1;}
+    }
+  else
+    {
+      REAL x=(s2->b-s1->b)/da;
+      return ((x>=x1)&&(x<=x2));
+    }  
   return 0;
   }
 
@@ -385,10 +390,10 @@ int4 IntPointsInStripe(REAL x1,REAL x2,TArcSegment *s1,TArcSegment *s2,TPlaneVec
   REAL R1,R2;
   TPlaneVect res=m+oo;
   if((res.x>=x1)&&(res.x<=x2)&&(s1->IsTheSamePart(res))&&(s2->IsTheSamePart(res)))
-    p[npoints++]=res;
+    { if(p)p[npoints]=res;npoints++;}
   res=m-oo;
   if((res.x>=x1)&&(res.x<=x2)&&(s1->IsTheSamePart(res))&&(s2->IsTheSamePart(res)))
-    p[npoints++]=res;
+     { if(p)p[npoints]=res;npoints++;}
   return npoints;
   };
 
@@ -437,9 +442,10 @@ class SegmentFunctions
       {
       return below(x,(SEGMENT*)s1,(SEGMENT*)s2);
       };
-    static  int4 __FindAndRegIPoints(PSeg s1,PSeg s2,PRegObj intersection_registrator)
+    static  int4 __FindAndRegIPoints(PSeg s1,PSeg s2,PRegObj intersection_registrator, BOOL no_ip)
       {
-      TPlaneVect p[2];
+      TPlaneVect P[2];
+      TPlaneVect *p=no_ip?NULL:P;
       int4 n=IntPoint((SEGMENT*)s1,(SEGMENT*)s2,p);
       if(n)register_intersection(intersection_registrator,s1,s2,n,p);
       return n; 
@@ -470,9 +476,10 @@ class SegmentFunctions
             return res;   
       };
       
-    static int4 __FindAndRegIPointsInStripe(REAL b,REAL e, PSeg s1,PSeg s2,PRegObj intersection_registrator)
+    static int4 __FindAndRegIPointsInStripe(REAL b,REAL e, PSeg s1,PSeg s2,PRegObj intersection_registrator,BOOL no_ip)
       {
-      TPlaneVect p[2];
+      TPlaneVect P[2];
+      TPlaneVect *p=no_ip?NULL:P;
       int4 n=StripePoint(b,e,(SEGMENT*)s1,(SEGMENT*)s2,p);
       if(n)register_intersection(intersection_registrator,s1,s2,n,p);
       return n; 
@@ -549,6 +556,7 @@ double  find_intersections(int4 seg_type,int4 SN,PSeg *colls,int4 alg,BOOL dont_
   double int_numb=0;
   CIntersectionFinder intersection_finder;
   double int_numb1=0;
+  BOOL is_line;
   switch (seg_type)
     {
     case line1:
@@ -564,7 +572,7 @@ double  find_intersections(int4 seg_type,int4 SN,PSeg *colls,int4 alg,BOOL dont_
         SegmentFunctions<TLineSegment1>::__YAtX,
         SegmentFunctions<TLineSegment1>::register_intersection,
         &int_numb,
-        TLineSegment1::is_line
+        is_line=TLineSegment1::is_line
         );
       break;
     case line2:
@@ -580,7 +588,7 @@ double  find_intersections(int4 seg_type,int4 SN,PSeg *colls,int4 alg,BOOL dont_
         SegmentFunctions<TLineSegment2>::__YAtX,
         SegmentFunctions<TLineSegment2>::register_intersection,
         &int_numb,
-        TLineSegment2::is_line
+        is_line=TLineSegment2::is_line
         );
       break;
     case arc:
@@ -596,7 +604,7 @@ double  find_intersections(int4 seg_type,int4 SN,PSeg *colls,int4 alg,BOOL dont_
         SegmentFunctions<TArcSegment>::__YAtX,
         SegmentFunctions<TArcSegment>::register_intersection,
         &int_numb,
-        TArcSegment::is_line
+        is_line=TArcSegment::is_line
         );
       break;
     }
@@ -605,7 +613,13 @@ double  find_intersections(int4 seg_type,int4 SN,PSeg *colls,int4 alg,BOOL dont_
     {
     case triv:intersection_finder.trivial(SN,colls);break;
     case simple_sweep:intersection_finder.simple_sweep(SN,colls);break;
-    case fast: intersection_finder.balaban_fast(SN,colls); break;
+    case fast: 
+        {
+       if(dont_need_ip&&is_line)
+            intersection_finder.balaban_no_ip(SN,colls);
+        else
+            intersection_finder.balaban_fast(SN,colls); 
+        }; break;
     case optimal:intersection_finder.balaban_optimal(SN,colls);break;
     case fast_parallel:intersection_finder.fast_parallel(SN,colls,&int_numb1);break;
     case bentley_ottmann:intersection_finder.bentley_ottmann(SN,colls);break;
