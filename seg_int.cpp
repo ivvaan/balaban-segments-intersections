@@ -96,14 +96,14 @@ counters_mute=counters_string;
     printf(" S=l: line segments representation y=a*x+b,x1<=x<=x2; a,b,x1,x2 - reals\n");
     printf(" S=L: line segments representation r=b+a*t,0<=t<=1; b,a - vectors\n");
     printf(" S=a: arcs\n");
-    printf("-dD: type of distribution\n");
-    printf(" D=r: random segments\n");
-    printf(" D=l: random length x parallel segments\n");
-    printf(" D=m: mixed random length x parallel segments and very short x parallel segments\n");
-    printf(" D=s: short segments\n");
-    printf(" D=p: random segment with parameter defined length\n");
     printf("-nN: number of segments\n");
     printf("-pP: parameter value, must be positive\n");
+    printf("-dD: type of distribution\n");
+    printf(" D=r: random segments\n");
+    printf(" D=l: random length almost x parallel segments, the bigger p/N the less parallel segments\n");
+    printf(" D=m: mixed random length almost x parallel 'long' segments (33%) and 'small' segments (67%), the bigger p/N the less parallel 'long' and longer 'short' segments\n");
+    printf(" D=s: short segments: random segment with  length multiplied by p/N\n");
+    printf(" D=p: random segment with  length multiplied by p\n");
     printf("-r: if presented, fast algorithm doesn't find intersection points but only intersecting pairs\n");
     printf("-m: if presented, means 'mute' mode - few information printed\n");
     printf("-w: if presented, program wait until 'Enter' pressed before closing\n");
@@ -214,7 +214,7 @@ counters_mute=counters_string;
           printf("%s intersections=%13.0f time=%8.2f%s\n",alg_names[a],nInt[a],exec_time[a],counters_string);
         }
      };
-  //printf("ratio fast  =%6.3f\n",0.5*(n*exec_time[2]*(n-1))/(exec_time[0]*nInt[2]));
+  printf("ratio fast  =%6.3f\n",0.5*(n*exec_time[2]*(n-1))/(exec_time[0]*nInt[2]));
 
   delete_test_collection(seg_type,coll);
   if(wait){printf("press 'Enter' to continue"); getchar();}
