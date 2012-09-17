@@ -49,10 +49,10 @@ class TLineSegment1
       shift.y=rv.GetRandomDouble()-org.y;
       Refine();
       if(parallel==type)
-        shift.y=0;
+        shift.y*=par;
       if(mixed==type)
         {
-        shift.y=0;
+        shift.y*=par;
         if(seg_n%3!=0)        
           shift.x*=par;
         }
@@ -145,8 +145,11 @@ int4 StripePoint(REAL b,REAL e,TLineSegment1* s1,TLineSegment1* s2,TPlaneVect *p
     mul=mul/prod;
     xc=s2->org.x-mul*s2->shift.x;
     if ((xc<=b)||(xc>e)) return 0;
-    p->x=xc;
-    p->y=s2->org.y-mul*s2->shift.y;
+    if(p)
+      {
+        p->x=xc;
+        p->y=s2->org.y-mul*s2->shift.y;
+      }
     return 1;
     }
   return 0;
@@ -510,7 +513,8 @@ PSeg* create_test_collection(int4 seg_type,int4 n,int4 distr,REAL par)
   CRandomValueGen random_gen;
   int4 i;
   colls=new PSeg[n];
-  if((mixed==distr)||(small==distr))par/=n;
+  if(distr!=param_defined)par/=n/33.0;
+  if(distr==parallel)par/=2.4;
   switch (seg_type)
     {
     case line1:
