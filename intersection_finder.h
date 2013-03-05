@@ -2,7 +2,7 @@
 #define INTSEGM_H
 /*
 *
-*      Copyright (c)  2011  Ivan Balaban 
+*      Copyright (c)  2011-2013  Ivan Balaban 
 *      ivvaan@gmail.com
 *
 This file is part of Seg_int library.
@@ -40,7 +40,8 @@ typedef int4 (*FIsIntersetInStripe)(REAL b,REAL e, PSeg s1,PSeg s2);//finds if s
 typedef void (*FGetPoint)(PSeg s,REAL &x,REAL &y);//puts a segment s end point coordinates into x and y
 typedef int4 (*FUnder)(PSeg s1,PSeg s2);//returns TRUE if s2 begin point is above s1
 
-typedef int4 (*FFindAndRegIPointOnRightOfSWL)(REAL swl_x,PSeg s1,PSeg s2,TPlaneVect *p1,TPlaneVect *p2);//finds  intersections on right of sweep line (swl_x), register it and place x coord to int_point_x
+typedef int4 (*FFindAndRegIPointOnRightOfSWL)(REAL swl_x,PSeg s1,PSeg s2,TPlaneVect *p1,TPlaneVect *p2);/*finds  intersections on right of sweep line (swl_x), register it and place coords 
+	to p1 (if only one intersection) and to p2 (if two intersections). Function does'n appliciable for nonline segments with 3 or more intersetions*/
 typedef REAL (*FYAtX)(PSeg s,REAL X);//given X coord, returns Y coord of a segment s 
 typedef void (*FRegIntersection)(PRegObj intersection_registrator,PSeg s1,PSeg s2,int4 n,TPlaneVect *p);/* register intersections of segments s1 and s2. 
   intersection_registrator - object used to register intersections (for example pointer to some list to add intersections found)
@@ -57,10 +58,10 @@ struct EndIndexes
   int4 B,E;
   };
 
-struct ProgramStackRec
+struct ProgramStackRec //structure to use program stack to store list of starcases above current call
   {
-  ProgramStackRec *prev;
-  int4 Q_pos, right_bound;
+  ProgramStackRec *prev; //link to program stack record storing parent staircase information 
+  int4 Q_pos, right_bound; //starting position and right boind of current staircase
   inline ProgramStackRec(int4 qp):Q_pos(qp){};
   inline ProgramStackRec(int4 qp,int4 rb):prev(NULL),Q_pos(qp),right_bound(rb){};
   inline ProgramStackRec *Set(ProgramStackRec *p,int4 rb){ prev=p,right_bound=rb;return this;};
@@ -178,18 +179,19 @@ class CIntersectionFinder
   // end functions to deal with segments
   
   //begin strutures for Balaban algorithms
+  //common
   int4 nTotSegm;
-  SegmentInfo * L,* R,* Q;
-  no_ipSegmentInfo * no_ipL,* no_ipR,* no_ipQ;
   EndIndexes *SegmentBE;
   TSegmEnd *ENDS;
-  int4 *Loc;
   PSeg *Scoll;
-
   long int_numb;
   int4 LBoundIdx,RBoundIdx;
   REAL B,E;
-  
+  //for fast, optimal and parallel algorithms
+  SegmentInfo * L,* R,* Q;
+  //for no_ip algorithm
+  no_ipSegmentInfo * no_ipL,* no_ipR,* no_ipQ;
+  int4 *Loc;
   //for optimal algorithm
   int4 *father_loc;
   //for parallel version  
@@ -210,6 +212,7 @@ class CIntersectionFinder
   //helpers for segment functions
   inline int4 IntersectionsInCurStripe(SegmentInfo  s1,PSeg s2)
     {
+		INC_COUNTER(0);
     return _FindAndRegIPointsInStripe(B,E,Scoll[s1],s2,_reg_obj,dont_need_int_points);
     };
 
@@ -246,6 +249,7 @@ class CIntersectionFinder
   int4 InsDel(int4 n,ProgramStackRec * stack_pos,int4 Size);
   int4 Merge(int4 QB,int4 QE,int4 Size);
   int4 Split(int4 &step_index,int4 Size);
+  int4 FindR(int4 ladder_start_index,int4 interval_left_index,int4 interval_right_index,ProgramStackRec *stack_pos,int4 Size,int4 call_numb);
 
   //same for optimal algorithm
   void optFindInt(int4 QB,int4 QE,int4 l,PSeg s);
@@ -253,6 +257,8 @@ class CIntersectionFinder
   int4 optInsDel(int4 n,ProgramStackRec *stack_pos,int4 Size);
   int4 optMerge(int4 QB,int4 QE,int4 Size);
   int4 optSplit(int4 father_first_step, int4 &step_index,int4 Size);
+  int4 optFindR(int4 father_first_step,int4 ladder_start_index,int4 interval_left_index,int4 interval_right_index,
+      ProgramStackRec *stack_pos,int4 Size,int4 call_numb);
 
 //functions for no_ip algorithm
   void no_ipAllocMem();
@@ -263,7 +269,9 @@ class CIntersectionFinder
   int4 no_ipMerge(int4 QB,int4 QE,int4 Size);
   int4 no_ipSplit(int4 &step_index,int4 Size,int4 stripe_divided);
   int4 no_ipSearchInStrip(int4 QP,int4 Size);
-//additional functions for fast parallel algorithm
+  int4 no_ipFindR(int4 ladder_start_index,int4 interval_left_index,int4 interval_right_index,ProgramStackRec *stack_pos,int4 Size,int4 call_numb);
+
+  //additional functions for fast parallel algorithm
   CIntersectionFinder *clone(PRegObj robj);
   void unclone();
   int4 CalcLAt(int4 end_index);
@@ -307,15 +315,9 @@ class CIntersectionFinder
      );
 
     void balaban_fast(int4 n,PSeg _Scoll[]);
-    int4 FindR(int4 ladder_start_index,int4 interval_left_index,int4 interval_right_index,ProgramStackRec *stack_pos,int4 Size,int4 call_numb);
-
+    void balaban_no_recursion(int4 n,PSeg _Scoll[]);
     void balaban_no_ip(int4 n,PSeg _Scoll[]);
-    int4 no_ipFindR(int4 ladder_start_index,int4 interval_left_index,int4 interval_right_index,ProgramStackRec *stack_pos,int4 Size,int4 call_numb);
-
     void balaban_optimal(int4 n,PSeg _Scoll[]);
-    int4 optFindR(int4 father_first_step,int4 ladder_start_index,int4 interval_left_index,int4 interval_right_index,
-      ProgramStackRec *stack_pos,int4 Size,int4 call_numb);
-
     void fast_parallel(int4 n,PSeg _Scoll[],PRegObj add_reg);
     void Run(){ ProgramStackRec stack_rec(-1,2*nTotSegm);  FindR(-1,0,   run_to  ,&stack_rec,1,0); }
 
