@@ -1,6 +1,6 @@
 /*
 *
-*      Copyright (c)  2011  Ivan Balaban 
+*      Copyright (c)  2011-2013  Ivan Balaban 
 *      ivvaan@gmail.com
 *
 This file is part of Seg_int library.
@@ -22,12 +22,19 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include "utils.h"
 #include "intersection_finder.h"
 //#include <stdio.h>
+#include <crtdbg.h>
 
 
 #define IS_LINE_SEGMENTS is_line_segments
 //#define IS_LINE_SEGMENTS true
 
 #define IS_ORIGINAL(v) (v<1)
+
+struct SNoRecursionRec:public ProgramStackRec
+{
+  int4 left_bound,m,Q_pos_prev;
+  SNoRecursionRec():ProgramStackRec(-1,-1){left_bound=-1;m=-1;};
+};
 
 // FindInt finds and reports intersection of segment whith staircase QB<stair_index<=QE, given location of the segment begin point - l
 void CIntersectionFinder::FindInt(int4 QB,int4 QE,int4 l,PSeg s)
@@ -92,7 +99,7 @@ void CIntersectionFinder::FindIntL(int4 QB,int4 QE,int4 segm_numb)
     {
     SegmentInfo s_idx=L[i];
     PSeg s=Scoll[s_idx];
-    int4 loc=Loc[i];
+    int4 loc=R[i];
     if (SegmentBE[s_idx].E<RBoundIdx) //if segment is not covering the stripe
       FindInt(QB,QE,loc,s);// find intersections
     else // segment is covering the stripe
@@ -212,7 +219,7 @@ int4 CIntersectionFinder::InsDel(int4 end_index,ProgramStackRec * stack_pos,int4
 
     int4 sn=L[Size]=current_end->s;
     for(i=0;L[i]!=sn;i++); 
-    //_ASSERTE(i!=Size);
+    _ASSERTE(i!=Size);
     Size--;
     for (;i<Size;i++)L[i]=L[i+1];
     }
@@ -395,11 +402,10 @@ int4 CIntersectionFinder::optMerge(int4 QB,int4 QE,int4 Size)
 // covering current strip with the staircase stairs below.   
 int4 CIntersectionFinder::Split(int4 &step_index,int4 Size)
   {
-  int4 father_last_step=step_index,new_L_size=0,cur_L_pos;
-  int4 cur_seg;
-  for (cur_L_pos=0;cur_L_pos<Size;cur_L_pos++)
+  int4 father_last_step=step_index,new_L_size=0;
+  for (int4 cur_L_pos=0;cur_L_pos<Size;cur_L_pos++)
     {
-    cur_seg=L[cur_L_pos];
+    int4 cur_seg=L[cur_L_pos];
     if(SegmentBE[cur_seg].E>=RBoundIdx)//segment is covering current stripe
       {
       int4 step=step_index;
@@ -409,8 +415,8 @@ int4 CIntersectionFinder::Split(int4 &step_index,int4 Size)
       if(step_index!=step)
         {
         int_numb+=step_index-step;
-        R[new_L_size]=cur_seg;
-        Loc[new_L_size++]=step_index;
+        L[new_L_size]=cur_seg;
+        R[new_L_size++]=step_index;
         }
       else
         {
@@ -420,11 +426,10 @@ int4 CIntersectionFinder::Split(int4 &step_index,int4 Size)
       }
     else
       {
-      R[new_L_size]=cur_seg;
-      Loc[new_L_size++]=step_index;
+      L[new_L_size]=cur_seg;
+      R[new_L_size++]=step_index;
       }
     }
-  ExchangeLR();
   return new_L_size;
   };
   
@@ -486,8 +491,8 @@ int4 CIntersectionFinder::optSplit(int4 cur_father_pos,int4 &step_index,int4 Siz
                   || (IsIntersectInCurStripe(Q[cur_father_pos],s))
                   ) // current segment intersect last stair or candidate to inherit 
                   { //add it to new L (R)
-                  R[new_L_size]=cur_seg;
-                  Loc[new_L_size++]=step_index;
+                  L[new_L_size]=cur_seg;
+                  R[new_L_size++]=step_index;
                   }
               else
                   { //add it to Q as original
@@ -500,8 +505,8 @@ int4 CIntersectionFinder::optSplit(int4 cur_father_pos,int4 &step_index,int4 Siz
               }
           else
               {
-              R[new_L_size]=cur_seg;
-              Loc[new_L_size++]=step_index;
+              L[new_L_size]=cur_seg;
+              R[new_L_size++]=step_index;
               }
           cur_L_pos++; // move to next in L
           }
@@ -522,8 +527,8 @@ int4 CIntersectionFinder::optSplit(int4 cur_father_pos,int4 &step_index,int4 Siz
           {
           if((step_index>father_last_step)&&(IsIntersectInCurStripe(Q[step_index],Scoll[cur_seg])))// if it intesects last stair
               {  // add it to new L
-              R[new_L_size]=cur_seg;
-              Loc[new_L_size++]=step_index;
+              L[new_L_size]=cur_seg;
+              R[new_L_size++]=step_index;
               }
           else
               {  // add it to Q
@@ -535,8 +540,8 @@ int4 CIntersectionFinder::optSplit(int4 cur_father_pos,int4 &step_index,int4 Siz
           }
       else
           { // add it to new L
-          R[new_L_size]=cur_seg;
-          Loc[new_L_size++]=step_index;
+          L[new_L_size]=cur_seg;
+          R[new_L_size++]=step_index;
           }
       };
   for(;cur_father_pos<=father_last_step;cur_father_pos+=inherit_each) // L segments is over. We are adding rest inherited father segments to Q
@@ -546,7 +551,7 @@ int4 CIntersectionFinder::optSplit(int4 cur_father_pos,int4 &step_index,int4 Siz
       father_loc[step_index]=cur_father_pos;
       Q[step_index]=Q[cur_father_pos];
       };
-  ExchangeLR();
+//  ExchangeLR();
   return new_L_size;
   };
 
@@ -556,10 +561,10 @@ int4 CIntersectionFinder::SearchInStrip(int4 QP,int4 Size)
   if(!Size)return 0;
   if(Size<2){*R=*L; return 1;}
   int4 NQP=QP;
-  int4 size=Size;
+  int4 size=Size;SegmentInfo *q=Q+QP+1;
   if(size=Split(NQP,size))
     {
-    SegmentInfo *q=Q+QP+1;
+    
       do
       {
         FindIntL(QP,NQP,size);
@@ -570,6 +575,8 @@ int4 CIntersectionFinder::SearchInStrip(int4 QP,int4 Size)
       for(QP=0;QP<Size;QP++)R[QP]=q[QP];
       fastsort(CSegmCompare(Scoll,_Below ,E),R,Size);
     }
+  else
+    for(QP=0;QP<Size;QP++)R[QP]=q[QP];
     return Size;
   }
   
@@ -647,7 +654,7 @@ int4 CIntersectionFinder::optFindR(int4 father_first_step, int4 ladder_start_ind
     {// use optimal variant if new staircase is big
     Size=optSplit(father_first_step,stack_rec.Q_pos,Size);
     for (int4 i=0;i<Size;i++)  
-      optFindInt(ladder_start_index,stack_rec.Q_pos,Loc[i],Scoll[L[i]]);
+      optFindInt(ladder_start_index,stack_rec.Q_pos,R[i],Scoll[L[i]]);
     }
   else
     {// use fast variant if new staircase is small 
@@ -744,7 +751,6 @@ void CIntersectionFinder::AllocMem(BOOL for_optimal)
       needed=nTotSegm+nTotSegm/(inherit_each-1)+inherit_each+1;
       father_loc=new int4[needed];
     }
-  Loc=new int4[needed];
   Q=new SegmentInfo  [needed];
   };
 
@@ -771,7 +777,7 @@ CIntersectionFinder *CIntersectionFinder::clone(PRegObj robj)
 
   res->Q=new SegmentInfo  [nTotSegm+1];
   res->R=new SegmentInfo  [nTotSegm+1];
-  res->Loc=new int4[nTotSegm+1];
+//  res->Loc=new int4[nTotSegm+1];
 
   res->set_segm_fuctions(_Below,
     _FindAndRegIPoints,
@@ -797,7 +803,7 @@ void CIntersectionFinder::unclone()
   MY_FREE_ARR_MACRO(Q);
   MY_FREE_ARR_MACRO(L)
   MY_FREE_ARR_MACRO(R);
-  MY_FREE_ARR_MACRO(Loc);
+//  MY_FREE_ARR_MACRO(Loc);
 
   Scoll=NULL; 
   nTotSegm=0;
@@ -897,6 +903,74 @@ void CIntersectionFinder::balaban_fast(int4 n,PSeg _Scoll[])
   Size=InsDel(n,&stack_rec,Size);
   Size=FindR(-1,n,2*n-1,&stack_rec, Size,0);
 
+  FreeMem();
+  }
+
+//same as balaban_fast but without recursion (just for the case, it doesn't work faster)
+void CIntersectionFinder::balaban_no_recursion(int4 n,PSeg _Scoll[])
+  {
+  Scoll=_Scoll;  nTotSegm=n;
+  AllocMem(FALSE);
+  int4 Size=prepare_ends(n);
+
+  int4 interval_left_index=0,interval_right_index=2*n-1,ladder_start_index=-1;
+  int4 m,call_numb=0;
+  SNoRecursionRec *stack=new SNoRecursionRec[32*(max_call+1)];
+  stack->left_bound=-1;stack->right_bound=2*n;
+  stack->m=stack->Q_pos=-1;stack->prev=NULL;
+  SNoRecursionRec *stack_pos=stack;
+  SNoRecursionRec *stack_bottom=stack++;
+  stack->Q_pos=-1;
+  while(1)
+    {
+      B=ENDS[interval_left_index].x;
+      while((interval_right_index-interval_left_index)>1)
+        {
+          stack->left_bound=interval_left_index;stack->right_bound=interval_right_index;
+          E=ENDS[RBoundIdx=interval_right_index].x;
+          stack->Q_pos_prev=ladder_start_index;
+          int_numb=0;// variable to count intersections on Split stage
+          stack->prev=stack_pos;
+          if (Size>0)
+            {
+              Size=Split(ladder_start_index,Size);
+              if((stack->Q_pos_prev<ladder_start_index))
+                {
+                  FindIntL(stack->Q_pos_prev,ladder_start_index,Size);
+                  stack_pos=stack;
+                }
+            };
+          stack->m=m=(interval_right_index+interval_left_index)>>1;
+          stack->Q_pos=ladder_start_index;
+          if ((int_numb>Size)&&(call_numb<max_call))
+              call_numb++;
+          else
+            {
+              call_numb=0;
+              interval_right_index=m;
+            }
+          stack++;
+        }
+      E=ENDS[RBoundIdx=interval_right_index].x;
+      SearchInStrip(ladder_start_index,Size);
+      stack--;
+      while(interval_right_index==stack->right_bound)
+        {
+          if(stack->Q_pos_prev<stack->Q_pos)
+            {
+              B=ENDS[LBoundIdx=stack->left_bound].x;   
+              Size=Merge(stack->Q_pos_prev,stack->Q_pos,Size);
+            };
+          stack--;
+        }
+      if(stack==stack_bottom)break;
+      ladder_start_index=stack->Q_pos;
+      stack_pos=stack;
+      Size=InsDel(interval_left_index=stack->m,stack,Size);
+      interval_right_index=stack->right_bound;
+      stack++;
+    }
+  delete[] stack_bottom;
   FreeMem();
   }
   
