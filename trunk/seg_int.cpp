@@ -1,6 +1,6 @@
 /*
 *
-*      Copyright (c)  2011  Ivan Balaban 
+*      Copyright (c)  2011-2013  Ivan Balaban 
 *      ivvaan@gmail.com
 *
 This file is part of Seg_int library.
@@ -40,12 +40,19 @@ double _benchmark(char *counters_string,int4 n,PSeg *coll,int4 s_type,int4 alg,B
   {
   double start,stop;
   double c[8];
+  int4 n_call=0;
   start=clock();
+  do
+  {
   res=find_intersections(s_type,n,coll,alg,dont_need_ip,c);
   stop=clock();
+  n_call++;
+  }
+  while ((stop-start)<CLOCKS_PER_SEC);
   if(counters_string)
-   sprintf(counters_string,"%13.0f;%13.0f;%13.0f;%13.0f;%13.0f;%13.0f;%13.0f;%13.0f",c[0],c[1],c[2],c[3],c[4],c[5],c[6],c[7]);
-  return (stop-start)/CLOCKS_PER_SEC;
+   sprintf(counters_string,"%11.2f;%11.2f;%11.2f;%11.2f;%11.2f;%11.2f;%11.2f;%11.2f",c[0],c[1],c[2],c[3],c[4],c[5],c[6],c[7]);
+   //printf("avg Size %11.2f\n",c[3]/(c[4]+1));
+  return (stop-start)/(n_call*CLOCKS_PER_SEC);
   }
 
 
@@ -209,9 +216,9 @@ counters_mute=counters_string;
         {
         exec_time[a]=_benchmark(pcs,n,coll,seg_type,alg_list[a],dont_need_ip,nInt[a]);
         if(mute)
-          printf("a%i;s%c;d%c;r%i;n%i;i%13.0f;t%8.2f;p%f;%s\n",alg_list[a],ss[seg_type], sd[d],dont_need_ip,n,nInt[a],exec_time[a],p,counters_mute);
+          printf("a%i;s%c;d%c;r%i;n%i;i%13.0f;t%6.5f;p%f;%s\n",alg_list[a],ss[seg_type], sd[d],dont_need_ip,n,nInt[a],exec_time[a],p,counters_mute);
         else
-          printf("%s intersections=%13.0f time=%8.2f%s\n",alg_names[a],nInt[a],exec_time[a],counters_string);
+          printf("%s intersections=%13.0f time=%6.5f%s\n",alg_names[a],nInt[a],exec_time[a],counters_string);
         }
      };
   //printf("ratio fast  =%6.3f\n",0.5*(n*exec_time[2]*(n-1))/(exec_time[0]*nInt[2]));
