@@ -143,7 +143,7 @@ counters_mute=counters_string;
               case 'a':seg_type=arc;break;
               default:
                 {
-                printf("some error in -s param. L used instead.\n");
+                printf("some error in -s param. l used instead.\n");
                 seg_type=line2; 
                 }
               };
@@ -161,7 +161,7 @@ counters_mute=counters_string;
               default:
                 {
                 printf("some error in -d param. r used instead.\n");
-                seg_type=random; 
+                d=random; 
                 }
               };
             };
