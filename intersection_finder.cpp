@@ -1,6 +1,6 @@
 /*
 *
-*      Copyright (c)  2011-2013  Ivan Balaban 
+*      Copyright (c)  2011-2015  Ivan Balaban 
 *      ivvaan@gmail.com
 *
 This file is part of Seg_int library.
@@ -29,12 +29,6 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 //#define IS_LINE_SEGMENTS true
 
 #define IS_ORIGINAL(v) (v<1)
-
-struct SNoRecursionRec:public ProgramStackRec
-{
-  int4 left_bound,m,Q_pos_prev;
-  SNoRecursionRec():ProgramStackRec(-1,-1){left_bound=-1;m=-1;};
-};
 
 // FindInt finds and reports intersection of segment whith staircase QB<stair_index<=QE, given location of the segment begin point - l
 void CIntersectionFinder::FindInt(int4 QB,int4 QE,int4 l,PSeg s)
@@ -919,13 +913,14 @@ void CIntersectionFinder::balaban_no_recursion(int4 n,PSeg _Scoll[])
   stack->left_bound=-1;stack->right_bound=2*n;
   stack->m=stack->Q_pos=-1;stack->prev=NULL;
   SNoRecursionRec *stack_pos=stack;
-  SNoRecursionRec *stack_bottom=stack++;
-  stack->Q_pos=-1;
+  SNoRecursionRec *stack_bottom=stack;
+  stack[1].Q_pos=-1;
   while(1)
     {
       B=ENDS[interval_left_index].x;
       while((interval_right_index-interval_left_index)>1)
         {
+          stack++;
           stack->left_bound=interval_left_index;stack->right_bound=interval_right_index;
           E=ENDS[RBoundIdx=interval_right_index].x;
           stack->Q_pos_prev=ladder_start_index;
@@ -939,7 +934,7 @@ void CIntersectionFinder::balaban_no_recursion(int4 n,PSeg _Scoll[])
                   FindIntL(stack->Q_pos_prev,ladder_start_index,Size);
                   stack_pos=stack;
                 }
-            };
+            }
           stack->m=m=(interval_right_index+interval_left_index)>>1;
           stack->Q_pos=ladder_start_index;
           if ((int_numb>Size)&&(call_numb<max_call))
@@ -949,11 +944,9 @@ void CIntersectionFinder::balaban_no_recursion(int4 n,PSeg _Scoll[])
               call_numb=0;
               interval_right_index=m;
             }
-          stack++;
         }
       E=ENDS[RBoundIdx=interval_right_index].x;
       SearchInStrip(ladder_start_index,Size);
-      stack--;
       while(interval_right_index==stack->right_bound)
         {
           if(stack->Q_pos_prev<stack->Q_pos)
@@ -968,7 +961,6 @@ void CIntersectionFinder::balaban_no_recursion(int4 n,PSeg _Scoll[])
       stack_pos=stack;
       Size=InsDel(interval_left_index=stack->m,stack,Size);
       interval_right_index=stack->right_bound;
-      stack++;
     }
   delete[] stack_bottom;
   FreeMem();
