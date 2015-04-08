@@ -2,7 +2,7 @@
 #define INTSEGM_H
 /*
 *
-*      Copyright (c)  2011-2013  Ivan Balaban 
+*      Copyright (c)  2011-2015  Ivan Balaban 
 *      ivvaan@gmail.com
 *
 This file is part of Seg_int library.
@@ -53,21 +53,6 @@ const int4 inherit_each=32; // defines how often in optimal algorithm stairs are
 const int4 max_call=5; //max number of sequential recursive call (opt)FindR before dividing current strip
 
 
-struct EndIndexes
-  {
-  int4 B,E;
-  };
-
-struct ProgramStackRec //structure to use program stack to store list of starcases above current call
-  {
-  ProgramStackRec *prev; //link to program stack record storing parent staircase information 
-  int4 Q_pos, right_bound; //starting position and right boind of current staircase
-  inline ProgramStackRec(int4 qp):Q_pos(qp){};
-  inline ProgramStackRec(int4 qp,int4 rb):prev(NULL),Q_pos(qp),right_bound(rb){};
-  inline ProgramStackRec *Set(ProgramStackRec *p,int4 rb){ prev=p,right_bound=rb;return this;};
-  };
-
-
 
 
 //uncomment line bellow to switch on counters
@@ -87,39 +72,6 @@ struct ProgramStackRec //structure to use program stack to store list of starcas
 
 typedef int4 SegmentInfo;
 
-struct no_ipSegmentInfo
-  {
-    int4 s;
-    REAL y;
-    bool operator<(const no_ipSegmentInfo &p)
-      {
-      return y<p.y;
-      };    
-  };
-
-struct TEnd
-  {
-    REAL x;
-    // REAL y;
-    bool islast;
-    bool operator<(const TEnd &p)
-      {
-      return ((x<p.x)||
-        ((x==p.x)&&(islast<p.islast)));
-      };
-  };
-
-struct TSEnd:public TEnd
-  {
-    PSeg s;
-  };
-
-struct TSegmEnd:public TEnd
-  {
-    SegmentInfo s;
-  };
-
-
 struct CSegmCompare
   {
     PSeg *Scoll;
@@ -131,28 +83,6 @@ struct CSegmCompare
   };
   
   
-//for Bentley & Ottmann algorithm
-  
-struct TBinTreeNode// for sweep line support 
-  {
-    int4 left,right,next,prev;
-    int4 segment;
-    int4 seg_node_idx;
-            // always should be 
-            //SweepLine[SweepLine[s].seg_node_idx].segment==s
-            //SweepLine[SweepLine[node].segment].seg_node_idx==node
-    TBinTreeNode()
-      {
-         segment=seg_node_idx=left=right=next=prev=-1;
-      };
-  }; 
-
-struct TEvent
-  {
-    TPlaneVect pt;
-    int4 s1,s2;
-  } ;  
-
 
 class CIntersectionFinder
   {
@@ -177,35 +107,110 @@ class CIntersectionFinder
   FYAtX _YAtX;
   FRegIntersection _RegIntersection;
   // end functions to deal with segments
+
+  // basic class for segment end
+  struct TEnd
+    {
+      REAL x;
+      // REAL y;
+      bool islast;
+      bool operator<(const TEnd &p)
+        {
+        return ((x<p.x)||
+          ((x==p.x)&&(islast<p.islast)));
+        };
+    };
+
   
-  //begin strutures for Balaban algorithms
+  //begin fields and structures for Balaban algorithms
   //common
   int4 nTotSegm;
-  EndIndexes *SegmentBE;
-  TSegmEnd *ENDS;
-  PSeg *Scoll;
   long int_numb;
   int4 LBoundIdx,RBoundIdx;
   REAL B,E;
+
+  struct EndIndexes
+    {
+    int4 B,E;
+    } *SegmentBE;
+  struct TSegmEnd:public TEnd
+    {
+      SegmentInfo s;
+    } *ENDS;
+  PSeg *Scoll;
+
+  struct ProgramStackRec //structure to use program stack to store list of starcases above current call
+    {
+      ProgramStackRec *prev; //link to program stack record storing parent staircase information 
+      int4 Q_pos, right_bound; //starting position and right boind of current staircase
+      inline ProgramStackRec(int4 qp):Q_pos(qp){};
+      inline ProgramStackRec(int4 qp,int4 rb):prev(NULL),Q_pos(qp),right_bound(rb){};
+      inline ProgramStackRec *Set(ProgramStackRec *p,int4 rb){ prev=p,right_bound=rb;return this;};
+    };
+
   //for fast, optimal and parallel algorithms
   SegmentInfo * L,* R,* Q;
+
+  // for no recursion version of fast
+  struct SNoRecursionRec:public ProgramStackRec // same for no recursion algorithm
+    {
+      int4 left_bound,m,Q_pos_prev;
+      SNoRecursionRec():ProgramStackRec(-1,-1){left_bound=-1;m=-1;};
+    };
+
+
+
   //for no_ip algorithm
-  no_ipSegmentInfo * no_ipL,* no_ipR,* no_ipQ;
   int4 *Loc;
+  struct no_ipSegmentInfo
+  {
+    int4 s;
+    REAL y;
+    bool operator<(const no_ipSegmentInfo &p)
+      {
+      return y<p.y;
+      };    
+  } * no_ipL,* no_ipR,* no_ipQ;
+
   //for optimal algorithm
   int4 *father_loc;
+
   //for parallel version  
   int4 run_to;
-  //end strutures for Balaban algorithms
 
-  //begin strutures for Bentley & Ottmann algorithm
+  //end structures for Balaban algorithms
+
+  // structure for simple_sweep algorithm
+  struct TSEnd:public TEnd
+    {
+      PSeg s;
+    };
+
+  //begin fields and struсtures for Bentley & Ottmann algorithm
   REAL sweep_line_x;
   int4 swl_root;
-  TBinTreeNode *SweepLine;
   int4 events_n,events_max;
-  TEvent *Events;
+  struct TBinTreeNode// for sweep line support 
+    {
+      int4 left,right,next,prev;
+      int4 segment;
+      int4 seg_node_idx;
+              // always should be 
+              //SweepLine[SweepLine[s].seg_node_idx].segment==s
+              //SweepLine[SweepLine[node].segment].seg_node_idx==node
+      TBinTreeNode()
+        {
+           segment=seg_node_idx=left=right=next=prev=-1;
+        };
+    } *SweepLine; 
+  struct TEvent // for events list
+    {
+      TPlaneVect pt;
+      int4 s1,s2;
+    } *Events;  
+
 //  int4 *SWL_stack;
-  //end strutures for Bentley & Ottmann algorithm
+  //end struсtures for Bentley & Ottmann algorithm
   
   //private functions for Balaban algorithms
 
@@ -236,6 +241,7 @@ class CIntersectionFinder
     register no_ipSegmentInfo* tmp=no_ipL;
     no_ipL=no_ipR; no_ipR=tmp;
     };
+
   //common  functions for fast and optomal algorithm
   int4 SearchInStrip(int4 QP,int4 Size);
   void AllocMem(int4 for_optimal);
@@ -272,19 +278,19 @@ class CIntersectionFinder
   int4 no_ipFindR(int4 ladder_start_index,int4 interval_left_index,int4 interval_right_index,ProgramStackRec *stack_pos,int4 Size,int4 call_numb);
 
   //additional functions for fast parallel algorithm
-  CIntersectionFinder *clone(PRegObj robj);
-  void unclone();
-  int4 CalcLAt(int4 end_index);
+  CIntersectionFinder *clone(PRegObj robj);// creates a copy of itself to run concurrently
+  void unclone();//should be called from the copy before deletion to free common structures correctly
+  int4 CalcLAt(int4 end_index); // calculates starting L array for parallel execution
   
   //private functions for Bentley & Ottmann algorithm
  void SweepLineInsert(int4 s);
  void SweepLineDelete(int4 s);
  void SweepLineExchange(int4 s1,int4 s2);
- void IntOnRightOfSWL(int4 s1,int4 s2);
+ void IntOnRightOfSWL(int4 s1,int4 s2);// find intersection s1 and s1 right to sweep line
  void PrepareEvents();
  void EventsDelMin();
  void EventsAddNew();
- void AllocBOMem();
+ void AllocBOMem();//allocates memory for Bentley & Ottmann algorithm
  void FreeBOMem();
 
 
@@ -319,7 +325,7 @@ class CIntersectionFinder
     void balaban_no_ip(int4 n,PSeg _Scoll[]);
     void balaban_optimal(int4 n,PSeg _Scoll[]);
     void fast_parallel(int4 n,PSeg _Scoll[],PRegObj add_reg);
-    void Run(){ ProgramStackRec stack_rec(-1,2*nTotSegm);  FindR(-1,0,   run_to  ,&stack_rec,1,0); }
+    void Run(){ ProgramStackRec stack_rec(-1,2*nTotSegm);  FindR(-1,0,   run_to  ,&stack_rec,1,0); }// to call from thread_routine
 
     // trivial algorithm
     void trivial(int4 n,PSeg sgm[]);
