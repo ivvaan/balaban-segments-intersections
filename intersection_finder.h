@@ -151,15 +151,6 @@ class CIntersectionFinder
   //for fast, optimal and parallel algorithms
   SegmentInfo * L,* R,* Q;
 
-  // for no recursion version of fast
-  struct SNoRecursionRec:public ProgramStackRec // same for no recursion algorithm
-    {
-      int4 left_bound,m,Q_pos_prev;
-      SNoRecursionRec():ProgramStackRec(-1,-1){left_bound=-1;m=-1;};
-    };
-
-
-
   //for no_ip algorithm
   int4 *Loc;
   struct no_ipSegmentInfo
@@ -180,12 +171,6 @@ class CIntersectionFinder
 
   //end structures for Balaban algorithms
 
-  // structure for simple_sweep algorithm
-  struct TSEnd:public TEnd
-    {
-      PSeg s;
-    };
-
   //begin fields and struсtures for Bentley & Ottmann algorithm
   REAL sweep_line_x;
   int4 swl_root;
@@ -198,10 +183,7 @@ class CIntersectionFinder
               // always should be 
               //SweepLine[SweepLine[s].seg_node_idx].segment==s
               //SweepLine[SweepLine[node].segment].seg_node_idx==node
-      TBinTreeNode()
-        {
-           segment=seg_node_idx=left=right=next=prev=-1;
-        };
+      TBinTreeNode(){segment=seg_node_idx=left=right=next=prev=-1;};
     } *SweepLine; 
   struct TEvent // for events list
     {
@@ -217,7 +199,6 @@ class CIntersectionFinder
   //helpers for segment functions
   inline int4 IntersectionsInCurStripe(SegmentInfo  s1,PSeg s2)
     {
-		INC_COUNTER(0);
     return _FindAndRegIPointsInStripe(B,E,Scoll[s1],s2,_reg_obj,dont_need_int_points);
     };
 
