@@ -909,12 +909,14 @@ void CIntersectionFinder::balaban_no_recursion(int4 n,PSeg _Scoll[])
 
   int4 interval_left_index=0,interval_right_index=2*n-1,ladder_start_index=-1;
   int4 m,call_numb=0;
-  SNoRecursionRec *stack=new SNoRecursionRec[32*(max_call+1)];
-  stack->left_bound=-1;stack->right_bound=2*n;
-  stack->m=stack->Q_pos=-1;stack->prev=NULL;
-  SNoRecursionRec *stack_pos=stack;
-  SNoRecursionRec *stack_bottom=stack;
-  stack[1].Q_pos=-1;
+
+  struct SNoRecursionRec:public ProgramStackRec 
+    {
+      int4 left_bound,m,Q_pos_prev;
+      SNoRecursionRec():ProgramStackRec(-1,-1){left_bound=m=-1;};
+    } *stack=new SNoRecursionRec[32*(max_call+1)];
+  SNoRecursionRec *stack_pos=stack,*stack_bottom=stack;
+  stack->right_bound=2*n;
   while(1)
     {
       B=ENDS[interval_left_index].x;
@@ -1072,9 +1074,12 @@ void CIntersectionFinder::simple_sweep(int4 n,PSeg Scoll[])
   int4 i,j;
   PSeg s;
   int4 pos,k;
-
-  TSEnd *Ends=new TSEnd[2*n];
   PSeg *sgm=new PSeg[n+1];
+  struct TSEnd:public TEnd
+    {
+      PSeg s;
+    } *Ends=new TSEnd[2*n];
+ 
   j=0;
   for (i=0;i<n;i++)
     {
@@ -1261,7 +1266,7 @@ void CIntersectionFinder::IntOnRightOfSWL(int4 s1,int4 s2)// important s1 below 
         ev->s1=s1;
         ev->s2=s2;
         EventsAddNew();
-        if(n==2)
+        if(n==2) //for arcs intersection case
           {
             ev++;
             ev->s1=s2;
