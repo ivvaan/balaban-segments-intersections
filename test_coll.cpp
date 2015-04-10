@@ -375,7 +375,7 @@ int4 IntPointsInStripe(REAL x1,REAL x2,TArcSegment *s1,TArcSegment *s2,TPlaneVec
   {
   TPlaneVect oo=s2->org-s1->org;
   REAL org_dist2=oo.get_norm();
-  //     REAL org_dist=sqrt(org_dist2);
+  if(org_dist2>s1->r2+s2->r2) return 0;
   REAL delta=0.5*(s1->r2-s2->r2+s2->org.get_norm()-s1->org.get_norm())-s1->org*oo;
   REAL t=delta/org_dist2;
   REAL l2=s1->r2-delta*t;
@@ -390,7 +390,6 @@ int4 IntPointsInStripe(REAL x1,REAL x2,TArcSegment *s1,TArcSegment *s2,TPlaneVec
   t=sqrt(l2/org_dist2);
   oo=TPlaneVect(oo.y*t,-oo.x*t);
   int4 npoints=0;
-  REAL R1,R2;
   TPlaneVect res=m+oo;
   if((res.x>=x1)&&(res.x<=x2)&&(s1->IsTheSamePart(res))&&(s2->IsTheSamePart(res)))
     { if(p)p[npoints]=res;npoints++;}
