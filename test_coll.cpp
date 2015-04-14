@@ -375,8 +375,7 @@ int4 IntPointsInStripe(REAL x1,REAL x2,TArcSegment *s1,TArcSegment *s2,TPlaneVec
   {
   TPlaneVect oo=s2->org-s1->org;
   REAL org_dist2=oo.get_norm();
-  if(org_dist2>s1->r2+s2->r2) return 0;
-  REAL delta=0.5*(s1->r2-s2->r2+s2->org.get_norm()-s1->org.get_norm())-s1->org*oo;
+  REAL delta=0.5*(s1->r2-s2->r2+org_dist2);
   REAL t=delta/org_dist2;
   REAL l2=s1->r2-delta*t;
   if(l2<0)return 0;
