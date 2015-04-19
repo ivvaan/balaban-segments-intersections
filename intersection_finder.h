@@ -48,7 +48,7 @@ typedef void (*FRegIntersection)(PRegObj intersection_registrator,PSeg s1,PSeg s
   n - the number of the intesection points, p- pointer to intersection points array*/
   
 
-const int4 undef_loc=-2147483648;
+const int4 undef_loc=(-2147483647-1);
 const int4 inherit_each=32; // defines how often in optimal algorithm stairs are inherited,  one inherited per inherit_each
 const int4 max_call=5; //max number of sequential recursive call (opt)FindR before dividing current strip
 
