@@ -221,7 +221,7 @@ counters_mute=counters_string;
           printf("%s intersections=%13.0f time=%6.5f%s\n",alg_names[a],nInt[a],exec_time[a],counters_string);
         }
      };
-  //printf("ratio fast  =%6.3f\n",0.5*(n*exec_time[2]*(n-1))/(exec_time[0]*nInt[2]));
+  printf("ratio fast  =%6.3f\n",0.5*(n*exec_time[2]*(n-1))/(exec_time[0]*nInt[2]));
 
   delete_test_collection(seg_type,coll);
   if(wait){printf("press 'Enter' to continue"); getchar();}
