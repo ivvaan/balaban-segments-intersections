@@ -63,7 +63,7 @@ int main(int argc, char* argv[])
   REAL p=1.0;
   double exec_time[33],nInt[33];
   char *ss="Lla",*sd="rlmsp";
-  BOOL mute=FALSE,print_counters=FALSE,wait=FALSE,dont_need_ip=FALSE;
+  BOOL mute=FALSE,print_counters=FALSE,wait=FALSE,dont_need_ip=FALSE, rtime_printout=FALSE;
   char counters_string[256],*pcs=NULL,*counters_mute,rpar[]="-r";
   int4 alg_list[]={ triv, simple_sweep, fast, optimal, fast_parallel, bentley_ottmann};
   char *alg_names[]={"trivial","simple_sweep","fast","optimal","fast_parallel","bentley_ottmann"};
@@ -87,7 +87,7 @@ counters_mute=counters_string;
 #ifdef COUNTERS_ON
     printf("usage: seg_int -aA -sS -dD -nN -pP -r -m -w -c\n");
 #else    
-    printf("usage: seg_int -aA -sS -dD -nN -pP -r -m -w\n");
+    printf("usage: seg_int -aA -sS -dD -nN -pP -r -m -e -w\n");
 #endif    
     printf("example: seg_int -a14 -sa -dp -n20000 -p5.5\n");
     printf("-aA: type of algorithms tested\n");
@@ -113,7 +113,9 @@ counters_mute=counters_string;
     printf(" D=p: random segment with  length multiplied by p\n");
     printf("-r: if presented, fast algorithm doesn't find intersection points but only intersecting pairs\n");
     printf("-m: if presented, means 'mute' mode - few information printed\n");
-    printf("-w: if presented, program wait until 'Enter' pressed before closing\n");
+	printf("-e: if presented, for each alg prints out relative (compared to checking two segments intersection) time to find one intersection (works only if A%2==1 and mute off)\n");
+	printf("-w: if presented, program wait until 'Enter' pressed before closing\n");   
+
 #ifdef COUNTERS_ON
     printf("-c: counters are printed, if presented\n");
 #endif    
@@ -185,11 +187,16 @@ counters_mute=counters_string;
             dont_need_ip=TRUE;
             }
             break;
-          case 'm':
-            {
-            mute=TRUE;
-            }
-            break;
+		  case 'm':
+		  {
+			  mute = TRUE;
+		  }
+		  break;
+		  case 'e':
+		  {
+			  rtime_printout = TRUE;
+		  }
+		  break;
           case 'w':
             {
             wait=TRUE;
@@ -221,10 +228,25 @@ counters_mute=counters_string;
           printf("%s intersections=%13.0f time=%6.5f%s\n",alg_names[a],nInt[a],exec_time[a],counters_string);
         }
      };
-  printf("ratio fast  =%6.3f\n",0.5*(n*exec_time[2]*(n-1))/(exec_time[0]*nInt[2]));
+  if (rtime_printout&&(alg&triv)&&(!mute))
+  {
+	  double n_checks = n*0.5*(double)(n - 1);
+	  double check_time = exec_time[0] / n_checks;
+	  printf("\ntrivial alg made %13.0f intersection checks\n", n_checks);
+	  printf("one intersection check takes %6.3f ns, let's use intersection check time (ICT) as a time unit \n\n", 1E+09*check_time);
+	  check_time*=nInt[0];
+	  for (int4 a = 0; a<sizeof(alg_list) / sizeof(alg_list[0]); a++)
+	  {
+		  if (alg&alg_list[a])
+		  {
+			  printf("%s finds one intersection in %6.3f ICT \n", alg_names[a] , exec_time[a]/ check_time);
+		  }
+	  };
+  }
 
+ 
   delete_test_collection(seg_type,coll);
-  if(wait){printf("press 'Enter' to continue"); getchar();}
+  if(wait){printf("\npress 'Enter' to continue"); getchar();}
   return 0;
   }
 
