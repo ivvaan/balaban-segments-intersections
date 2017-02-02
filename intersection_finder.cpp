@@ -446,7 +446,7 @@ int4 CIntersectionFinder::no_ipSplit(int4 &step_index, int4 Size, int4 stripe_di
 		{
 			int4 step = step_index;
 			PSeg ps = Scoll[cur_L_pos->s];
-			//  at the left edge of the stripe current segment must have bigger Y coord when all segments of current staircase 
+			//  at the left edge of the stripe current segment must have Y coord greater then all segments of the current staircase 
 			if (stripe_divided)cur_L_pos->y = _YAtX(ps, E); // Y coordinate of current segment at right edge of the stripe
 			while ((father_last_step<step) && (no_ipQ[step].y>cur_L_pos->y))// current segment intersects all segments of the staircase having bigger Y coords at the stripe right edge  
 			{
