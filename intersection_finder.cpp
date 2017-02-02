@@ -1008,7 +1008,10 @@ int4 CIntersectionFinder::CalcLAt(int4 end_index)
 
 };
 
-#ifdef WIN32
+#if defined(_WIN32)||defined(_WIN64)||defined(__WIN32__)||defined(__TOS_WIN__)||defined(__WINDOWS__)
+#define COMPILING_FOR_WINDOWS
+#endif
+#ifdef COMPILING_FOR_WINDOWS
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 DWORD WINAPI thread_routine(void *param)
@@ -1020,7 +1023,7 @@ DWORD WINAPI thread_routine(void *param)
 
 void CIntersectionFinder::fast_parallel(int4 n, PSeg _Scoll[], PRegObj add_reg)
 {
-#ifdef WIN32 //compiling for Windows CreateThread supported
+#ifdef COMPILING_FOR_WINDOWS //compiling for Windows CreateThread supported
 	int4 Size, m;
 	HANDLE hThread;
 	DWORD tID;
