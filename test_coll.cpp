@@ -551,13 +551,15 @@ void  delete_test_collection(int4 seg_type,PSeg *colls)
     }
   delete[]  colls; 
   };
-  
+
+const int4 reg_obj_margin = 32;// for reg objects to be in different CPU cash blocks
+double reg_objects[reg_obj_margin*n_threads];
 double  find_intersections(int4 seg_type,int4 SN,PSeg *colls,int4 alg,BOOL dont_need_ip, double *counters)
   {
   if(colls==NULL) return 0;
   double int_numb=0;
   CIntersectionFinder intersection_finder;
-  double int_numb1=0;
+  
   BOOL is_line;
   switch (seg_type)
     {
@@ -623,10 +625,21 @@ double  find_intersections(int4 seg_type,int4 SN,PSeg *colls,int4 alg,BOOL dont_
             intersection_finder.balaban_fast(SN,colls); 
         }; break;
     case optimal:intersection_finder.balaban_optimal(SN,colls);break;
-    case fast_parallel:intersection_finder.fast_parallel(SN,colls,&int_numb1);break;
+    case fast_parallel: 
+    {
+        PRegObj additional_reg_obj[n_threads];
+        for (int i = 0; i < n_threads - 1; i++)
+        {
+            reg_objects[i*reg_obj_margin]=0;
+            additional_reg_obj[i] = (PRegObj *)reg_objects + i*reg_obj_margin;
+        }
+        intersection_finder.fast_parallel(SN, colls, n_threads, additional_reg_obj);
+        for (int i = 0; i < n_threads - 1; i++)int_numb += *(double*)additional_reg_obj[i];
+    }
+    break;
     case bentley_ottmann:intersection_finder.bentley_ottmann(SN,colls);break;
     };
   memcpy(counters,intersection_finder.my_counter,sizeof(intersection_finder.my_counter));
-  return int_numb+int_numb1;
+  return int_numb;
   };
 

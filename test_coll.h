@@ -42,7 +42,7 @@ enum _Distribution
   {
   random=0,parallel,mixed,small,param_defined
   };
-
+const int4 n_threads = 6;
 
 PSeg* create_test_collection(int4 seg_type,int4 n,int4 distr,REAL par);
 void  delete_test_collection(int4 seg_type,PSeg* );

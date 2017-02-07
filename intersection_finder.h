@@ -86,6 +86,7 @@ struct CSegmCompare
 
 class CIntersectionFinder
   {
+ 
   int4 is_line_segments;//shows if segments is straitline and more fast calculations are possible
   
   //begin functions to deal with segments
@@ -167,7 +168,7 @@ class CIntersectionFinder
   int4 *father_loc;
 
   //for parallel version  
-  int4 run_to;
+  CIntersectionFinder* clone_of;
 
   //end structures for Balaban algorithms
 
@@ -225,7 +226,7 @@ class CIntersectionFinder
 
   //common  functions for fast and optomal algorithm
   int4 SearchInStrip(int4 QP,int4 Size);
-  void AllocMem(int4 for_optimal);
+  void AllocMem(BOOL for_optimal);
   void FreeMem();
   int4 prepare_ends(int4 n);
 
@@ -259,7 +260,7 @@ class CIntersectionFinder
   int4 no_ipFindR(int4 ladder_start_index,int4 interval_left_index,int4 interval_right_index,ProgramStackRec *stack_pos,int4 Size,int4 call_numb);
 
   //additional functions for fast parallel algorithm
-  CIntersectionFinder *clone(PRegObj robj);// creates a copy of itself to run concurrently
+  void clone (CIntersectionFinder *master,PRegObj robj);// creates a copy of master to run concurrently
   void unclone();//should be called from the copy before deletion to free common structures correctly
   int4 CalcLAt(int4 end_index); // calculates starting L array for parallel execution
   
@@ -286,7 +287,7 @@ class CIntersectionFinder
 
 
     CIntersectionFinder();
-    ~CIntersectionFinder(){FreeMem();};
+    ~CIntersectionFinder() { FreeMem(); };
 
     void set_segm_fuctions(FBelow _below, 
       FFindAndRegIPoints findAndRegIPoints,
@@ -305,9 +306,7 @@ class CIntersectionFinder
     void balaban_no_recursion(int4 n,PSeg _Scoll[]);
     void balaban_no_ip(int4 n,PSeg _Scoll[]);
     void balaban_optimal(int4 n,PSeg _Scoll[]);
-    void fast_parallel(int4 n,PSeg _Scoll[],PRegObj add_reg);
-    void Run(){ ProgramStackRec stack_rec(-1,2*nTotSegm);  FindR(-1,0,   run_to  ,&stack_rec,1,0); }// to call from thread_routine
-
+    void fast_parallel(int4 n,PSeg _Scoll[],int4 n_threads,PRegObj add_reg[]);//it should be provided n_threads-1 additional intersection registration objects 
     // trivial algorithm
     void trivial(int4 n,PSeg sgm[]);
 
