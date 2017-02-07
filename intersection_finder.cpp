@@ -713,11 +713,11 @@ int4 CIntersectionFinder::no_ipFindR(int4 ladder_start_index, int4 interval_left
 void CIntersectionFinder::FreeMem()
 {
 #define MY_FREE_ARR_MACRO(a) if(a){delete[] a;a=NULL;}
-	MY_FREE_ARR_MACRO(Q);
 	MY_FREE_ARR_MACRO(SegmentBE);
+  MY_FREE_ARR_MACRO(ENDS);
+  MY_FREE_ARR_MACRO(Q);
 	MY_FREE_ARR_MACRO(L);
 	MY_FREE_ARR_MACRO(R);
-	MY_FREE_ARR_MACRO(ENDS);
 	MY_FREE_ARR_MACRO(Loc);
 	MY_FREE_ARR_MACRO(father_loc);
 	MY_FREE_ARR_MACRO(no_ipL);
@@ -752,49 +752,48 @@ void CIntersectionFinder::no_ipAllocMem()
 	no_ipQ = new no_ipSegmentInfo[nTotSegm];
 };
 
-CIntersectionFinder *CIntersectionFinder::clone(PRegObj robj)
+void CIntersectionFinder::clone(CIntersectionFinder *master, PRegObj robj)
 {
-	CIntersectionFinder *res = new CIntersectionFinder();
-	res->nTotSegm = nTotSegm;
-	res->Scoll = Scoll;
-	res->SegmentBE = SegmentBE;
-	res->ENDS = ENDS;
-	res->L = new SegmentInfo[nTotSegm + 1];
-	res->L[0] = L[0];
+	
+	nTotSegm = master->nTotSegm;
+	Scoll = master->Scoll;
+	SegmentBE = master->SegmentBE;
+	ENDS = master->ENDS;
+	L = new SegmentInfo[nTotSegm + 1];
 
 
-	res->Q = new SegmentInfo[nTotSegm + 1];
-	res->R = new SegmentInfo[nTotSegm + 1];
+	Q = new SegmentInfo[nTotSegm + 1];
+	R = new SegmentInfo[nTotSegm + 1];
 	//  res->Loc=new int4[nTotSegm+1];
 
-	res->set_segm_fuctions(_Below,
-		_FindAndRegIPoints,
-		_FindAndRegIPointsInStripe,
-		_IsIntersetInStripe,
-		_BegPoint,
-		_EndPoint,
-		_Under,
+	set_segm_fuctions(master->_Below,
+      master->_FindAndRegIPoints,
+      master->_FindAndRegIPointsInStripe,
+      master->_IsIntersetInStripe,
+      master->_BegPoint,
+      master->_EndPoint,
+      master->_Under,
 		NULL,
 		NULL,
 		NULL,
 		robj,
-		IS_LINE_SEGMENTS);
-	return res;
-};
+      master->is_line_segments);
+  clone_of= master;
+ };
 
 void CIntersectionFinder::unclone()
 {
-
+    // to be done: my_counter summation should be here
+    // lock(clone_of->my_counter) for(i...)clone_of->my_counter[i]+=my_counter[i];unlock(clone_of->my_counter);
 	SegmentBE = NULL;
 	ENDS = NULL;
-
 	MY_FREE_ARR_MACRO(Q);
 	MY_FREE_ARR_MACRO(L)
-		MY_FREE_ARR_MACRO(R);
-	//  MY_FREE_ARR_MACRO(Loc);
-
+	MY_FREE_ARR_MACRO(R);
+  MY_FREE_ARR_MACRO(Loc);
 	Scoll = NULL;
 	nTotSegm = 0;
+  clone_of = NULL;
 };
 
 int4 CIntersectionFinder::prepare_ends(int4 n)
@@ -848,6 +847,7 @@ CIntersectionFinder::CIntersectionFinder()
 	no_ipL = NULL;
 	no_ipR = NULL;
 	no_ipQ = NULL;
+  clone_of = NULL;
 	memset(my_counter, 0, sizeof(my_counter));
 };
 
@@ -1008,52 +1008,41 @@ int4 CIntersectionFinder::CalcLAt(int4 end_index)
 
 };
 
-#if defined(_WIN32)||defined(_WIN64)||defined(__WIN32__)||defined(__TOS_WIN__)||defined(__WINDOWS__)
-#define COMPILING_FOR_WINDOWS
-#endif
-#ifdef COMPILING_FOR_WINDOWS
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-DWORD WINAPI thread_routine(void *param)
-{
-	((CIntersectionFinder *)param)->Run();
-	return 0;
-}
-#endif
 
-void CIntersectionFinder::fast_parallel(int4 n, PSeg _Scoll[], PRegObj add_reg)
-{
-#ifdef COMPILING_FOR_WINDOWS //compiling for Windows CreateThread supported
-	int4 Size, m;
-	HANDLE hThread;
-	DWORD tID;
 
+#include <thread>
+#include <vector>
+void CIntersectionFinder::fast_parallel(int4 n, PSeg _Scoll[], int4 n_threads,PRegObj add_reg[])
+{
 	Scoll = _Scoll;
 	nTotSegm = n;
-	AllocMem(n);
+	AllocMem(FALSE);
 	prepare_ends(n);
-
-	CIntersectionFinder *intersection_finder = clone(add_reg);
-	intersection_finder->L[0] = ENDS[0].s;
-	m = n*1.05;
-	intersection_finder->run_to = m;
-	hThread = CreateThread(NULL, 0, thread_routine, (void *)intersection_finder, 0, &tID);
-	if (hThread)
-	{
-		Size = CalcLAt(m);
-		ProgramStackRec stack_rec(-1, 2 * nTotSegm);
-		FindR(-1, m, 2 * n - 1, &stack_rec, Size, 0);
-		WaitForSingleObject(hThread, INFINITE);
-		CloseHandle(hThread);
-	}
-	intersection_finder->unclone();
-	delete intersection_finder;
-	FreeMem();
-
-#else //compiling for some another enviroment just call balaban_fast. Rewrite thread creation to use parallel version 
-	// somethere else (not Windows)
-	balaban_fast(n, _Scoll);
-#endif    
+  using  namespace std;
+  
+  vector<thread> wrk_threads;
+  auto thread_func = [](CIntersectionFinder *master, int4 from, int4 to, PRegObj add_reg)
+        {
+            CIntersectionFinder i_f;  
+            i_f.clone(master, add_reg); 
+            i_f.FindR(-1, from, to, &ProgramStackRec(-1, 2 * i_f.nTotSegm), i_f.CalcLAt(from), 0); 
+            i_f.unclone();
+        };
+  double part = 2 * n /(double) n_threads;
+  int4 i = 1;
+  int4 start_from = part;
+  int4 to = start_from;
+  while ( i < n_threads)
+  {
+      int4 from = to;
+      i++;
+      to = (i == n_threads) ? 2 * n - 1 : part*i;
+      wrk_threads.push_back(thread(thread_func, this, from,to, add_reg[i-2]));
+  }
+  FindR(-1, 0, start_from, &ProgramStackRec(-1, 2 * n), 1, 0);
+  auto cur_thread = wrk_threads.begin();
+  for (; cur_thread != wrk_threads.end(); cur_thread++) cur_thread->join();
+  FreeMem();
 }
 
 void CIntersectionFinder::trivial(int4 n, PSeg sgm[])
