@@ -2,7 +2,7 @@
 #define UTILS_FOR_SEGMENT_INTERSECTION
 /*
 *
-*      Copyright (c)  2011  Ivan Balaban 
+*      Copyright (c)  2011-2017  Ivan Balaban 
 *      ivvaan@gmail.com
 *
 This file is part of Seg_int library.
@@ -224,55 +224,55 @@ template<class order,class real> void fastsort(order &o,real *List,int4 n)
 
 
 template<class real> 
-class tuple{
+class couple{
 public:
     real x;
     real y;
-    tuple()
+    couple()
       { x=0; y=0;}
-    tuple(const real &xc,const real &yc):x(xc),y(yc){};
-    int operator<(tuple<real>   & v2)
+    couple(const real &xc,const real &yc):x(xc),y(yc){};
+    int operator<(couple<real>   & v2)
       { return ((x<v2.x)||(x==v2.x) && (y<v2.y));};
-    int operator>(tuple<real>   & v2)
+    int operator>(couple<real>   & v2)
       { return ((x>v2.x)||(x==v2.x) && (y>v2.y));};
-    tuple<real> operator-()
-      {return tuple<real>(-x,-y);};
+    couple<real> operator-()
+      {return couple<real>(-x,-y);};
     real get_norm()
       {return x*x+y*y;}
     real get_length()
       {return sqrt(x*x+y*y);};
-    tuple<real>& normalize()
+    couple<real>& normalize()
       {
       real l=get_length();
       x/=l;y/=l;
       return *this;
       };
-    tuple<real> get_normalized()
+    couple<real> get_normalized()
       {
       real l=get_length();
-      return tuple<real>(x/l,y/l);
+      return couple<real>(x/l,y/l);
       };
   };
 
 
 
-template <class real> inline real operator%(tuple<real>    v1,tuple<real>   v2)
+template <class real> inline real operator%(const couple<real>    &v1,const couple<real>  &v2)
   { return v1.x*v2.y-v2.x*v1.y;}
 
-template <class real> inline tuple<real> operator*(const real   & r,tuple<real>   & t)
-  {return tuple<real>(t.x*r,t.y*r);}
+template <class real> inline couple<real> operator*(const real   & r,const couple<real>   & t)
+  {return couple<real>(t.x*r,t.y*r);}
 
-template <class real> inline tuple<real> operator*(tuple<real>   & t,real   & r)
-  {return tuple<real>(t.x*r,t.y*r);}
+template <class real> inline couple<real> operator*(const couple<real>   & t,const real   & r)
+  {return couple<real>(t.x*r,t.y*r);}
 
-template <class real> inline real operator*(tuple<real>  t,tuple<real>   v)
+template <class real> inline real operator*(const couple<real>   &t, const couple<real>   &   v)
   {return t.x*v.x+t.y*v.y;}
 
-template <class real> inline tuple<real> operator+(tuple<real>   &v1,tuple<real>   &v2)
-  {return tuple<real>(v1.x+v2.x,v1.y+v2.y);}
+template <class real> inline couple<real> operator+(const couple<real>   &v1, const couple<real>   &v2)
+  {return couple<real>(v1.x+v2.x,v1.y+v2.y);}
 
-template <class real> inline tuple<real> operator-(tuple<real>   &v1,tuple<real>   &v2)
-  {return tuple<real>(v1.x-v2.x,v1.y-v2.y);}
+template <class real> inline couple<real> operator-(const couple<real>   &v1, const couple<real>   &v2)
+  {return couple<real>(v1.x-v2.x,v1.y-v2.y);}
 
 
 class CRandomValueGen
@@ -284,6 +284,6 @@ class CRandomValueGen
   };
 
 
-typedef tuple<REAL> TPlaneVect;
+typedef couple<REAL> TPlaneVect;
 
 #endif

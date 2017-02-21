@@ -1,6 +1,6 @@
 /*
 *
-*      Copyright (c)  2011  Ivan Balaban 
+*      Copyright (c)  2011-2017  Ivan Balaban 
 *      ivvaan@gmail.com
 *
 This file is part of Seg_int library.
@@ -29,7 +29,7 @@ REAL sq(REAL x) {return x*x;}
 class TLineSegment1
   {
   public:
-    static int4 is_line;
+    static const int4 is_line=1;
     TLineSegment1(){};
     // int4 parnum,intpar;
     TPlaneVect org;
@@ -85,13 +85,11 @@ class TLineSegment1
         return org.y+shift.y*(X-org.x)/shift.x;
       };
     friend int4 below(REAL X,TLineSegment1 *s1,TLineSegment1 *s2);
-    friend int4 IntPoint(TLineSegment1 *s1,TLineSegment1 *s2,TPlaneVect *p);
-    friend int4 StripePoint(REAL b,REAL e,TLineSegment1 *s1,TLineSegment1 *s2,TPlaneVect *p);
+    template <bool _ret_ip> friend int4 IntPoint(TLineSegment1 *s1,TLineSegment1 *s2,TPlaneVect *p);
+    template <bool _ret_ip> friend int4 StripePoint(REAL b,REAL e,TLineSegment1 *s1,TLineSegment1 *s2,TPlaneVect *p);
     //for optimal alg only
     friend int4 IntInside(REAL b,REAL e,TLineSegment1 *s1,TLineSegment1 *s2);
   };
-
-int4 TLineSegment1::is_line=1;
 
 
 int4 below(REAL X,TLineSegment1* s1,TLineSegment1* s2)
@@ -117,7 +115,7 @@ int4 below(REAL X,TLineSegment1* s1,TLineSegment1* s2)
   return y1<y2;
   }
 
-
+template <bool _ret_ip>
 int4 IntPoint(TLineSegment1* s1,TLineSegment1* s2,TPlaneVect *p)
   { 
   REAL b1=max(s1->org.x,s2->org.x);
@@ -129,12 +127,13 @@ int4 IntPoint(TLineSegment1* s1,TLineSegment1* s2,TPlaneVect *p)
     if (((mul=delt%s2->shift)>0)^(mul-prod>0))
       {
       if (prod==0) return 0;
-      if(p)*p=s1->org+((REAL)fabs(mul/prod))*s1->shift;
+      if(_ret_ip)*p=s1->org+((REAL)fabs(mul/prod))*s1->shift;
       return 1;
       }
     return 0;
   } 
 
+template <bool _ret_ip>
 int4 StripePoint(REAL b,REAL e,TLineSegment1* s1,TLineSegment1* s2,TPlaneVect *p)
   { 
   TPlaneVect delt=s2->org-s1->org;
@@ -145,7 +144,7 @@ int4 StripePoint(REAL b,REAL e,TLineSegment1* s1,TLineSegment1* s2,TPlaneVect *p
     mul=mul/prod;
     xc=s2->org.x-mul*s2->shift.x;
     if ((xc<=b)||(xc>e)) return 0;
-    if(p)
+    if(_ret_ip)
       {
         p->x=xc;
         p->y=s2->org.y-mul*s2->shift.y;
@@ -174,7 +173,7 @@ class TLineSegment2
   {
   public:
     //int4 seg_n;
-    static int4 is_line;
+    static const int4 is_line=1;
     REAL x1,x2,a,b;
     TLineSegment2(){x1=0;x2=0;a=0;b=0;};
     void Init(TLineSegment1 &s){x1=s.org.x;x2=s.org.x+s.shift.x;a=s.shift.y/s.shift.x;b=s.org.y-a*s.org.x;};
@@ -208,14 +207,13 @@ class TLineSegment2
         return a*X+b;
       };
     friend int4 below(REAL X,TLineSegment2 *s1,TLineSegment2 *s2);
-    friend int4 IntPoint(TLineSegment2 *s1,TLineSegment2 *s2,TPlaneVect *p);
-    friend int4 StripePoint(REAL b,REAL e,TLineSegment2 *s1,TLineSegment2 *s2,TPlaneVect *p);
+    template <bool _ret_ip> friend int4 IntPoint(TLineSegment2 *s1,TLineSegment2 *s2,TPlaneVect *p);
+    template <bool _ret_ip> friend int4 StripePoint(REAL b,REAL e,TLineSegment2 *s1,TLineSegment2 *s2,TPlaneVect *p);
     //for optimal alg only
     friend int4 IntInside(REAL b,REAL e,TLineSegment2 *s1,TLineSegment2 *s2);
 
   };
 
-int4 TLineSegment2::is_line=1;
 
 int4 below(REAL X,TLineSegment2* s1,TLineSegment2* s2)
   { 
@@ -223,6 +221,7 @@ int4 below(REAL X,TLineSegment2* s1,TLineSegment2* s2)
   return (s1!=s2)&&((X*s1->a+s1->b)<(X*s2->a+s2->b));
   }
 
+template <bool _ret_ip>
 int4 IntPoint(TLineSegment2* s1,TLineSegment2* s2,TPlaneVect *p)
   { 
   REAL x1=max(s1->x1,s2->x1);
@@ -230,7 +229,7 @@ int4 IntPoint(TLineSegment2* s1,TLineSegment2* s2,TPlaneVect *p)
   if(x1>=x2)return 0;
   REAL da=s1->a-s2->a;
   if(da==0)return 0;
-  if(p)
+  if(_ret_ip)
     {
        p->x=(s2->b-s1->b)/da;
        if ((p->x>=x1)&&(p->x<=x2)){p->y=p->x*s1->a+s1->b; return 1;}
@@ -243,6 +242,7 @@ int4 IntPoint(TLineSegment2* s1,TLineSegment2* s2,TPlaneVect *p)
   return 0;
   } 
 
+template <bool _ret_ip>
 int4 StripePoint(REAL b,REAL e,TLineSegment2* s1,TLineSegment2* s2,TPlaneVect *p)
   { 
   REAL x1=max(s1->x1,s2->x1);
@@ -250,7 +250,7 @@ int4 StripePoint(REAL b,REAL e,TLineSegment2* s1,TLineSegment2* s2,TPlaneVect *p
   x1=max(x1,b);x2=min(x2,e);
   REAL da=s1->a-s2->a;
   if(da==0)return 0;
-  if(p)
+  if(_ret_ip)
     {
        p->x=(s2->b-s1->b)/da;
        if ((p->x>=x1)&&(p->x<=x2)){p->y=p->x*s1->a+s1->b; return 1;}
@@ -279,7 +279,7 @@ int4 IntInside(REAL b,REAL e,TLineSegment2 *s1,TLineSegment2 *s2)
 class TArcSegment// arc formed by intersection of a vertical strip [x1,x2] with a circle having center org and square of radius r2 
   {
   public:
-    static int4 is_line;
+    static const int4 is_line=0;
     REAL x1,x2,r2;
     TPlaneVect org;
     BOOL is_upper;// upper or lower part of the intersection
@@ -356,14 +356,14 @@ class TArcSegment// arc formed by intersection of a vertical strip [x1,x2] with 
       };
     friend int4 below(REAL X,TArcSegment *s1,TArcSegment *s2);
     friend int4 IntPointsInStripe(REAL x1,REAL x2,TArcSegment *s1,TArcSegment *s2,TPlaneVect *p);
-    friend int4 IntPoint(TArcSegment *s1,TArcSegment *s2,TPlaneVect *p);
-    friend int4 StripePoint(REAL b,REAL e,TArcSegment *s1,TArcSegment *s2,TPlaneVect *p);
+    template <bool _ret_ip> friend int4 IntPoint(TArcSegment *s1,TArcSegment *s2,TPlaneVect *p);
+    template <bool _ret_ip> friend int4 StripePoint(REAL b,REAL e,TArcSegment *s1,TArcSegment *s2,TPlaneVect *p);
     //for optimal alg only
     friend int4 IntInside(REAL b,REAL e,TArcSegment *s1,TArcSegment *s2);
 
   };
 
-int4 TArcSegment::is_line=0;
+
 
 int4 below(REAL X,TArcSegment* s1,TArcSegment* s2)
   { 
@@ -398,6 +398,7 @@ int4 IntPointsInStripe(REAL x1,REAL x2,TArcSegment *s1,TArcSegment *s2,TPlaneVec
   return npoints;
   };
 
+template <bool _ret_ip>
 int4 IntPoint(TArcSegment* s1,TArcSegment* s2,TPlaneVect *p)
   { 
   REAL x1=max(s1->x1,s2->x1);
@@ -406,6 +407,7 @@ int4 IntPoint(TArcSegment* s1,TArcSegment* s2,TPlaneVect *p)
   return IntPointsInStripe(x1,x2,s1,s2,p);
   } 
 
+template <bool _ret_ip>
 int4 StripePoint(REAL b,REAL e,TArcSegment* s1,TArcSegment* s2,TPlaneVect *p)
   { 
   REAL x1=max(s1->x1,s2->x1);
@@ -443,19 +445,19 @@ class SegmentFunctions
       {
       return below(x,(SEGMENT*)s1,(SEGMENT*)s2);
       };
-    static  int4 __FindAndRegIPoints(PSeg s1,PSeg s2,PRegObj intersection_registrator, BOOL no_ip)
+    template<bool  _reg_ip>
+    static  int4 __FindAndRegIPoints(PSeg s1,PSeg s2,PRegObj intersection_registrator)
       {
       TPlaneVect P[2];
-      TPlaneVect *p=no_ip?NULL:P;
-      int4 n=IntPoint((SEGMENT*)s1,(SEGMENT*)s2,p);
-      if(n)register_intersection(intersection_registrator,s1,s2,n,p);
+      int4 n=IntPoint<_reg_ip>((SEGMENT*)s1,(SEGMENT*)s2,P);
+      if(n)register_intersection(intersection_registrator,s1,s2,n, _reg_ip?P:NULL);
       return n; 
       };
 
     static  int4 __FindAndRegIPointOnRightOfSWL(REAL swl_x,PSeg s1,PSeg s2,TPlaneVect *p1,TPlaneVect *p2)
       {
           TPlaneVect p[2];
-          int4 n=IntPoint((SEGMENT*)s1,(SEGMENT*)s2,p);
+          int4 n=IntPoint<true>((SEGMENT*)s1,(SEGMENT*)s2,p);
 //              if(n&&(p->x>swl_x)) *p1=*p;
               
           if(n==0)return 0;
@@ -476,13 +478,13 @@ class SegmentFunctions
             } 
             return res;   
       };
-      
-    static int4 __FindAndRegIPointsInStripe(REAL b,REAL e, PSeg s1,PSeg s2,PRegObj intersection_registrator,BOOL no_ip)
+    
+    template<bool  _reg_ip>
+    static int4 __FindAndRegIPointsInStripe(REAL b,REAL e, PSeg s1,PSeg s2,PRegObj intersection_registrator)
       {
       TPlaneVect P[2];
-      TPlaneVect *p=no_ip?NULL:P;
-      int4 n=StripePoint(b,e,(SEGMENT*)s1,(SEGMENT*)s2,p);
-      if(n)register_intersection(intersection_registrator,s1,s2,n,p);
+      int4 n=StripePoint<_reg_ip>(b,e,(SEGMENT*)s1,(SEGMENT*)s2,P);
+      if(n)register_intersection(intersection_registrator,s1,s2,n, _reg_ip ? P : NULL);
       return n; 
       };
     static void __BegPoint(PSeg s,REAL &x,REAL &y)
@@ -566,8 +568,8 @@ double  find_intersections(int4 seg_type,int4 SN,PSeg *colls,int4 alg,BOOL dont_
     case line1:
       intersection_finder.set_segm_fuctions(
         SegmentFunctions<TLineSegment1>::__Below,
-        SegmentFunctions<TLineSegment1>::__FindAndRegIPoints,
-        SegmentFunctions<TLineSegment1>::__FindAndRegIPointsInStripe,
+          dont_need_ip?SegmentFunctions<TLineSegment1>::__FindAndRegIPoints<false>: SegmentFunctions<TLineSegment1>::__FindAndRegIPoints<true>,
+          dont_need_ip?SegmentFunctions<TLineSegment1>::__FindAndRegIPointsInStripe<false>:SegmentFunctions<TLineSegment1>::__FindAndRegIPointsInStripe<false>,
         SegmentFunctions<TLineSegment1>::__IntInside,
         SegmentFunctions<TLineSegment1>::__BegPoint,
         SegmentFunctions<TLineSegment1>::__EndPoint,
@@ -582,9 +584,9 @@ double  find_intersections(int4 seg_type,int4 SN,PSeg *colls,int4 alg,BOOL dont_
     case line2:
       intersection_finder.set_segm_fuctions(
         SegmentFunctions<TLineSegment2>::__Below,
-        SegmentFunctions<TLineSegment2>::__FindAndRegIPoints,
-        SegmentFunctions<TLineSegment2>::__FindAndRegIPointsInStripe,
-        SegmentFunctions<TLineSegment2>::__IntInside,
+          dont_need_ip ? SegmentFunctions<TLineSegment2>::__FindAndRegIPoints<false> : SegmentFunctions<TLineSegment2>::__FindAndRegIPoints<true>,
+          dont_need_ip ? SegmentFunctions<TLineSegment2>::__FindAndRegIPointsInStripe<false> : SegmentFunctions<TLineSegment2>::__FindAndRegIPointsInStripe<false>,
+          SegmentFunctions<TLineSegment2>::__IntInside,
         SegmentFunctions<TLineSegment2>::__BegPoint,
         SegmentFunctions<TLineSegment2>::__EndPoint,
         SegmentFunctions<TLineSegment2>::__Under,
@@ -598,9 +600,9 @@ double  find_intersections(int4 seg_type,int4 SN,PSeg *colls,int4 alg,BOOL dont_
     case arc:
       intersection_finder.set_segm_fuctions(
         SegmentFunctions<TArcSegment>::__Below,
-        SegmentFunctions<TArcSegment>::__FindAndRegIPoints,
-        SegmentFunctions<TArcSegment>::__FindAndRegIPointsInStripe,
-        SegmentFunctions<TArcSegment>::__IntInside,
+          SegmentFunctions<TArcSegment>::__FindAndRegIPoints<true>,
+          SegmentFunctions<TArcSegment>::__FindAndRegIPointsInStripe<true>,
+          SegmentFunctions<TArcSegment>::__IntInside,
         SegmentFunctions<TArcSegment>::__BegPoint,
         SegmentFunctions<TArcSegment>::__EndPoint,
         SegmentFunctions<TArcSegment>::__Under,
@@ -612,14 +614,14 @@ double  find_intersections(int4 seg_type,int4 SN,PSeg *colls,int4 alg,BOOL dont_
         );
       break;
     }
-  intersection_finder.dont_need_int_points=dont_need_ip;
+  dont_need_ip = dont_need_ip&&is_line;
   switch (alg)
     {
     case triv:intersection_finder.trivial(SN,colls);break;
     case simple_sweep:intersection_finder.simple_sweep(SN,colls);break;
     case fast: 
         {
-       if(dont_need_ip&&is_line)
+       if(dont_need_ip)
             intersection_finder.balaban_no_ip(SN,colls);
         else
             intersection_finder.balaban_fast(SN,colls); 
