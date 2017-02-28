@@ -556,11 +556,13 @@ void  delete_test_collection(int4 seg_type,PSeg *colls)
 
 const int4 reg_obj_margin = 32;// for reg objects to be in different CPU cash blocks
 double reg_objects[reg_obj_margin*n_threads];
-double  find_intersections(int4 seg_type,int4 SN,PSeg *colls,int4 alg,BOOL dont_need_ip, double *counters)
+
+double  find_intersections(int4 seg_type,int4 SN,PSeg *colls,int4 alg, double *counters)
   {
   if(colls==NULL) return 0;
   double int_numb=0;
   CIntersectionFinder intersection_finder;
+  BOOL dont_need_ip=(alg== fast_no_ip);
   
   BOOL is_line;
   switch (seg_type)
@@ -614,19 +616,13 @@ double  find_intersections(int4 seg_type,int4 SN,PSeg *colls,int4 alg,BOOL dont_
         );
       break;
     }
-  dont_need_ip = dont_need_ip&&is_line;
   switch (alg)
     {
     case triv:intersection_finder.trivial(SN,colls);break;
     case simple_sweep:intersection_finder.simple_sweep(SN,colls);break;
-    case fast: 
-        {
-       if(dont_need_ip)
-            intersection_finder.balaban_no_ip(SN,colls);
-        else
-            intersection_finder.balaban_fast(SN,colls); 
-        }; break;
-    case optimal:intersection_finder.balaban_optimal(SN,colls);break;
+    case fast: intersection_finder.balaban_fast(SN,colls); break;
+    case fast_no_ip: if (is_line)intersection_finder.balaban_no_ip(SN, colls); break;
+    case optimal:intersection_finder.balaban_optimal(SN, colls); break;
     case fast_parallel: 
     {
         PRegObj additional_reg_obj[n_threads];

@@ -36,7 +36,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-double _benchmark(char *counters_string,int4 n,PSeg *coll,int4 s_type,int4 alg,BOOL dont_need_ip,double &res)
+double _benchmark(char *counters_string,int4 n,PSeg *coll,int4 s_type,int4 alg,double &res)
   {
   double start,stop;
   double c[8];
@@ -44,7 +44,7 @@ double _benchmark(char *counters_string,int4 n,PSeg *coll,int4 s_type,int4 alg,B
   start=clock();
   do
   {
-  res=find_intersections(s_type,n,coll,alg,dont_need_ip,c);
+  res=find_intersections(s_type,n,coll,alg,c);
   stop=clock();
   n_call++;
   }
@@ -63,10 +63,10 @@ int main(int argc, char* argv[])
   REAL p=1.0;
   double exec_time[33],nInt[33];
   char *ss="Lla",*sd="rlmsp";
-  BOOL mute=FALSE,print_counters=FALSE,wait=FALSE,dont_need_ip=FALSE, rtime_printout=FALSE;
+  BOOL mute=FALSE,print_counters=FALSE,wait=FALSE, rtime_printout=FALSE;
   char counters_string[256],*pcs=NULL,*counters_mute,rpar[]="-r";
-  int4 alg_list[]={ triv, simple_sweep, fast, optimal, fast_parallel, bentley_ottmann};
-  char *alg_names[]={"trivial","simple_sweep","fast","optimal","fast_parallel","bentley_ottmann"};
+  int4 alg_list[]={ triv, simple_sweep, fast, optimal, fast_parallel, bentley_ottmann,fast_no_ip};
+  char *alg_names[]={"trivial","simple_sweep","fast","optimal","fast_parallel","bentley_ottmann","fast no inters points"};
 
 #ifdef _DEBUG
   _CrtSetDbgFlag(_CRTDBG_CHECK_ALWAYS_DF);
@@ -95,10 +95,11 @@ counters_mute=counters_string;
     printf(" A=2: simple sweep\n");
     printf(" A=4: balaban fast\n");
     printf(" A=8: balaban optimal\n");
-    printf(" A=16: balaban fast parallel for 2 cores\n");
+    printf(" A=16: balaban fast parallel for 6 treads\n");
     printf(" A=32: bentley & ottmann\n");
+    printf(" A=64: balaban fast;  intersection points aren't reported (only intersecting pairs)\n");
     printf(" if you want several algorithms to test just sum up their values\n");
-    printf(" i.e. A=63 (=1+2+4+8+16+32) all algorithms\n");
+    printf(" i.e. A=127 (=1+2+4+8+16+32+64) all algorithms\n");
     printf("-sS: type of segments\n");
     printf(" S=l: line segments representation y=a*x+b,x1<=x<=x2; a,b,x1,x2 - reals\n");
     printf(" S=L: line segments representation r=b+a*t,0<=t<=1; b,a - vectors\n");
@@ -111,7 +112,6 @@ counters_mute=counters_string;
     printf(" D=m: mixed random length almost x parallel 'long' segments (33%) and 'small' segments (67%), the bigger p/N the less parallel 'long' and longer 'short' segments\n");
     printf(" D=s: short segments: random segment with  length multiplied by p/N\n");
     printf(" D=p: random segment with  length multiplied by p\n");
-    printf("-r: if presented, fast algorithm doesn't find intersection points but only intersecting pairs\n");
     printf("-m: if presented, means 'mute' mode - few information printed\n");
 	printf("-e: if presented, for each alg prints out relative (compared to checking two segments intersection) time to find one intersection (works only if A%2==1 and mute off)\n");
 	printf("-w: if presented, program wait until 'Enter' pressed before closing\n");   
@@ -132,7 +132,7 @@ counters_mute=counters_string;
           case 'a':
             {
             alg=atoi(argv[i]+2);
-            if((alg<1)||(alg>63))
+            if((alg<1)||(alg>127))
               {alg=4; printf("some error in -a param. 4 used instead.\n");}
             }
             break;
@@ -182,12 +182,7 @@ counters_mute=counters_string;
               {p=1.0; printf("some error in -p param. 1.0 used instead.\n");}
             }
             break;
-          case 'r':
-            {
-            dont_need_ip=TRUE;
-            }
-            break;
-		  case 'm':
+   		  case 'm':
 		  {
 			  mute = TRUE;
 		  }
@@ -212,20 +207,21 @@ counters_mute=counters_string;
           }
         }
     }
-  if(!dont_need_ip)rpar[0]=0;
-  if(!mute)printf("actual params is: -a%i -s%c -d%c -n%i -p%f %s\n", alg, ss[seg_type], sd[d], n, p,rpar);
+  if(!mute)printf("actual params is: -a%i -s%c -d%c -n%i -p%f\n", alg, ss[seg_type], sd[d], n, p);
   if((seg_type==arc)&&(d==mixed)) {printf("-sa -dm is not compartible!/n"); return 0;}
   if((seg_type==arc)&&(d==parallel)) {printf("-sa -dl is not compartible!/n"); return 0;}
   PSeg *coll=create_test_collection(seg_type,n,d,p);
-  for(int4 a=0;a<sizeof(alg_list)/sizeof(alg_list[0]);a++)
+  {double c[8];  find_intersections(seg_type, min(15000, n), coll, triv, c); };//just to load and speedup processor;
+  for (int4 a = sizeof(alg_list) / sizeof(alg_list[0]) - 1;a>-1; a--)
     {
-      if(alg&alg_list[a])
-        {
-        exec_time[a]=_benchmark(pcs,n,coll,seg_type,alg_list[a],dont_need_ip,nInt[a]);
-        if(mute)
-          printf("a%i;s%c;d%c;r%i;n%i;i%13.0f;t%6.5f;p%f;%s\n",alg_list[a],ss[seg_type], sd[d],dont_need_ip,n,nInt[a],exec_time[a],p,counters_mute);
+      if(alg&alg_list[a]) 
+      {
+        if ((alg_list[a]==fast_no_ip)&&(seg_type==arc)){ if(!mute)printf("fast no inters. points algorithm can handle only line segments\n");continue;}
+        exec_time[a]=_benchmark(pcs,n,coll,seg_type,alg_list[a],nInt[a]);
+        if (mute)
+            printf("a%i;s%c;d%c;n%i;i%13.0f;t%6.5f;p%f;%s\n", alg_list[a], ss[seg_type], sd[d], n, nInt[a], exec_time[a], p, counters_mute);
         else
-          printf("%s intersections=%13.0f time=%6.5f%s\n",alg_names[a],nInt[a],exec_time[a],counters_string);
+            printf("alg=%s; inters numb=%13.0f; exec time=%6.5f;%s\n", alg_names[a], nInt[a], exec_time[a], counters_string);
         }
      };
   if (rtime_printout&&(alg&triv)&&(!mute))
@@ -239,6 +235,7 @@ counters_mute=counters_string;
 	  {
 		  if (alg&alg_list[a])
 		  {
+        if ((alg_list[a] == fast_no_ip) && (seg_type == arc)) continue;
 			  printf("%s finds one intersection in %6.3f ICT \n", alg_names[a] , exec_time[a]/ check_time);
 		  }
 	  };

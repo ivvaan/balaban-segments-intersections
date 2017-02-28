@@ -70,7 +70,6 @@ const int4 max_call=5; //max number of sequential recursive call (opt)FindR befo
 #define SET_COUNTER_IFGT(i,value)
 #endif
 
-typedef int4 SegmentInfo;
 
 struct CSegmCompare
   {
@@ -79,7 +78,7 @@ struct CSegmCompare
     REAL x;
     CSegmCompare(){};
     CSegmCompare(PSeg *sc,FBelow _b,REAL _x){Scoll=sc;_Below=_b;x=_x;};
-    bool lt(SegmentInfo s1,SegmentInfo s2){return _Below(x,Scoll[s1],Scoll[s2]);}
+    inline bool operator()(int4 s1, int4 s2) { return _Below(x, Scoll[s1], Scoll[s2]); }
   };
   
   
@@ -125,32 +124,42 @@ class CIntersectionFinder
   
   //begin fields and structures for Balaban algorithms
   //common
-  int4 nTotSegm;
+  uint4 nTotSegm;
   long int_numb;
-  int4 LBoundIdx,RBoundIdx;
+  uint4 LBoundIdx,RBoundIdx;
   REAL B,E;
 
   struct EndIndexes
     {
-    int4 B,E;
+    uint4 B,E;
     } *SegmentBE;
-  struct TSegmEnd:public TEnd
+  struct TSegmEnd
     {
-      SegmentInfo s;
+
+      REAL x;
+      int4 segm;
+      inline int4 s()  { return segm>>1; }; // segm/2 is segment number
+      inline bool islast() const  { return segm & 1; } ;// if segm is odd then it is last segment end
+      inline bool operator<(const TSegmEnd &p)
+      {
+          return ((x<p.x) ||
+              ((x == p.x) && (segm<p.segm)));
+      };
     } *ENDS;
   PSeg *Scoll;
 
   struct ProgramStackRec //structure to use program stack to store list of starcases above current call
     {
       ProgramStackRec *prev; //link to program stack record storing parent staircase information 
-      int4 Q_pos, right_bound; //starting position and right boind of current staircase
+      int4 Q_pos; //starting position and 
+      uint4 right_bound;//right boind of current staircase
       inline ProgramStackRec(int4 qp):Q_pos(qp){};
-      inline ProgramStackRec(int4 qp,int4 rb):prev(NULL),Q_pos(qp),right_bound(rb){};
-      inline ProgramStackRec *Set(ProgramStackRec *p,int4 rb){ prev=p,right_bound=rb;return this;};
+      inline ProgramStackRec(int4 qp,uint4 rb):prev(NULL),Q_pos(qp),right_bound(rb){};
+      inline ProgramStackRec *Set(ProgramStackRec *p,uint4 rb){ prev=p,right_bound=rb;return this;};
     };
 
   //for fast, optimal and parallel algorithms
-  SegmentInfo * L,* R,* Q;
+  int4 * L,* R,* Q;
 
   //for no_ip algorithm
   int4 *Loc;
@@ -198,24 +207,24 @@ class CIntersectionFinder
   //private functions for Balaban algorithms
 
   //helpers for segment functions
-  inline int4 IntersectionsInCurStripe(SegmentInfo  s1,PSeg s2)
+  inline int4 IntersectionsInCurStripe(int4  s1,PSeg s2)
     {
     return _FindAndRegIPointsInStripe(B,E,Scoll[s1],s2,_reg_obj);
     };
 
-  inline int4 IsIntersectInCurStripe(SegmentInfo  s1,PSeg s2)
+  inline int4 IsIntersectInCurStripe(int4  s1,PSeg s2)
     {
     return _IsIntersetInStripe(B,E,Scoll[s1],s2);
     };
 
-  inline int4 Intersections(SegmentInfo  s1,PSeg s2)
+  inline int4 Intersections(int4  s1,PSeg s2)
     {
     return _FindAndRegIPoints(Scoll[s1],s2,_reg_obj);
     };
 
   inline void ExchangeLR()
     {
-    register SegmentInfo* tmp=L;
+    register int4* tmp=L;
     L=R; R=tmp;
     };
   inline void no_ipExchangeLR()
@@ -228,44 +237,44 @@ class CIntersectionFinder
   template<bool is_line_seg> int4 SearchInStrip(int4 QP,int4 Size);
   void AllocMem(BOOL for_optimal);
   void FreeMem();
-  int4 prepare_ends(int4 n);
+  void prepare_ends(uint4 n);
 
   //functions for fast algorithm
   template<bool is_line_seg> void FindInt(int4 QB,int4 QE,int4 l,PSeg s);
-  template<bool is_line_seg> void FindIntI(int4 r_index,ProgramStackRec * stack_pos,PSeg seg);
+  template<bool is_line_seg> void FindIntI(uint4 r_index,ProgramStackRec * stack_pos,PSeg seg);
   template<bool is_line_seg> void FindIntL(int4 QB,int4 QE,int4 segm_numb);
-  template<bool is_line_seg> int4 InsDel(int4 n,ProgramStackRec * stack_pos,int4 Size);
+  template<bool is_line_seg> int4 InsDel(uint4 n,ProgramStackRec * stack_pos,int4 Size);
   template<bool is_line_seg> int4 Merge(int4 QB,int4 QE,int4 Size);
   int4 Split(int4 &step_index,int4 Size);
-  template<bool is_line_seg> int4 FindR(int4 ladder_start_index,int4 interval_left_index,int4 interval_right_index,ProgramStackRec *stack_pos,int4 Size,int4 call_numb);
-  template<bool is_line_seg> void _balaban_no_recursion(int4 n, PSeg _Scoll[]);
-  template<bool is_line_seg> void _fast_parallel(int4 n, PSeg _Scoll[], int4 n_threads, PRegObj add_reg[]);
+  template<bool is_line_seg> int4 FindR(int4 ladder_start_index,uint4 interval_left_index,uint4 interval_right_index,ProgramStackRec *stack_pos,int4 Size,int4 call_numb);
+  template<bool is_line_seg> void _balaban_no_recursion(uint4 n, PSeg _Scoll[]);
+  template<bool is_line_seg> void _fast_parallel(uint4 n, PSeg _Scoll[], int4 n_threads, PRegObj add_reg[]);
 
 
   //same for optimal algorithm
   template<bool is_line_seg> void optFindInt(int4 QB,int4 QE,int4 l,PSeg s);
-  template<bool is_line_seg> void optFindIntI(int4 r_index,ProgramStackRec *stack_pos,PSeg seg);
-  template<bool is_line_seg> int4 optInsDel(int4 n,ProgramStackRec *stack_pos,int4 Size);
+  template<bool is_line_seg> void optFindIntI(uint4 r_index,ProgramStackRec *stack_pos,PSeg seg);
+  template<bool is_line_seg> int4 optInsDel(uint4 n,ProgramStackRec *stack_pos,int4 Size);
   template<bool is_line_seg> int4 optMerge(int4 QB,int4 QE,int4 Size);
   int4 optSplit(int4 father_first_step, int4 &step_index,int4 Size);
-  template<bool is_line_seg> int4 optFindR(int4 father_first_step,int4 ladder_start_index,int4 interval_left_index,int4 interval_right_index,
+  template<bool is_line_seg> int4 optFindR(int4 father_first_step,int4 ladder_start_index,uint4 interval_left_index,uint4 interval_right_index,
       ProgramStackRec *stack_pos,int4 Size,int4 call_numb);
 
 //functions for no_ip algorithm
   void no_ipAllocMem();
   void no_ipFindInt(int4 QB,int4 QE,int4 l,PSeg s);
-  void no_ipFindIntI(int4 r_index,ProgramStackRec * stack_pos,PSeg seg);
+  void no_ipFindIntI(uint4 r_index,ProgramStackRec * stack_pos,PSeg seg);
   void no_ipFindIntL(int4 QB,int4 QE,int4 segm_numb);
-  int4 no_ipInsDel(int4 n,ProgramStackRec * stack_pos,int4 Size);
+  int4 no_ipInsDel(uint4 n,ProgramStackRec * stack_pos,int4 Size);
   int4 no_ipMerge(int4 QB,int4 QE,int4 Size);
   int4 no_ipSplit(int4 &step_index,int4 Size,int4 stripe_divided);
   int4 no_ipSearchInStrip(int4 QP,int4 Size);
-  int4 no_ipFindR(int4 ladder_start_index,int4 interval_left_index,int4 interval_right_index,ProgramStackRec *stack_pos,int4 Size,int4 call_numb);
+  int4 no_ipFindR(int4 ladder_start_index,uint4 interval_left_index,uint4 interval_right_index,ProgramStackRec *stack_pos,int4 Size,int4 call_numb);
 
   //additional functions for fast parallel algorithm
   void clone (CIntersectionFinder *master,PRegObj robj);// creates a copy of master to run concurrently
   void unclone();//should be called from the copy before deletion to free common structures correctly
-  int4 CalcLAt(int4 end_index); // calculates starting L array for parallel execution
+  int4 CalcLAt(uint4 end_index); // calculates starting L array for parallel execution
   
   //private functions for Bentley & Ottmann algorithm
  void SweepLineInsert(int4 s);
@@ -303,21 +312,21 @@ class CIntersectionFinder
       int4 is_line
      );
 
-    void balaban_fast(int4 n,PSeg _Scoll[]);
-    void balaban_no_recursion(int4 n, PSeg _Scoll[]);
+    void balaban_fast(uint4 n,PSeg _Scoll[]);
+    void balaban_no_recursion(uint4 n, PSeg _Scoll[]);
 
-    void balaban_no_ip(int4 n,PSeg _Scoll[]);
-    void balaban_optimal(int4 n,PSeg _Scoll[]);
-    void fast_parallel(int4 n, PSeg _Scoll[], int4 n_threads, PRegObj add_reg[]);//it should be provided n_threads-1 additional intersection registration objects 
+    void balaban_no_ip(uint4 n,PSeg _Scoll[]);
+    void balaban_optimal(uint4 n,PSeg _Scoll[]);
+    void fast_parallel(uint4 n, PSeg _Scoll[], int4 n_threads, PRegObj add_reg[]);//it should be provided n_threads-1 additional intersection registration objects 
  
     // trivial algorithm
-    void trivial(int4 n,PSeg sgm[]);
+    void trivial(uint4 n,PSeg sgm[]);
 
     // simple sweepline algorithm (not Bentley & Ottmann!)
-    void simple_sweep(int4 n,PSeg Scoll[]);
+    void simple_sweep(uint4 n,PSeg Scoll[]);
 
     //  Bentley & Ottmann
-    void bentley_ottmann(int4 n,PSeg _Scoll[]);
+    void bentley_ottmann(uint4 n,PSeg _Scoll[]);
 
   };
 

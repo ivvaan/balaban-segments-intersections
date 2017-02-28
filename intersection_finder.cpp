@@ -23,6 +23,8 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include "intersection_finder.h"
 //#include <stdio.h>
 #include <crtdbg.h>
+#include <algorithm>
+
 
 #define IS_ORIGINAL(v) (v<1)
 
@@ -90,7 +92,7 @@ void CIntersectionFinder::FindIntL(int4 QB, int4 QE, int4 segm_numb)
 {
 	for (int4 i = 0; i<segm_numb; i++)
 	{
-		SegmentInfo s_idx = L[i];
+		int4 s_idx = L[i];
 		PSeg s = Scoll[s_idx];
 		int4 loc = R[i];
 		if (SegmentBE[s_idx].E<RBoundIdx) //if segment is not covering the stripe
@@ -121,7 +123,7 @@ void CIntersectionFinder::no_ipFindIntL(int4 QB, int4 QE, int4 segm_numb)
 // optFindIntI - finds and reports intersections of the segment seg with ancestor staircases (listed in program stack)
 // from bottom of the hierarchy to top starting from first staircase for which seg is internal
 template<bool is_line_seg>
-void CIntersectionFinder::optFindIntI(int4 r_index, ProgramStackRec *stack_pos, PSeg seg)
+void CIntersectionFinder::optFindIntI(uint4 r_index, ProgramStackRec *stack_pos, PSeg seg)
 {
 	while (stack_pos->right_bound <= r_index)stack_pos = stack_pos->prev;// go from bottom to top and find staircase to start
 	E = ENDS[r_index].x;// adjust right bound for segment functions helpers
@@ -158,7 +160,7 @@ void CIntersectionFinder::optFindIntI(int4 r_index, ProgramStackRec *stack_pos, 
 // FindIntI - finds and reports intersections of the segment seg with ancestor staircases (listed in program stack)
 // from top of the hierarchy to bottom stopping on last staircase for which seg is internal
 template<bool is_line_seg>
-void CIntersectionFinder::FindIntI(int4 r_index, ProgramStackRec * stack_pos, PSeg seg)
+void CIntersectionFinder::FindIntI(uint4 r_index, ProgramStackRec * stack_pos, PSeg seg)
 {
 	while (stack_pos->right_bound <= r_index)stack_pos = stack_pos->prev;// go from bottom to top and find staircase to start
 	E = ENDS[r_index].x;// adjust right bound for segment functions helpers
@@ -180,7 +182,7 @@ void CIntersectionFinder::FindIntI(int4 r_index, ProgramStackRec * stack_pos, PS
 	};
 }//*/
 
-void CIntersectionFinder::no_ipFindIntI(int4 r_index, ProgramStackRec * stack_pos, PSeg seg)
+void CIntersectionFinder::no_ipFindIntI(uint4 r_index, ProgramStackRec * stack_pos, PSeg seg)
 {
 	while (stack_pos->right_bound <= r_index)stack_pos = stack_pos->prev;// go from bottom to top and find staircase to start
 	E = ENDS[r_index].x;// adjust right bound for segment functions helpers
@@ -207,15 +209,15 @@ void CIntersectionFinder::no_ipFindIntI(int4 r_index, ProgramStackRec * stack_po
 // InsDel - inserts or deletes segment associated with end_index to/from L
 //retuns new L size
 template<bool is_line_seg>
-int4 CIntersectionFinder::InsDel(int4 end_index, ProgramStackRec * stack_pos, int4 Size)
+int4 CIntersectionFinder::InsDel(uint4 end_index, ProgramStackRec * stack_pos, int4 Size)
 {
 	int4 i;
 	TSegmEnd *current_end = ENDS + end_index;
 	ExchangeLR();
-	if (current_end->islast) // if endpoint - delete
+	if (current_end->islast()) // if endpoint - delete
 	{
 
-		int4 sn = L[Size] = current_end->s;
+		int4 sn = L[Size] = current_end->s();
 		for (i = 0; L[i] != sn; i++);
 		_ASSERTE(i != Size);
 		Size--;
@@ -223,28 +225,28 @@ int4 CIntersectionFinder::InsDel(int4 end_index, ProgramStackRec * stack_pos, in
 	}
 	else// if startpoint - insert
 	{
-		PSeg seg = Scoll[current_end->s];
+		PSeg seg = Scoll[current_end->s()];
 		for (i = Size - 1; (i>-1) && (!_Under(Scoll[L[i]], seg)); i--)
 			L[i + 1] = L[i];
-		L[i + 1] = current_end->s;
+		L[i + 1] = current_end->s();
 		Size++;
 
-		FindIntI<is_line_seg>(SegmentBE[current_end->s].E, stack_pos, seg);// get internal intersections
+		FindIntI<is_line_seg>(SegmentBE[current_end->s()].E, stack_pos, seg);// get internal intersections
 	}
 	return Size;
 }
 
 // InsDel - inserts or deletes segment associated with end_index to/from L
 //retuns new L size
-int4 CIntersectionFinder::no_ipInsDel(int4 end_index, ProgramStackRec * stack_pos, int4 Size)
+int4 CIntersectionFinder::no_ipInsDel(uint4 end_index, ProgramStackRec * stack_pos, int4 Size)
 {
 	int4 i;
 	TSegmEnd *current_end = ENDS + end_index;
 	no_ipExchangeLR();
-	if (current_end->islast) // if endpoint - delete
+	if (current_end->islast()) // if endpoint - delete
 	{
 
-		int4 sn = no_ipL[Size].s = current_end->s;
+		int4 sn = no_ipL[Size].s = current_end->s();
 		for (i = 0; no_ipL[i].s != sn; i++);
 		//_ASSERTE(i!=Size);
 		Size--;
@@ -252,29 +254,29 @@ int4 CIntersectionFinder::no_ipInsDel(int4 end_index, ProgramStackRec * stack_po
 	}
 	else// if startpoint - insert
 	{
-		PSeg seg = Scoll[current_end->s];
+		PSeg seg = Scoll[current_end->s()];
 		REAL X, Y;
 		_BegPoint(seg, X, Y);
 		for (i = Size - 1; (i>-1) && (no_ipL[i].y >= Y); i--)
 			no_ipL[i + 1] = no_ipL[i];
-		no_ipL[i + 1].s = current_end->s;
+		no_ipL[i + 1].s = current_end->s();
 		Size++;
 
-		no_ipFindIntI(SegmentBE[current_end->s].E, stack_pos, seg);// get internal intersections
+		no_ipFindIntI(SegmentBE[current_end->s()].E, stack_pos, seg);// get internal intersections
 	}
 	return Size;
 }
 
 // see InsDel comments
 template<bool is_line_seg>
-int4 CIntersectionFinder::optInsDel(int4 end_index, ProgramStackRec *stack_pos, int4 Size)
+int4 CIntersectionFinder::optInsDel(uint4 end_index, ProgramStackRec *stack_pos, int4 Size)
 {
 	int4 i;
 	TSegmEnd *current_end = ENDS + end_index;
 	ExchangeLR();
-	if (current_end->islast)
+	if (current_end->islast())
 	{
-		int4 sn = L[Size] = current_end->s;
+		int4 sn = L[Size] = current_end->s();
 		for (i = 0; L[i] != sn; i++);
 		//_ASSERTE(i!=Size);
 		Size--;
@@ -282,13 +284,13 @@ int4 CIntersectionFinder::optInsDel(int4 end_index, ProgramStackRec *stack_pos, 
 	}
 	else
 	{
-		PSeg seg = Scoll[current_end->s];
+		PSeg seg = Scoll[current_end->s()];
 		for (i = Size - 1; (i>-1) && (!_Under(Scoll[L[i]], seg)); i--)
 			L[i + 1] = L[i];
-		L[i + 1] = current_end->s;
+		L[i + 1] = current_end->s();
 		Size++;
 
-		optFindIntI<is_line_seg>(SegmentBE[current_end->s].E, stack_pos, seg);
+		optFindIntI<is_line_seg>(SegmentBE[current_end->s()].E, stack_pos, seg);
 	}
 	return Size;
 }
@@ -444,7 +446,7 @@ int4 CIntersectionFinder::no_ipSplit(int4 &step_index, int4 Size, int4 stripe_di
 {
 	int4 father_last_step = step_index, new_L_size = 0;
 	no_ipSegmentInfo *cur_L_pos = no_ipL, *last_L_pos = no_ipL + Size;
-	REAL Y;
+
 	for (; cur_L_pos<last_L_pos; cur_L_pos++)
 	{
 		if (SegmentBE[cur_L_pos->s].E >= RBoundIdx)//segment is covering current stripe
@@ -557,7 +559,7 @@ int4 CIntersectionFinder::SearchInStrip(int4 QP, int4 Size)
 	if (!Size)return 0;
 	if (Size<2){ *R = *L; return 1; }
 	int4 NQP = QP;
-	int4 size = Size; SegmentInfo *q = Q + QP + 1;
+	int4 size = Size; int4 *q = Q + QP + 1;
 	if (size = Split(NQP, size))
 	{
 
@@ -568,7 +570,7 @@ int4 CIntersectionFinder::SearchInStrip(int4 QP, int4 Size)
 		} while (size = Split(NQP, size));
 		// at this point we can just place Q starting from QP+1 to R and sort it
 		for (QP = 0; QP<Size; QP++)R[QP] = q[QP];
-		fastsort(CSegmCompare(Scoll, _Below, E), R, Size);
+    std::sort(R, R + Size, CSegmCompare(Scoll, _Below, E));
 	}
 	else
 		for (QP = 0; QP<Size; QP++)R[QP] = q[QP];
@@ -595,14 +597,14 @@ int4 CIntersectionFinder::no_ipSearchInStrip(int4 QP, int4 Size)
 		} while (size = no_ipSplit(NQP, size, FALSE));
 		// at this point we can just place Q starting from QP+1 to R and sort it
 		for (QP = 0; QP<Size; QP++)no_ipR[QP] = q[QP];
-		fastsort(no_ipR, Size);
+		std::sort(no_ipR, no_ipR+Size);
 	}
 	return Size;
 }
 
 // main function to find intersections for fast algorithm
 template<bool is_line_seg>
-int4 CIntersectionFinder::FindR(int4 ladder_start_index, int4 interval_left_index, int4 interval_right_index,
+int4 CIntersectionFinder::FindR(int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index,
 	ProgramStackRec *stack_pos, int4 Size, int4 call_numb)
 {
 	//  int4 RSize;
@@ -624,7 +626,7 @@ int4 CIntersectionFinder::FindR(int4 ladder_start_index, int4 interval_left_inde
 		Size = FindR<is_line_seg>(stack_rec.Q_pos, interval_left_index, interval_right_index, stack_pos, Size, call_numb + 1);
 	else //cut stripe on the middle
 	{
-		int4 m = (interval_left_index + interval_right_index) / 2;
+		uint4 m = (interval_left_index + interval_right_index) / 2;
 		Size = FindR<is_line_seg>(stack_rec.Q_pos, interval_left_index, m, stack_pos, Size, 0);
 		Size = InsDel<is_line_seg>(m, stack_pos, Size);
 		Size = FindR<is_line_seg>(stack_rec.Q_pos, m, interval_right_index, stack_pos, Size, 0);
@@ -638,7 +640,7 @@ int4 CIntersectionFinder::FindR(int4 ladder_start_index, int4 interval_left_inde
 
 // main function to find intersections for optimal algorithm
 template<bool is_line_seg>
-int4 CIntersectionFinder::optFindR(int4 father_first_step, int4 ladder_start_index, int4 interval_left_index, int4 interval_right_index,
+int4 CIntersectionFinder::optFindR(int4 father_first_step, int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index,
 	ProgramStackRec *stack_pos, int4 Size, int4 call_numb)
 {
 	B = ENDS[interval_left_index].x; E = ENDS[RBoundIdx = interval_right_index].x;
@@ -666,7 +668,7 @@ int4 CIntersectionFinder::optFindR(int4 father_first_step, int4 ladder_start_ind
 		Size = optFindR<is_line_seg>(ladder_start_index + 1, stack_rec.Q_pos, interval_left_index, interval_right_index, stack_pos, Size, call_numb + 1);
 	else //cut stripe on the middle
 	{
-		int4 m = (interval_left_index + interval_right_index) / 2;
+		uint4 m = (interval_left_index + interval_right_index) / 2;
 		Size = optFindR<is_line_seg>(ladder_start_index + 1, stack_rec.Q_pos, interval_left_index, m, stack_pos, Size, 0);
 		Size = optInsDel<is_line_seg>(m, stack_pos, Size);
 		Size = optFindR<is_line_seg>(ladder_start_index + 1, stack_rec.Q_pos, m, interval_right_index, stack_pos, Size, 0);
@@ -682,7 +684,7 @@ int4 CIntersectionFinder::optFindR(int4 father_first_step, int4 ladder_start_ind
 };
 
 
-int4 CIntersectionFinder::no_ipFindR(int4 ladder_start_index, int4 interval_left_index, int4 interval_right_index,
+int4 CIntersectionFinder::no_ipFindR(int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index,
 	ProgramStackRec *stack_pos, int4 Size, int4 call_numb)
 {
 	//  int4 RSize;
@@ -704,7 +706,7 @@ int4 CIntersectionFinder::no_ipFindR(int4 ladder_start_index, int4 interval_left
 		Size = no_ipFindR(stack_rec.Q_pos, interval_left_index, interval_right_index, stack_pos, Size, call_numb + 1);
 	else //cut stripe on the middle
 	{
-		int4 m = (interval_left_index + interval_right_index) / 2;
+		uint4 m = (interval_left_index + interval_right_index) / 2;
 		Size = no_ipFindR(stack_rec.Q_pos, interval_left_index, m, stack_pos, Size, 0);
 		Size = no_ipInsDel(m, stack_pos, Size);
 		Size = no_ipFindR(stack_rec.Q_pos, m, interval_right_index, stack_pos, Size, 0);
@@ -736,18 +738,18 @@ void CIntersectionFinder::FreeMem()
 void CIntersectionFinder::AllocMem(BOOL for_optimal)
 {
 	SegmentBE = new EndIndexes[nTotSegm];
-	L = new SegmentInfo[nTotSegm + 1];
-	R = new SegmentInfo[nTotSegm + 1];
+	L = new int4[nTotSegm + 1];
+	R = new int4[nTotSegm + 1];
 	ENDS = new TSegmEnd[2 * nTotSegm];
 
-	int4 needed = nTotSegm;
+	uint4 needed = nTotSegm;
 	if (for_optimal)
 	{
 		// for optimal alg it needs additional space reserve nTotSegm/(inherit_each-1)+inherit_each+1 to store inherited stairs
 		needed = nTotSegm + nTotSegm / (inherit_each - 1) + inherit_each + 1;
 		father_loc = new int4[needed];
 	}
-	Q = new SegmentInfo[needed];
+	Q = new int4[needed];
 };
 
 void CIntersectionFinder::no_ipAllocMem()
@@ -767,11 +769,11 @@ void CIntersectionFinder::clone(CIntersectionFinder *master, PRegObj robj)
 	Scoll = master->Scoll;
 	SegmentBE = master->SegmentBE;
 	ENDS = master->ENDS;
-	L = new SegmentInfo[nTotSegm + 1];
+	L = new int4[nTotSegm + 1];
 
 
-	Q = new SegmentInfo[nTotSegm + 1];
-	R = new SegmentInfo[nTotSegm + 1];
+	Q = new int4[nTotSegm + 1];
+	R = new int4[nTotSegm + 1];
 	//  res->Loc=new int4[nTotSegm+1];
 
 	set_segm_fuctions(master->_Below,
@@ -804,40 +806,27 @@ void CIntersectionFinder::unclone()
   clone_of = NULL;
 };
 
-int4 CIntersectionFinder::prepare_ends(int4 n)
+void CIntersectionFinder::prepare_ends(uint4 n)
 {
-	int4 i, j, k;
+	uint4 i, j;
 	REAL x, y;
 	for (i = 0, j = 0; i<n; i++)
 	{
-		ENDS[j].s = i;
+		ENDS[j].segm = 2*i;// even value means first (leftmost) end
 		_BegPoint(Scoll[i], ENDS[j].x, y);
-		ENDS[j].islast = 0;
+		//ENDS[j].islast() = false;
 		j++;
 		_EndPoint(Scoll[i], ENDS[j].x, y);
-		ENDS[j].s = i;
-		ENDS[j].islast = 1;
+		ENDS[j].segm =  2*i+1;// odd value means last (rightmost) end
+		//ENDS[j].islast() = true;
 		j++;
 	}
-	fastsort(ENDS, j);
-	for (int4 i = 0; i<2 * n; i++)
-		if (ENDS[i].islast)
-			SegmentBE[ENDS[i].s].E = i;
+  std::sort(ENDS, ENDS + j);
+	for (uint4 i = 0; i<2 * n; i++)
+		if (ENDS[i].islast())
+			SegmentBE[ENDS[i].s()].E = i;
 		else
-			SegmentBE[ENDS[i].s].B = i;
-
-	if (ENDS[0].s == ENDS[2 * n - 1].s)
-	{
-		PSeg s = Scoll[ENDS[0].s];
-		for (int4 i = 0; i<n; i++)  if (s != Scoll[i]) _FindAndRegIPoints(s, Scoll[i], _reg_obj);
-		return 0;
-	}
-	if (no_ipL)
-		no_ipL[0].s = ENDS[0].s;
-	else
-		L[0] = ENDS[0].s;
-	return 1;
-
+			SegmentBE[ENDS[i].s()].B = i;
 };
 
 CIntersectionFinder::CIntersectionFinder()
@@ -888,47 +877,42 @@ void CIntersectionFinder::set_segm_fuctions(
 }
 
 
-void CIntersectionFinder::balaban_fast(int4 n, PSeg _Scoll[])
+void CIntersectionFinder::balaban_fast(uint4 n, PSeg _Scoll[])
 {
 	Scoll = _Scoll;  nTotSegm = n;
 	AllocMem(FALSE);
-	int4 Size = prepare_ends(n);
+	prepare_ends(n);
 	ProgramStackRec stack_rec(-1, 2 * n);  //need to be initialized this way
-
+  L[0] = ENDS[0].s();
   if(is_line_segments)
-  {
-      Size = FindR<true>(-1, 0, n, &stack_rec, Size, 0);
-      Size = InsDel<true>(n, &stack_rec, Size);
-      Size = FindR<true>(-1, n, 2 * n - 1, &stack_rec, Size, 0);
-  }
+      FindR<true>(-1, 0, 2*n-1, &stack_rec, 1, 0);
   else
-  {
-      Size = FindR<false>(-1, 0, n, &stack_rec, Size, 0);
-      Size = InsDel<false>(n, &stack_rec, Size);
-      Size = FindR<false>(-1, n, 2 * n - 1, &stack_rec, Size, 0);
-  }
-  
+      FindR<false>(-1, 0, 2 * n-1, &stack_rec, 1, 0);
 	FreeMem();
 }
 
 //same as balaban_fast but without recursion (just for the case, it doesn't work faster)
 template<bool is_line_seg>
-void CIntersectionFinder::_balaban_no_recursion(int4 n, PSeg _Scoll[])
+void CIntersectionFinder::_balaban_no_recursion(uint4 n, PSeg _Scoll[])
 {
 	Scoll = _Scoll;  nTotSegm = n;
 	AllocMem(FALSE);
-	int4 Size = prepare_ends(n);
+  prepare_ends(n);
+  uint4 interval_left_index = 0, interval_right_index = 2 * n - 1,  m;
+  int4 ladder_start_index = -1, call_numb = 0;
 
-	int4 interval_left_index = 0, interval_right_index = 2 * n - 1, ladder_start_index = -1;
-	int4 m, call_numb = 0;
 
 	struct SNoRecursionRec :public ProgramStackRec
 	{
-		int4 left_bound, m, Q_pos_prev;
-		SNoRecursionRec() :ProgramStackRec(-1, -1){ left_bound = m = -1; };
+      uint4 left_bound, m;
+      int4   Q_pos_prev;
+		SNoRecursionRec() :ProgramStackRec(-1,0){ left_bound = m = 0; };
 	} *stack = new SNoRecursionRec[32 * (max_call + 1)];
+
 	SNoRecursionRec *stack_pos = stack, *stack_bottom = stack;
 	stack->right_bound = 2 * n;
+  int4 Size = 1;
+  L[0] = ENDS[0].s();
 	while (1)
 	{
 		B = ENDS[interval_left_index].x;
@@ -980,7 +964,7 @@ void CIntersectionFinder::_balaban_no_recursion(int4 n, PSeg _Scoll[])
 	FreeMem();
 }
 
-void CIntersectionFinder::balaban_no_recursion(int4 n, PSeg _Scoll[])
+void CIntersectionFinder::balaban_no_recursion(uint4 n, PSeg _Scoll[])
 {
     if (is_line_segments)
         _balaban_no_recursion<true>(n, _Scoll);
@@ -988,49 +972,34 @@ void CIntersectionFinder::balaban_no_recursion(int4 n, PSeg _Scoll[])
         _balaban_no_recursion<false>(n, _Scoll);
 };
 
-void CIntersectionFinder::balaban_no_ip(int4 n, PSeg _Scoll[])
+void CIntersectionFinder::balaban_no_ip(uint4 n, PSeg _Scoll[])
 {
 	Scoll = _Scoll;  nTotSegm = n;
 	no_ipAllocMem();
-
-	int4 Size = prepare_ends(n);
+	prepare_ends(n);
 	ProgramStackRec stack_rec(-1, 2 * n);  //need to be initialized this way
-	Size = no_ipFindR(-1, 0, n, &stack_rec, Size, 0);
-	Size = no_ipInsDel(n, &stack_rec, Size);
-	Size = no_ipFindR(-1, n, 2 * n - 1, &stack_rec, Size, 0);
-
+  no_ipL[0].s = ENDS[0].s();
+	no_ipFindR(-1, 0, 2*n-1, &stack_rec, 1, 0);
 	FreeMem();
 }
 
-void CIntersectionFinder::balaban_optimal(int4 n, PSeg _Scoll[])
+void CIntersectionFinder::balaban_optimal(uint4 n, PSeg _Scoll[])
 {
 	Scoll = _Scoll;  nTotSegm = n;
 	AllocMem(TRUE);
-
-	int4 Size = prepare_ends(n);
+	prepare_ends(n);
 	ProgramStackRec stack_rec(inherit_each, 2 * n);  //need to be initialized this way 
+  L[0] = ENDS[0].s();
   if(is_line_segments)
-  {
-      Size = optFindR<true>(inherit_each + 1, inherit_each, 0, n, &stack_rec, Size, 0);
-      Size = optInsDel<true>(n, &stack_rec, Size);
-      Size = optFindR<true>(inherit_each + 1, inherit_each, n, 2 * n - 1, &stack_rec, Size, 0);
-
-  }
+     optFindR<true>(inherit_each + 1, inherit_each, 0, 2*n-1, &stack_rec, 1, 0);
   else
-  { 
-      Size = optFindR<false>(inherit_each + 1, inherit_each, 0, n, &stack_rec, Size, 0);
-      Size = optInsDel<false>(n, &stack_rec, Size);
-      Size = optFindR<false>(inherit_each + 1, inherit_each, n, 2 * n - 1, &stack_rec, Size, 0);
-
-  }
-
+     optFindR<false>(inherit_each + 1, inherit_each, 0, 2 * n - 1, &stack_rec, 1, 0);
 	FreeMem();
 }
 
-int4 CIntersectionFinder::CalcLAt(int4 end_index)
+int4 CIntersectionFinder::CalcLAt(uint4 end_index)
 {
-	int4 i, j, k;
-	int4 Size = 0;
+	int4 i, Size = 0;
 	EndIndexes * cur_ends;
 	for (i = 0; i<nTotSegm; i++)
 	{
@@ -1040,7 +1009,7 @@ int4 CIntersectionFinder::CalcLAt(int4 end_index)
 			L[Size++] = i;
 	}
 
-	fastsort(CSegmCompare(Scoll, _Below, ENDS[end_index].x), L, Size);
+  std::sort(L, L + Size, CSegmCompare(Scoll, _Below, ENDS[end_index].x));
 	return Size;
 
 };
@@ -1050,7 +1019,7 @@ int4 CIntersectionFinder::CalcLAt(int4 end_index)
 #include <thread>
 #include <vector>
 template <bool is_line_seg>
-void CIntersectionFinder::_fast_parallel(int4 n, PSeg _Scoll[], int4 n_threads,PRegObj add_reg[])
+void CIntersectionFinder::_fast_parallel(uint4 n, PSeg _Scoll[], int4 n_threads,PRegObj add_reg[])
 {
 	Scoll = _Scoll;
 	nTotSegm = n;
@@ -1059,33 +1028,34 @@ void CIntersectionFinder::_fast_parallel(int4 n, PSeg _Scoll[], int4 n_threads,P
   using  namespace std;
   
   vector<thread> wrk_threads;
-  auto thread_func = [](CIntersectionFinder *master, int4 from, int4 to, PRegObj add_reg)
+  auto thread_func = [](CIntersectionFinder *master, uint4 from, uint4 to, PRegObj add_reg)
         {
             CIntersectionFinder i_f;  
             i_f.clone(master, add_reg); 
-            i_f.FindR<is_line_seg>(-1, from, to, &ProgramStackRec(-1, 2 * i_f.nTotSegm), i_f.CalcLAt(from), 0);
+            i_f.FindR<is_line_seg>(-1, from, to, &ProgramStackRec(-1, 2 *  i_f.nTotSegm), i_f.CalcLAt(from), 0);
             i_f.unclone();
         };
   double part = 2 * n /(double) n_threads;
   int4 i = 1;
-  int4 start_from = part;
-  int4 to = start_from;
+  uint4 start_from = part;
+  uint4 from,to = start_from;
   while ( i < n_threads)
   {
-      int4 from = to;
+      from = to;
       i++;
       to = (i == n_threads) ? 2 * n - 1 : part*i;
-      wrk_threads.push_back(thread(thread_func, this, from,to, add_reg[i-2]));
+      wrk_threads.emplace_back(thread_func, this, from,to, add_reg[i-2]);// starts intersection finding in a stripe <from,to>
   }
+  L[0] = ENDS[0].s();
   FindR<is_line_seg>(-1, 0, start_from, &ProgramStackRec(-1, 2 * n), 1, 0);
   auto cur_thread = wrk_threads.begin();
-  for (; cur_thread != wrk_threads.end(); cur_thread++) cur_thread->join();
+  for (; cur_thread != wrk_threads.end(); cur_thread++) cur_thread->join();//waiting for calculation of all threads are finished
   FreeMem();
 }
 
 
 
-void CIntersectionFinder::fast_parallel(int4 n, PSeg _Scoll[], int4 n_threads, PRegObj add_reg[])
+void CIntersectionFinder::fast_parallel(uint4 n, PSeg _Scoll[], int4 n_threads, PRegObj add_reg[])
 {
     if (is_line_segments)
         _fast_parallel<true>(n, _Scoll, n_threads, add_reg);
@@ -1093,20 +1063,20 @@ void CIntersectionFinder::fast_parallel(int4 n, PSeg _Scoll[], int4 n_threads, P
         _fast_parallel<false>(n, _Scoll, n_threads, add_reg);
 };
 
-void CIntersectionFinder::trivial(int4 n, PSeg sgm[])
+void CIntersectionFinder::trivial(uint4 n, PSeg sgm[])
 {
-	int4 i, j, m = n - 1;
+	uint4 i, j, m = n - 1;
 	for (i = 0; i<m; i++)
 		for (j = i + 1; j<n; j++)
 			_FindAndRegIPoints(sgm[i], sgm[j], _reg_obj);
 };
 
 
-void CIntersectionFinder::simple_sweep(int4 n, PSeg Scoll[])
+void CIntersectionFinder::simple_sweep(uint4 n, PSeg Scoll[])
 {
-	int4 i, j;
+	uint4 i, j;
 	PSeg s;
-	int4 pos, k;
+	uint4 pos, k;
 	PSeg *sgm = new PSeg[n + 1];
 	struct TSEnd :public TEnd
 	{
@@ -1119,14 +1089,14 @@ void CIntersectionFinder::simple_sweep(int4 n, PSeg Scoll[])
 		REAL y;
 		_BegPoint(Scoll[i], Ends[j].x, y);
 		Ends[j].s = Scoll[i];
-		Ends[j].islast = 0;
+		Ends[j].islast = false;
 		j++;
 		_EndPoint(Scoll[i], Ends[j].x, y);
 		Ends[j].s = Scoll[i];
-		Ends[j].islast = 1;
+		Ends[j].islast = true;
 		j++;
 	}
-	fastsort(Ends, 2 * n);
+	std::sort(Ends, Ends+2 * n);
 	pos = 0;
 	for (i = 0; i<2 * n; i++)
 	{
@@ -1239,8 +1209,8 @@ void CIntersectionFinder::EventsDelMin()
 {
 	Events[0] = Events[--events_n];
 	if (events_n<2) return;
-	int4 cur = 0;
-	int4 son = 2;
+	uint4 cur = 0;
+	uint4 son = 2;
 	TEvent tmp;
 	do
 	{
@@ -1290,7 +1260,7 @@ void CIntersectionFinder::IntOnRightOfSWL(int4 s1, int4 s2)// important s1 below
 	{
 		events_max *= 2;
 		TEvent *newEvents = new TEvent[events_max];
-		for (int4 i = 0; i<events_n; i++)
+		for (uint4 i = 0; i<events_n; i++)
 			newEvents[i] = Events[i];
 		delete[] Events;
 		Events = newEvents;
@@ -1315,7 +1285,7 @@ void CIntersectionFinder::IntOnRightOfSWL(int4 s1, int4 s2)// important s1 below
 void CIntersectionFinder::PrepareEvents()
 {
 	TEvent *ev = Events;
-	for (int4 i = 0; i<nTotSegm; i++)
+	for (uint4 i = 0; i<nTotSegm; i++)
 	{
 		_BegPoint(Scoll[i], ev->pt.x, ev->pt.y);
 		ev->s1 = i;
@@ -1346,7 +1316,7 @@ void CIntersectionFinder::FreeBOMem()
 	events_max = 0;
 };
 
-void CIntersectionFinder::bentley_ottmann(int4 n, PSeg _Scoll[])
+void CIntersectionFinder::bentley_ottmann(uint4 n, PSeg _Scoll[])
 {
 	Scoll = _Scoll;  nTotSegm = n;
 	AllocBOMem();
