@@ -624,12 +624,32 @@ int4 CIntersectionFinder::FindR(int4 ladder_start_index, uint4 interval_left_ind
 	};
 	if ((int_numb>Size) && (call_numb<max_call)) //if found a lot of intersections repeat FindR
 		Size = FindR<is_line_seg>(stack_rec.Q_pos, interval_left_index, interval_right_index, stack_pos, Size, call_numb + 1);
-	else //cut stripe on the middle
+	else //cut stripe 
 	{
-		uint4 m = (interval_left_index + interval_right_index) / 2;
-		Size = FindR<is_line_seg>(stack_rec.Q_pos, interval_left_index, m, stack_pos, Size, 0);
-		Size = InsDel<is_line_seg>(m, stack_pos, Size);
-		Size = FindR<is_line_seg>(stack_rec.Q_pos, m, interval_right_index, stack_pos, Size, 0);
+
+      uint4 m = (interval_left_index + interval_right_index) / 2;
+      if(Size>nTotSegm/100){// if L contains a lot of segments then cut on two parts
+		       Size = FindR<is_line_seg>(stack_rec.Q_pos, interval_left_index, m, stack_pos, Size, 0);
+		       Size = InsDel<is_line_seg>(m, stack_pos, Size);
+		       Size = FindR<is_line_seg>(stack_rec.Q_pos, m, interval_right_index, stack_pos, Size, 0);
+      }
+      else{// if L contains not so many segments than cut on four parts (works faster for some segment distributions)
+          uint4 q = (interval_left_index + m) / 2;
+          if (interval_left_index != q) {
+              Size = FindR<is_line_seg>(stack_rec.Q_pos, interval_left_index, q, stack_pos, Size, 0);
+              Size = InsDel<is_line_seg>(q, stack_pos, Size);
+          }
+          if (q != m) {
+              Size = FindR<is_line_seg>(stack_rec.Q_pos, q, m, stack_pos, Size, 0);
+              Size = InsDel<is_line_seg>(m, stack_pos, Size);
+          }
+          q = (interval_right_index + m) / 2;
+          if (q != m) {
+              Size = FindR<is_line_seg>(stack_rec.Q_pos, m, q, stack_pos, Size, 0);
+              Size = InsDel<is_line_seg>(q, stack_pos, Size);
+          }
+          Size = FindR<is_line_seg>(stack_rec.Q_pos, q, interval_right_index, stack_pos, Size, 0);
+      }
 	}
 	if (ladder_start_index >= stack_rec.Q_pos) return Size;
 	B = ENDS[LBoundIdx = interval_left_index].x;   E = ENDS[interval_right_index].x;
@@ -666,12 +686,32 @@ int4 CIntersectionFinder::optFindR(int4 father_first_step, int4 ladder_start_ind
 		stack_pos = stack_rec.Set(stack_pos, interval_right_index);
 	if ((int_numb>Size) && (call_numb<max_call)) //if found a lot of intersections repeat optFindR
 		Size = optFindR<is_line_seg>(ladder_start_index + 1, stack_rec.Q_pos, interval_left_index, interval_right_index, stack_pos, Size, call_numb + 1);
-	else //cut stripe on the middle
+	else //cut stripe 
 	{
-		uint4 m = (interval_left_index + interval_right_index) / 2;
-		Size = optFindR<is_line_seg>(ladder_start_index + 1, stack_rec.Q_pos, interval_left_index, m, stack_pos, Size, 0);
-		Size = optInsDel<is_line_seg>(m, stack_pos, Size);
-		Size = optFindR<is_line_seg>(ladder_start_index + 1, stack_rec.Q_pos, m, interval_right_index, stack_pos, Size, 0);
+      uint4 m = (interval_left_index + interval_right_index) / 2;
+      if (Size>nTotSegm / 100) {// if L contains a lot of segments then cut on two parts
+          Size = optFindR<is_line_seg>(ladder_start_index + 1, stack_rec.Q_pos, interval_left_index, m, stack_pos, Size, 0);
+          Size = optInsDel<is_line_seg>(m, stack_pos, Size);
+          Size = optFindR<is_line_seg>(ladder_start_index + 1, stack_rec.Q_pos, m, interval_right_index, stack_pos, Size, 0);
+      }
+      else {// if L contains not so many segments than cut on four parts (works faster for some segment distributions)
+          uint4 q = (interval_left_index + m) / 2;
+          if (interval_left_index != q) {
+              Size = optFindR<is_line_seg>(ladder_start_index + 1, stack_rec.Q_pos, interval_left_index, q, stack_pos, Size, 0);
+              Size = optInsDel<is_line_seg>(q, stack_pos, Size);
+          }
+          if (q != m) {
+              Size = optFindR<is_line_seg>(ladder_start_index + 1, stack_rec.Q_pos, q, m, stack_pos, Size, 0);
+              Size = optInsDel<is_line_seg>(m, stack_pos, Size);
+          }
+          q = (interval_right_index + m) / 2;
+          if (q != m) {
+              Size = optFindR<is_line_seg>(ladder_start_index + 1, stack_rec.Q_pos, m, q, stack_pos, Size, 0);
+              Size = optInsDel<is_line_seg>(q, stack_pos, Size);
+          }
+          Size = optFindR<is_line_seg>(ladder_start_index + 1, stack_rec.Q_pos, q, interval_right_index, stack_pos, Size, 0);
+      }
+
 	}
 	if (ladder_start_index >= stack_rec.Q_pos) return Size;
 	LBoundIdx = interval_left_index;
