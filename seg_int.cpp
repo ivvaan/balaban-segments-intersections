@@ -211,7 +211,9 @@ counters_mute=counters_string;
   if((seg_type==arc)&&(d==mixed)) {printf("-sa -dm is not compartible!/n"); return 0;}
   if((seg_type==arc)&&(d==parallel)) {printf("-sa -dl is not compartible!/n"); return 0;}
   PSeg *coll=create_test_collection(seg_type,n,d,p);
+#ifndef _DEBUG
   {double c[8];  find_intersections(seg_type, min(15000, n), coll, triv, c); };//just to load and speedup processor;
+#endif // !1
   for (int4 a = sizeof(alg_list) / sizeof(alg_list[0]) - 1;a>-1; a--)
     {
       if(alg&alg_list[a]) 

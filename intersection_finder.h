@@ -126,7 +126,7 @@ class CIntersectionFinder
   //common
   uint4 nTotSegm;
   long int_numb;
-  uint4 LBoundIdx,RBoundIdx;
+  uint4 RBoundIdx;
   REAL B,E;
 
   struct EndIndexes
@@ -244,7 +244,7 @@ class CIntersectionFinder
   template<bool is_line_seg> void FindIntI(uint4 r_index,ProgramStackRec * stack_pos,PSeg seg);
   template<bool is_line_seg> void FindIntL(int4 QB,int4 QE,int4 segm_numb);
   template<bool is_line_seg> int4 InsDel(uint4 n,ProgramStackRec * stack_pos,int4 Size);
-  template<bool is_line_seg> int4 Merge(int4 QB,int4 QE,int4 Size);
+  template<bool is_line_seg> int4 Merge(uint4 LBoundIdx, int4 QB,int4 QE,int4 Size);
   int4 Split(int4 &step_index,int4 Size);
   template<bool is_line_seg> int4 FindR(int4 ladder_start_index,uint4 interval_left_index,uint4 interval_right_index,ProgramStackRec *stack_pos,int4 Size,int4 call_numb);
   template<bool is_line_seg> void _balaban_no_recursion(uint4 n, PSeg _Scoll[]);
@@ -255,7 +255,7 @@ class CIntersectionFinder
   template<bool is_line_seg> void optFindInt(int4 QB,int4 QE,int4 l,PSeg s);
   template<bool is_line_seg> void optFindIntI(uint4 r_index,ProgramStackRec *stack_pos,PSeg seg);
   template<bool is_line_seg> int4 optInsDel(uint4 n,ProgramStackRec *stack_pos,int4 Size);
-  template<bool is_line_seg> int4 optMerge(int4 QB,int4 QE,int4 Size);
+  template<bool is_line_seg> int4 optMerge(uint4 LBoundIdx, int4 QB,int4 QE,int4 Size);
   int4 optSplit(int4 father_first_step, int4 &step_index,int4 Size);
   template<bool is_line_seg> int4 optFindR(int4 father_first_step,int4 ladder_start_index,uint4 interval_left_index,uint4 interval_right_index,
       ProgramStackRec *stack_pos,int4 Size,int4 call_numb);
@@ -266,7 +266,7 @@ class CIntersectionFinder
   void no_ipFindIntI(uint4 r_index,ProgramStackRec * stack_pos,PSeg seg);
   void no_ipFindIntL(int4 QB,int4 QE,int4 segm_numb);
   int4 no_ipInsDel(uint4 n,ProgramStackRec * stack_pos,int4 Size);
-  int4 no_ipMerge(int4 QB,int4 QE,int4 Size);
+  int4 no_ipMerge(uint4 LBoundIdx, int4 QB,int4 QE,int4 Size);
   int4 no_ipSplit(int4 &step_index,int4 Size,int4 stripe_divided);
   int4 no_ipSearchInStrip(int4 QP,int4 Size);
   int4 no_ipFindR(int4 ladder_start_index,uint4 interval_left_index,uint4 interval_right_index,ProgramStackRec *stack_pos,int4 Size,int4 call_numb);

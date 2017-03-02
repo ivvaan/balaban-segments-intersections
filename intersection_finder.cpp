@@ -134,7 +134,7 @@ void CIntersectionFinder::optFindIntI(uint4 r_index, ProgramStackRec *stack_pos,
 		if (l == undef_loc)// search all range to find seg location for first or small staircase 
 		{
 			l = QB; r = QE + 1;
-		}
+    }
 		else
 		{ // else search from l to l+inherit_each
 			l = abs(l);
@@ -299,7 +299,7 @@ int4 CIntersectionFinder::optInsDel(uint4 end_index, ProgramStackRec *stack_pos,
 // than exchange it back to R and returns new R size.  While merging finds locations of R segments
 // in current staircase and appropriate intersections.
 template<bool is_line_seg>
-int4 CIntersectionFinder::Merge(int4 QB, int4 QE, int4 Size)
+int4 CIntersectionFinder::Merge(uint4 LBoundIdx, int4 QB, int4 QE, int4 Size)
 {
 	int4 cur_R_pos = 0, new_size = 0;
 	int4 cur_stair = QB;
@@ -332,7 +332,7 @@ int4 CIntersectionFinder::Merge(int4 QB, int4 QE, int4 Size)
 // Merge merges R and current staircase QB<stair_index<=QE on right bound of the stripe and place it in L, 
 // than exchange it back to R and returns new R size.  While merging finds locations of R segments
 // in current staircase and appropriate intersections.
-int4 CIntersectionFinder::no_ipMerge(int4 QB, int4 QE, int4 Size)
+int4 CIntersectionFinder::no_ipMerge(uint4 LBoundIdx, int4 QB, int4 QE, int4 Size)
 {
 	int4 new_size = 0;
 	no_ipSegmentInfo *cur_R_pos = no_ipR, *last_R_pos = no_ipR + Size;
@@ -362,7 +362,7 @@ int4 CIntersectionFinder::no_ipMerge(int4 QB, int4 QE, int4 Size)
 
 // Same as Merge but merges only original stairs
 template<bool is_line_seg>
-int4 CIntersectionFinder::optMerge(int4 QB, int4 QE, int4 Size)
+int4 CIntersectionFinder::optMerge(uint4 LBoundIdx, int4 QB, int4 QE, int4 Size)
 {
 	int4 cur_R_pos = 0, new_size = 0;
 	int4 cur_stair = QB;
@@ -652,9 +652,8 @@ int4 CIntersectionFinder::FindR(int4 ladder_start_index, uint4 interval_left_ind
       }
 	}
 	if (ladder_start_index >= stack_rec.Q_pos) return Size;
-	B = ENDS[LBoundIdx = interval_left_index].x;   E = ENDS[interval_right_index].x;
-	Size = Merge<is_line_seg>(ladder_start_index, stack_rec.Q_pos, Size);
-	return Size;
+	B = ENDS[interval_left_index].x;   E = ENDS[interval_right_index].x;
+	return Merge<is_line_seg>(interval_left_index,ladder_start_index, stack_rec.Q_pos, Size);
 };
 
 
@@ -668,20 +667,9 @@ int4 CIntersectionFinder::optFindR(int4 father_first_step, int4 ladder_start_ind
 		return SearchInStrip<is_line_seg>(ladder_start_index, Size);
 	ProgramStackRec stack_rec(ladder_start_index);
 	int_numb = 0;// variable to count intersections on Split stage
-	if (father_first_step + inherit_each<stack_rec.Q_pos)
-	{// use optimal variant if new staircase is big
-		Size = optSplit(father_first_step, stack_rec.Q_pos, Size);
+	Size = optSplit(father_first_step, stack_rec.Q_pos, Size);
 		for (int4 i = 0; i<Size; i++)
 			optFindInt<is_line_seg>(ladder_start_index, stack_rec.Q_pos, R[i], Scoll[L[i]]);//R[i] should contain the location of the segment Scoll[L[i]]
-	}
-	else
-	{// use fast variant if new staircase is small 
-		Size = Split(stack_rec.Q_pos, Size);
-		if ((ladder_start_index<stack_rec.Q_pos))
-			FindIntL<is_line_seg>(ladder_start_index, stack_rec.Q_pos, Size);
-		for (int4 i = ladder_start_index + 1; i <= stack_rec.Q_pos; i++)
-			father_loc[i] = undef_loc;
-	}
 	if ((ladder_start_index<stack_rec.Q_pos))
 		stack_pos = stack_rec.Set(stack_pos, interval_right_index);
 	if ((int_numb>Size) && (call_numb<max_call)) //if found a lot of intersections repeat optFindR
@@ -714,13 +702,8 @@ int4 CIntersectionFinder::optFindR(int4 father_first_step, int4 ladder_start_ind
 
 	}
 	if (ladder_start_index >= stack_rec.Q_pos) return Size;
-	LBoundIdx = interval_left_index;
 	B = ENDS[interval_left_index].x;   E = ENDS[interval_right_index].x;
-	if (father_first_step + inherit_each<stack_rec.Q_pos)
-		Size = optMerge<is_line_seg>(ladder_start_index, stack_rec.Q_pos, Size);
-	else // use fast variant if new staircase is small 
-		Size = Merge<is_line_seg>(ladder_start_index, stack_rec.Q_pos, Size);
-	return Size;
+	return optMerge<is_line_seg>(interval_left_index,ladder_start_index, stack_rec.Q_pos, Size);
 };
 
 
@@ -752,8 +735,8 @@ int4 CIntersectionFinder::no_ipFindR(int4 ladder_start_index, uint4 interval_lef
 		Size = no_ipFindR(stack_rec.Q_pos, m, interval_right_index, stack_pos, Size, 0);
 	}
 	if (ladder_start_index >= stack_rec.Q_pos) return Size;
-	B = ENDS[LBoundIdx = interval_left_index].x;   E = ENDS[interval_right_index].x;
-	Size = no_ipMerge(ladder_start_index, stack_rec.Q_pos, Size);
+	B = ENDS[interval_left_index].x;   E = ENDS[interval_right_index].x;
+	Size = no_ipMerge(interval_left_index,ladder_start_index, stack_rec.Q_pos, Size);
 	return Size;
 };
 
@@ -989,8 +972,8 @@ void CIntersectionFinder::_balaban_no_recursion(uint4 n, PSeg _Scoll[])
 		{
 			if (stack->Q_pos_prev<stack->Q_pos)
 			{
-				B = ENDS[LBoundIdx = stack->left_bound].x;
-				Size = Merge<is_line_seg>(stack->Q_pos_prev, stack->Q_pos, Size);
+				B = ENDS[stack->left_bound].x;
+				Size = Merge<is_line_seg>(stack->left_bound,stack->Q_pos_prev, stack->Q_pos, Size);
 			};
 			stack--;
 		}
