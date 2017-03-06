@@ -125,35 +125,94 @@ void CIntersectionFinder::no_ipFindIntL(int4 QB, int4 QE, int4 segm_numb)
 template<bool is_line_seg>
 void CIntersectionFinder::optFindIntI(uint4 r_index, ProgramStackRec *stack_pos, PSeg seg)
 {
-	while (stack_pos->right_bound <= r_index)stack_pos = stack_pos->prev;// go from bottom to top and find staircase to start
-	E = ENDS[r_index].x;// adjust right bound for segment functions helpers
-	int4  l = undef_loc, r, m, QB, QE = stack_pos->Q_pos;
-	for (stack_pos = stack_pos->prev; stack_pos; stack_pos = stack_pos->prev)// for all staircases
-	{
-		QB = stack_pos->Q_pos;
-		if (l == undef_loc)// search all range to find seg location for first or small staircase 
-		{
-			l = QB; r = QE + 1;
-    }
-		else
-		{ // else search from l to l+inherit_each
-			l = abs(l);
-			if (l<QB)l = QB;
-			r = l + inherit_each;
-			if (r>QE + 1)r = QE + 1;
-		}
-		while ((r - l)>1)// binary search
-		{
-			m = (r + l) >> 1;//        m=(r+l)/2;
-			if (_Under(Scoll[Q[m]], seg))
-				l = m;
-			else
-				r = m;
-		}
-		optFindInt<is_line_seg>(QB, QE, l, seg);
-		QE = QB; // move staircase bound to parent staircase
-		l = father_loc[l];  //using father_loc get approximate location in parent staircase 
-	};
+    while (stack_pos->right_bound <= r_index)stack_pos = stack_pos->prev;// go from bottom to top and find staircase to start
+    if (!stack_pos->prev)return;
+    E = ENDS[r_index].x;// adjust right bound for segment functions helpers
+    int4  l = undef_loc, r, m,  QE = stack_pos->Q_pos + 1;
+    int4 QB = undef_loc+1;//just to differ from l at first loop
+    for (stack_pos = stack_pos->prev; stack_pos; stack_pos = stack_pos->prev)// for all staircases above
+    {
+        if (l == QB) //if location is below first stair we don't have data in father_loc for that location
+            // because the number of locations is greater (by one) than number of stairs 
+            // (for example one stair has two locations (below and above), but we keep in father_loc data for only one (above))
+            // so we use data from next location QE==l+1
+        {
+            l=father_loc[QE]; // using father_loc get approximate location in parent staircase
+            QB = stack_pos->Q_pos;// set lower location bound to the location below first step of current staircase
+            if(l==undef_loc)
+            { 
+                l = QB; r = QE;//full range search if we don't know location from prev level
+            }
+            else
+            { 
+                l = abs(l);//to get rid of sign showing original or inherited segment
+                r = l + inherit_each;
+                l -= inherit_offset;// expand search range down to account that we use information from next location l+1 not from l
+                if (l<QB)l = QB;  if (r>QE)r = QE;
+            }
+        }
+        else
+        {
+            l=father_loc[l];//using father_loc get approximate location in parent staircase; 
+            // line above sometimes executed than l == undef_loc, so we must initialize father_loc[undef_loc]=undef_loc in AllocMem()
+            //to keep l unchanged in this case 
+            //or add additional check here if(l != undef_loc)l=father_loc[l];
+            QB = stack_pos->Q_pos;
+            if (l == undef_loc)
+            {
+                l = QB; r = QE;//full range search if we don't know location from prev level
+            }
+            else
+            {
+                l = abs(l);//to get rid of sign showing original or inherited segment
+                r = l+inherit_each;
+                if (l<QB)l = QB;  if (r>QE)r = QE;
+            }
+        }
+        
+
+        while ((r - l)>1)// binary search
+        {
+            m = (r + l) >> 1;//        m=(r+l)/2;
+            if (_Under(Scoll[Q[m]], seg))
+                l = m;
+            else
+                r = m;
+        }
+
+        optFindInt<is_line_seg>(QB, QE - 1, l, seg);
+        QE = QB + 1; //set upper location bound to the location above last step of prev (which will be current) staircase
+    };
+ /*  
+ //this simlified variant ignoring check l == QB
+ // works correctly (somehow) only if big_staircase_threshold==-1 and inherit_offset==1
+    while (stack_pos->right_bound <= r_index)stack_pos = stack_pos->prev;// go from bottom to top and find staircase to start
+    if (!stack_pos->prev)return;
+    E = ENDS[r_index].x;// adjust right bound for segment functions helpers
+    int4 r = stack_pos->Q_pos + 1, l;
+    stack_pos = stack_pos->prev;
+    int4  QE = r, QB = l = stack_pos->Q_pos, m;
+    while (1)// for all staircases
+    {
+        while ((r - l)>1)// binary search
+        {
+            m = (r + l) >> 1;//        m=(r+l)/2;
+            if (_Under(Scoll[Q[m]], seg))
+                l = m;
+            else
+                r = m;
+        }
+        optFindInt<is_line_seg>(QB, QE - 1, l, seg);
+        QE = QB + 1; // move staircase bound to parent staircase
+        stack_pos = stack_pos->prev;
+        if (!stack_pos)return;
+        QB = stack_pos->Q_pos;
+        l = abs(father_loc[l]);  //using father_loc get approximate location in parent staircase 
+        if (l<QB)l = QB;
+        r = l + inherit_each;
+        if (r>QE)r = QE;
+    };
+*/
 }
 
 
@@ -219,7 +278,6 @@ int4 CIntersectionFinder::InsDel(uint4 end_index, ProgramStackRec * stack_pos, i
 
 		int4 sn = L[Size] = current_end->s();
 		for (i = 0; L[i] != sn; i++);
-		_ASSERTE(i != Size);
 		Size--;
 		for (; i<Size; i++)L[i] = L[i + 1];
 	}
@@ -667,43 +725,63 @@ int4 CIntersectionFinder::optFindR(int4 father_first_step, int4 ladder_start_ind
 		return SearchInStrip<is_line_seg>(ladder_start_index, Size);
 	ProgramStackRec stack_rec(ladder_start_index);
 	int_numb = 0;// variable to count intersections on Split stage
-	Size = optSplit(father_first_step, stack_rec.Q_pos, Size);
-		for (int4 i = 0; i<Size; i++)
-			optFindInt<is_line_seg>(ladder_start_index, stack_rec.Q_pos, R[i], Scoll[L[i]]);//R[i] should contain the location of the segment Scoll[L[i]]
-	if ((ladder_start_index<stack_rec.Q_pos))
-		stack_pos = stack_rec.Set(stack_pos, interval_right_index);
+  bool use_opt = (ladder_start_index- father_first_step>=big_staircase_threshold);
+  if (use_opt)
+  {// use optimal variant if father staircase is big
+      Size = optSplit(father_first_step, stack_rec.Q_pos, Size);
+      for (int4 i = 0; i<Size; i++)
+          optFindInt<is_line_seg>(ladder_start_index, stack_rec.Q_pos, R[i], Scoll[L[i]]);//R[i] should contain the location of the segment Scoll[L[i]]
+      stack_pos = stack_rec.Set(stack_pos, interval_right_index);
+      father_first_step = ladder_start_index + inherit_offset;
+  }
+  else
+  {// use fast variant if new staircase is small 
+      Size = Split(stack_rec.Q_pos, Size);
+      if ((ladder_start_index < stack_rec.Q_pos))
+      {
+          FindIntL<is_line_seg>(ladder_start_index, stack_rec.Q_pos, Size);
+          for (int4 i = ladder_start_index + 1; i <= stack_rec.Q_pos; i++)
+              father_loc[i] = undef_loc;
+          stack_pos = stack_rec.Set(stack_pos, interval_right_index);
+          father_first_step = ladder_start_index + inherit_offset;
+      }
+  }
 	if ((int_numb>Size) && (call_numb<max_call)) //if found a lot of intersections repeat optFindR
 		Size = optFindR<is_line_seg>(ladder_start_index + 1, stack_rec.Q_pos, interval_left_index, interval_right_index, stack_pos, Size, call_numb + 1);
 	else //cut stripe 
 	{
       uint4 m = (interval_left_index + interval_right_index) / 2;
       if (Size>nTotSegm / 100) {// if L contains a lot of segments then cut on two parts
-          Size = optFindR<is_line_seg>(ladder_start_index + 1, stack_rec.Q_pos, interval_left_index, m, stack_pos, Size, 0);
+          Size = optFindR<is_line_seg>(father_first_step, stack_rec.Q_pos, interval_left_index, m, stack_pos, Size, 0);
           Size = optInsDel<is_line_seg>(m, stack_pos, Size);
-          Size = optFindR<is_line_seg>(ladder_start_index + 1, stack_rec.Q_pos, m, interval_right_index, stack_pos, Size, 0);
+          Size = optFindR<is_line_seg>(father_first_step, stack_rec.Q_pos, m, interval_right_index, stack_pos, Size, 0);
       }
       else {// if L contains not so many segments than cut on four parts (works faster for some segment distributions)
           uint4 q = (interval_left_index + m) / 2;
           if (interval_left_index != q) {
-              Size = optFindR<is_line_seg>(ladder_start_index + 1, stack_rec.Q_pos, interval_left_index, q, stack_pos, Size, 0);
+              Size = optFindR<is_line_seg>(father_first_step, stack_rec.Q_pos, interval_left_index, q, stack_pos, Size, 0);
               Size = optInsDel<is_line_seg>(q, stack_pos, Size);
           }
           if (q != m) {
-              Size = optFindR<is_line_seg>(ladder_start_index + 1, stack_rec.Q_pos, q, m, stack_pos, Size, 0);
+              Size = optFindR<is_line_seg>(father_first_step, stack_rec.Q_pos, q, m, stack_pos, Size, 0);
               Size = optInsDel<is_line_seg>(m, stack_pos, Size);
           }
           q = (interval_right_index + m) / 2;
           if (q != m) {
-              Size = optFindR<is_line_seg>(ladder_start_index + 1, stack_rec.Q_pos, m, q, stack_pos, Size, 0);
+              Size = optFindR<is_line_seg>(father_first_step, stack_rec.Q_pos, m, q, stack_pos, Size, 0);
               Size = optInsDel<is_line_seg>(q, stack_pos, Size);
           }
-          Size = optFindR<is_line_seg>(ladder_start_index + 1, stack_rec.Q_pos, q, interval_right_index, stack_pos, Size, 0);
+          Size = optFindR<is_line_seg>(father_first_step, stack_rec.Q_pos, q, interval_right_index, stack_pos, Size, 0);
       }
 
 	}
 	if (ladder_start_index >= stack_rec.Q_pos) return Size;
 	B = ENDS[interval_left_index].x;   E = ENDS[interval_right_index].x;
-	return optMerge<is_line_seg>(interval_left_index,ladder_start_index, stack_rec.Q_pos, Size);
+  if(use_opt)
+      Size= optMerge<is_line_seg>(interval_left_index, ladder_start_index, stack_rec.Q_pos, Size);
+  else
+      Size=Merge<is_line_seg>(interval_left_index,ladder_start_index, stack_rec.Q_pos, Size);
+  return Size;
 };
 
 
@@ -771,6 +849,7 @@ void CIntersectionFinder::AllocMem(BOOL for_optimal)
 		// for optimal alg it needs additional space reserve nTotSegm/(inherit_each-1)+inherit_each+1 to store inherited stairs
 		needed = nTotSegm + nTotSegm / (inherit_each - 1) + inherit_each + 1;
 		father_loc = new int4[needed];
+    father_loc[undef_loc] = undef_loc;//nesessary precondition for optFindIntI
 	}
 	Q = new int4[needed];
 };
