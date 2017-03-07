@@ -144,7 +144,7 @@ void CIntersectionFinder::optFindIntI(uint4 r_index, ProgramStackRec *stack_pos,
             else
             {
                 r = l + inherit_each;
-                if (r>QE)r = QE;
+                if((big_staircase_threshold<inherit_each)&&(r>QE))r = QE;
             }
         }
         else
