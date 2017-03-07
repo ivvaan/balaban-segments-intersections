@@ -130,6 +130,7 @@ void CIntersectionFinder::optFindIntI(uint4 r_index, ProgramStackRec *stack_pos,
     E = ENDS[r_index].x;// adjust right bound for segment functions helpers
     int4  l = undef_loc, r, m,  QE = stack_pos->Q_pos + 1;
     int4 QB = undef_loc+1;//just to differ from l at first loop
+    int4 l1, r1, m1;
     for (stack_pos = stack_pos->prev; stack_pos; stack_pos = stack_pos->prev)// for all staircases above
     {
         if (l == QB) //if location is below first stair we don't have data in father_loc for that location
@@ -137,27 +138,22 @@ void CIntersectionFinder::optFindIntI(uint4 r_index, ProgramStackRec *stack_pos,
             // (for example one stair has two locations (below and above), but we keep in father_loc data for only one (above))
             // so we use data from next location QE==l+1
         {
-            l=father_loc[QE]; // using father_loc get approximate location in parent staircase
-            QB = stack_pos->Q_pos;// set lower location bound to the location below first step of current staircase
-            if(l==undef_loc)
-            { 
-                l = QB; r = QE;//full range search if we don't know location from prev level
-            }
+            l = QB = stack_pos->Q_pos;// set lower location bound to the location below first step of current staircase
+            if(father_loc[QE] ==undef_loc)// means staircase was created by Split not by optSplit
+                r = QE;//full range search if we don't know location from prev level
             else
-            { 
-                l = abs(l);//to get rid of sign showing original or inherited segment
+            {
                 r = l + inherit_each;
-                l -= inherit_offset;// expand search range down to account that we use information from next location l+1 not from l
-                if (l<QB)l = QB;  if (r>QE)r = QE;
+                if (r>QE)r = QE;
             }
         }
         else
         {
+            QB = stack_pos->Q_pos;
             l=father_loc[l];//using father_loc get approximate location in parent staircase; 
             // line above sometimes executed than l == undef_loc, so we must initialize father_loc[undef_loc]=undef_loc in AllocMem()
             //to keep l unchanged in this case 
             //or add additional check here if(l != undef_loc)l=father_loc[l];
-            QB = stack_pos->Q_pos;
             if (l == undef_loc)
             {
                 l = QB; r = QE;//full range search if we don't know location from prev level
@@ -169,7 +165,6 @@ void CIntersectionFinder::optFindIntI(uint4 r_index, ProgramStackRec *stack_pos,
                 if (l<QB)l = QB;  if (r>QE)r = QE;
             }
         }
-        
 
         while ((r - l)>1)// binary search
         {
@@ -179,6 +174,7 @@ void CIntersectionFinder::optFindIntI(uint4 r_index, ProgramStackRec *stack_pos,
             else
                 r = m;
         }
+
 
         optFindInt<is_line_seg>(QB, QE - 1, l, seg);
         QE = QB + 1; //set upper location bound to the location above last step of prev (which will be current) staircase
