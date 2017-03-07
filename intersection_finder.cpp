@@ -743,7 +743,7 @@ int4 CIntersectionFinder::optFindR(int4 father_first_step, int4 ladder_start_ind
       }
   }
 	if ((int_numb>Size) && (call_numb<max_call)) //if found a lot of intersections repeat optFindR
-		Size = optFindR<is_line_seg>(ladder_start_index + 1, stack_rec.Q_pos, interval_left_index, interval_right_index, stack_pos, Size, call_numb + 1);
+		Size = optFindR<is_line_seg>(father_first_step, stack_rec.Q_pos, interval_left_index, interval_right_index, stack_pos, Size, call_numb + 1);
 	else //cut stripe 
 	{
       uint4 m = (interval_left_index + interval_right_index) / 2;
