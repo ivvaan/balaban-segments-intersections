@@ -130,40 +130,28 @@ void CIntersectionFinder::optFindIntI(uint4 r_index, ProgramStackRec *stack_pos,
     E = ENDS[r_index].x;// adjust right bound for segment functions helpers
     int4  l = undef_loc, r, m,  QE = stack_pos->Q_pos + 1;
     int4 QB = undef_loc+1;//just to differ from l at first loop
-    int4 l1, r1, m1;
     for (stack_pos = stack_pos->prev; stack_pos; stack_pos = stack_pos->prev)// for all staircases above
     {
-        if (l == QB) //if location is below first stair we don't have data in father_loc for that location
+        if ((big_staircase_threshold>inherit_each) && (l == QB)) //if location is below first stair we don't have data in father_loc for that location
             // because the number of locations is greater (by one) than number of stairs 
             // (for example one stair has two locations (below and above), but we keep in father_loc data for only one (above))
             // so we use data from next location QE==l+1
         {
             l = QB = stack_pos->Q_pos;// set lower location bound to the location below first step of current staircase
-            if(father_loc[QE] ==undef_loc)// means staircase was created by Split not by optSplit
-                r = QE;//full range search if we don't know location from prev level
-            else
-            {
-                r = l + inherit_each;
-                if((big_staircase_threshold<inherit_each)&&(r>QE))r = QE;
-            }
+            r = father_loc[QE] == undef_loc? QE : QB + inherit_each;// father_loc[QE] ==undef_loc means staircase was created by Split not by optSplit
+            //and we use full gange search [QB;QE] otherwise [QB;QB+inherit_each]
         }
         else
         {
             QB = stack_pos->Q_pos;
-            l=father_loc[l];//using father_loc get approximate location in parent staircase; 
+            m=abs(father_loc[l]);//using father_loc get approximate location in parent staircase; 
             // line above sometimes executed than l == undef_loc, so we must initialize father_loc[undef_loc]=undef_loc in AllocMem()
-            //to keep l unchanged in this case 
-            //or add additional check here if(l != undef_loc)l=father_loc[l];
-            if (l == undef_loc)
-            {
-                l = QB; r = QE;//full range search if we don't know location from prev level
-            }
-            else
-            {
-                l = abs(l);//to get rid of sign showing original or inherited segment
-                r = l+inherit_each;
-                if (l<QB)l = QB;  if (r>QE)r = QE;
-            }
+            //to keep l unchanged in this case;
+            //also undef_loc was chosen to be zero so abs(undef_loc)==undef_loc
+            //otherwise we need additional checks
+            l=max(QB,m);//here we use a fact that always undef_loc < QB
+            if (m == undef_loc)r = QE;
+            else { r = l + inherit_each; if (r > QE)r = QE; }
         }
 
         while ((r - l)>1)// binary search
@@ -174,41 +162,11 @@ void CIntersectionFinder::optFindIntI(uint4 r_index, ProgramStackRec *stack_pos,
             else
                 r = m;
         }
-
 
         optFindInt<is_line_seg>(QB, QE - 1, l, seg);
         QE = QB + 1; //set upper location bound to the location above last step of prev (which will be current) staircase
     };
- /*  
- //this simlified variant ignoring check l == QB
- // works correctly (somehow) only if big_staircase_threshold==-1 and inherit_offset==1
-    while (stack_pos->right_bound <= r_index)stack_pos = stack_pos->prev;// go from bottom to top and find staircase to start
-    if (!stack_pos->prev)return;
-    E = ENDS[r_index].x;// adjust right bound for segment functions helpers
-    int4 r = stack_pos->Q_pos + 1, l;
-    stack_pos = stack_pos->prev;
-    int4  QE = r, QB = l = stack_pos->Q_pos, m;
-    while (1)// for all staircases
-    {
-        while ((r - l)>1)// binary search
-        {
-            m = (r + l) >> 1;//        m=(r+l)/2;
-            if (_Under(Scoll[Q[m]], seg))
-                l = m;
-            else
-                r = m;
-        }
-        optFindInt<is_line_seg>(QB, QE - 1, l, seg);
-        QE = QB + 1; // move staircase bound to parent staircase
-        stack_pos = stack_pos->prev;
-        if (!stack_pos)return;
-        QB = stack_pos->Q_pos;
-        l = abs(father_loc[l]);  //using father_loc get approximate location in parent staircase 
-        if (l<QB)l = QB;
-        r = l + inherit_each;
-        if (r>QE)r = QE;
-    };
-*/
+ 
 }
 
 
@@ -721,7 +679,7 @@ int4 CIntersectionFinder::optFindR(int4 father_first_step, int4 ladder_start_ind
 		return SearchInStrip<is_line_seg>(ladder_start_index, Size);
 	ProgramStackRec stack_rec(ladder_start_index);
 	int_numb = 0;// variable to count intersections on Split stage
-  bool use_opt = (ladder_start_index- father_first_step>=big_staircase_threshold);
+  bool use_opt = (ladder_start_index- father_first_step>big_staircase_threshold);
   if (use_opt)
   {// use optimal variant if father staircase is big
       Size = optSplit(father_first_step, stack_rec.Q_pos, Size);

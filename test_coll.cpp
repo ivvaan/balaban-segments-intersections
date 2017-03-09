@@ -571,7 +571,7 @@ double  find_intersections(int4 seg_type,int4 SN,PSeg *colls,int4 alg, double *c
       intersection_finder.set_segm_fuctions(
         SegmentFunctions<TLineSegment1>::__Below,
           dont_need_ip?SegmentFunctions<TLineSegment1>::__FindAndRegIPoints<false>: SegmentFunctions<TLineSegment1>::__FindAndRegIPoints<true>,
-          dont_need_ip?SegmentFunctions<TLineSegment1>::__FindAndRegIPointsInStripe<false>:SegmentFunctions<TLineSegment1>::__FindAndRegIPointsInStripe<false>,
+          dont_need_ip?SegmentFunctions<TLineSegment1>::__FindAndRegIPointsInStripe<false>:SegmentFunctions<TLineSegment1>::__FindAndRegIPointsInStripe<true>,
         SegmentFunctions<TLineSegment1>::__IntInside,
         SegmentFunctions<TLineSegment1>::__BegPoint,
         SegmentFunctions<TLineSegment1>::__EndPoint,
@@ -587,7 +587,7 @@ double  find_intersections(int4 seg_type,int4 SN,PSeg *colls,int4 alg, double *c
       intersection_finder.set_segm_fuctions(
         SegmentFunctions<TLineSegment2>::__Below,
           dont_need_ip ? SegmentFunctions<TLineSegment2>::__FindAndRegIPoints<false> : SegmentFunctions<TLineSegment2>::__FindAndRegIPoints<true>,
-          dont_need_ip ? SegmentFunctions<TLineSegment2>::__FindAndRegIPointsInStripe<false> : SegmentFunctions<TLineSegment2>::__FindAndRegIPointsInStripe<false>,
+          dont_need_ip ? SegmentFunctions<TLineSegment2>::__FindAndRegIPointsInStripe<false> : SegmentFunctions<TLineSegment2>::__FindAndRegIPointsInStripe<true>,
           SegmentFunctions<TLineSegment2>::__IntInside,
         SegmentFunctions<TLineSegment2>::__BegPoint,
         SegmentFunctions<TLineSegment2>::__EndPoint,
