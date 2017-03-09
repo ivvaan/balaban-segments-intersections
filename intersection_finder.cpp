@@ -138,20 +138,19 @@ void CIntersectionFinder::optFindIntI(uint4 r_index, ProgramStackRec *stack_pos,
             // so we use data from next location QE==l+1
         {
             l = QB = stack_pos->Q_pos;// set lower location bound to the location below first step of current staircase
-            r = father_loc[QE] == undef_loc? QE : QB + inherit_each;// father_loc[QE] ==undef_loc means staircase was created by Split not by optSplit
-            //and we use full gange search [QB;QE] otherwise [QB;QB+inherit_each]
+            r = father_loc[QE] ? QB + inherit_each : QE ;// father_loc[QE] !=undef_loc (i.e. 0) means staircase was created by optSplit 
+            //and we use range [QB;QB+inherit_each] to search, otherwise it was created by Split and full range search [QB;QE] is used
         }
         else
         {
             QB = stack_pos->Q_pos;
             m=abs(father_loc[l]);//using father_loc get approximate location in parent staircase; 
             // line above sometimes executed than l == undef_loc, so we must initialize father_loc[undef_loc]=undef_loc in AllocMem()
-            //to keep l unchanged in this case;
-            //also undef_loc was chosen to be zero so abs(undef_loc)==undef_loc
+            //to keep l unchanged in this case; undef_loc was chosen to be zero so abs(undef_loc)==undef_loc
             //otherwise we need additional checks
-            l=max(QB,m);//here we use a fact that always undef_loc < QB
-            if (m == undef_loc)r = QE;
-            else { r = l + inherit_each; if (r > QE)r = QE; }
+            l=max(QB,m);//here we use a fact that always undef_loc < QB and if m==undef_loc or m<QB l should be QB
+            if (m) { r = l + inherit_each; if (r > QE)r = QE; }
+            else r = QE;//if m==0 i.e. undef_loc we use [QB;QE] as a range
         }
 
         while ((r - l)>1)// binary search
