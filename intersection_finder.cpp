@@ -145,7 +145,7 @@ void CIntersectionFinder::optFindIntI(uint4 r_index, ProgramStackRec *stack_pos,
         {
             QB = stack_pos->Q_pos;
             m=abs(father_loc[l]);//using father_loc get approximate location in parent staircase; 
-            // line above sometimes executed than l == undef_loc, so we must initialize father_loc[undef_loc]=undef_loc in AllocMem()
+            // line above sometimes executed when l == undef_loc, so we must initialize father_loc[undef_loc]=undef_loc in AllocMem()
             //to keep l unchanged in this case; undef_loc was chosen to be zero so abs(undef_loc)==undef_loc
             //otherwise we need additional checks
             l=max(QB,m);//here we use a fact that always undef_loc < QB and if m==undef_loc or m<QB l should be QB
