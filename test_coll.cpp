@@ -450,7 +450,8 @@ class SegmentFunctions
       {
       TPlaneVect P[2];
       int4 n=IntPoint<_reg_ip>((SEGMENT*)s1,(SEGMENT*)s2,P);
-      if(n)register_intersection(intersection_registrator,s1,s2,n, _reg_ip?P:NULL);
+      if(n)
+		  register_intersection(intersection_registrator,s1,s2,n, _reg_ip?P:NULL);
       return n; 
       };
 
@@ -561,83 +562,115 @@ double  find_intersections(int4 seg_type,int4 SN,PSeg *colls,int4 alg, double *c
   {
   if(colls==NULL) return 0;
   double int_numb=0;
-  CIntersectionFinder intersection_finder;
+  
   BOOL dont_need_ip=(alg== fast_no_ip);
   
   BOOL is_line;
-  switch (seg_type)
-    {
-    case line1:
-      intersection_finder.set_segm_fuctions(
-        SegmentFunctions<TLineSegment1>::__Below,
-          dont_need_ip?SegmentFunctions<TLineSegment1>::__FindAndRegIPoints<false>: SegmentFunctions<TLineSegment1>::__FindAndRegIPoints<true>,
-          dont_need_ip?SegmentFunctions<TLineSegment1>::__FindAndRegIPointsInStripe<false>:SegmentFunctions<TLineSegment1>::__FindAndRegIPointsInStripe<true>,
-        SegmentFunctions<TLineSegment1>::__IntInside,
-        SegmentFunctions<TLineSegment1>::__BegPoint,
-        SegmentFunctions<TLineSegment1>::__EndPoint,
-        SegmentFunctions<TLineSegment1>::__Under,
-        SegmentFunctions<TLineSegment1>::__FindAndRegIPointOnRightOfSWL,
-        SegmentFunctions<TLineSegment1>::__YAtX,
-        SegmentFunctions<TLineSegment1>::register_intersection,
-        &int_numb,
-        is_line=TLineSegment1::is_line
-        );
-      break;
-    case line2:
-      intersection_finder.set_segm_fuctions(
-        SegmentFunctions<TLineSegment2>::__Below,
-          dont_need_ip ? SegmentFunctions<TLineSegment2>::__FindAndRegIPoints<false> : SegmentFunctions<TLineSegment2>::__FindAndRegIPoints<true>,
-          dont_need_ip ? SegmentFunctions<TLineSegment2>::__FindAndRegIPointsInStripe<false> : SegmentFunctions<TLineSegment2>::__FindAndRegIPointsInStripe<true>,
-          SegmentFunctions<TLineSegment2>::__IntInside,
-        SegmentFunctions<TLineSegment2>::__BegPoint,
-        SegmentFunctions<TLineSegment2>::__EndPoint,
-        SegmentFunctions<TLineSegment2>::__Under,
-        SegmentFunctions<TLineSegment2>::__FindAndRegIPointOnRightOfSWL,
-        SegmentFunctions<TLineSegment2>::__YAtX,
-        SegmentFunctions<TLineSegment2>::register_intersection,
-        &int_numb,
-        is_line=TLineSegment2::is_line
-        );
-      break;
-    case arc:
-      intersection_finder.set_segm_fuctions(
-        SegmentFunctions<TArcSegment>::__Below,
-          SegmentFunctions<TArcSegment>::__FindAndRegIPoints<true>,
-          SegmentFunctions<TArcSegment>::__FindAndRegIPointsInStripe<true>,
-          SegmentFunctions<TArcSegment>::__IntInside,
-        SegmentFunctions<TArcSegment>::__BegPoint,
-        SegmentFunctions<TArcSegment>::__EndPoint,
-        SegmentFunctions<TArcSegment>::__Under,
-        SegmentFunctions<TArcSegment>::__FindAndRegIPointOnRightOfSWL,
-        SegmentFunctions<TArcSegment>::__YAtX,
-        SegmentFunctions<TArcSegment>::register_intersection,
-        &int_numb,
-        is_line=TArcSegment::is_line
-        );
-      break;
-    }
-  switch (alg)
-    {
-    case triv:intersection_finder.trivial(SN,colls);break;
-    case simple_sweep:intersection_finder.simple_sweep(SN,colls);break;
-    case fast: intersection_finder.balaban_fast(SN,colls); break;
-    case fast_no_ip: if (is_line)intersection_finder.balaban_no_ip(SN, colls); break;
-    case optimal:intersection_finder.balaban_optimal(SN, colls); break;
-    case fast_parallel: 
-    {
-        PRegObj additional_reg_obj[n_threads];
-        for (int i = 0; i < n_threads - 1; i++)
-        {
-            reg_objects[i*reg_obj_margin]=0;
-            additional_reg_obj[i] = (PRegObj *)reg_objects + i*reg_obj_margin;
-        }
-        intersection_finder.fast_parallel(SN, colls, n_threads, additional_reg_obj);
-        for (int i = 0; i < n_threads - 1; i++)int_numb += *(double*)additional_reg_obj[i];
-    }
-    break;
-    case bentley_ottmann:intersection_finder.bentley_ottmann(SN,colls);break;
-    };
-  memcpy(counters,intersection_finder.my_counter,sizeof(intersection_finder.my_counter));
+  if ((seg_type == line1) || (seg_type == line2))
+	  {
+		  CLineFinder intersection_finder;
+		  switch (seg_type)
+			  {
+			  case line1:
+				  intersection_finder.set_segm_fuctions(
+					  SegmentFunctions<TLineSegment1>::__Below,
+					  dont_need_ip ? SegmentFunctions<TLineSegment1>::__FindAndRegIPoints<false> : SegmentFunctions<TLineSegment1>::__FindAndRegIPoints<true>,
+					  dont_need_ip ? SegmentFunctions<TLineSegment1>::__FindAndRegIPointsInStripe<false> : SegmentFunctions<TLineSegment1>::__FindAndRegIPointsInStripe<true>,
+					  SegmentFunctions<TLineSegment1>::__IntInside,
+					  SegmentFunctions<TLineSegment1>::__BegPoint,
+					  SegmentFunctions<TLineSegment1>::__EndPoint,
+					  SegmentFunctions<TLineSegment1>::__Under,
+					  SegmentFunctions<TLineSegment1>::__FindAndRegIPointOnRightOfSWL,
+					  SegmentFunctions<TLineSegment1>::__YAtX,
+					  SegmentFunctions<TLineSegment1>::register_intersection,
+					  &int_numb,
+					  is_line = TLineSegment1::is_line
+				  );
+				  break;
+			  case line2:
+				  intersection_finder.set_segm_fuctions(
+					  SegmentFunctions<TLineSegment2>::__Below,
+					  dont_need_ip ? SegmentFunctions<TLineSegment2>::__FindAndRegIPoints<false> : SegmentFunctions<TLineSegment2>::__FindAndRegIPoints<true>,
+					  dont_need_ip ? SegmentFunctions<TLineSegment2>::__FindAndRegIPointsInStripe<false> : SegmentFunctions<TLineSegment2>::__FindAndRegIPointsInStripe<true>,
+					  SegmentFunctions<TLineSegment2>::__IntInside,
+					  SegmentFunctions<TLineSegment2>::__BegPoint,
+					  SegmentFunctions<TLineSegment2>::__EndPoint,
+					  SegmentFunctions<TLineSegment2>::__Under,
+					  SegmentFunctions<TLineSegment2>::__FindAndRegIPointOnRightOfSWL,
+					  SegmentFunctions<TLineSegment2>::__YAtX,
+					  SegmentFunctions<TLineSegment2>::register_intersection,
+					  &int_numb,
+					  is_line = TLineSegment2::is_line
+				  );
+				  break;
+			  }
+		  switch (alg)
+			  {
+				  case triv:intersection_finder.trivial(SN, colls); break;
+				  case simple_sweep:intersection_finder.simple_sweep(SN, colls); break;
+				  case fast: intersection_finder.balaban_fast(SN, colls); break;
+				  case fast_no_ip: intersection_finder.balaban_no_ip(SN, colls); break;
+				  case optimal:intersection_finder.balaban_optimal(SN, colls); break;
+				  case fast_parallel:
+					  {
+						  PRegObj additional_reg_obj[n_threads];
+						  for (int i = 0; i < n_threads - 1; i++)
+						  {
+							  reg_objects[i*reg_obj_margin] = 0;
+							  additional_reg_obj[i] = (PRegObj *)reg_objects + i*reg_obj_margin;
+						  }
+						  intersection_finder.fast_parallel(SN, colls, n_threads, additional_reg_obj);
+						  for (int i = 0; i < n_threads - 1; i++)int_numb += *(double*)additional_reg_obj[i];
+					  }
+				  break;
+				  case bentley_ottmann:intersection_finder.bentley_ottmann(SN, colls); break;
+			  };
+		  memcpy(counters, intersection_finder.my_counter, sizeof(intersection_finder.my_counter));
+      }
+
+  if (seg_type == arc)
+  {
+	  CCommonFinder intersection_finder;
+	  intersection_finder.set_segm_fuctions(
+		  SegmentFunctions<TArcSegment>::__Below,
+		  SegmentFunctions<TArcSegment>::__FindAndRegIPoints<true>,
+		  SegmentFunctions<TArcSegment>::__FindAndRegIPointsInStripe<true>,
+		  SegmentFunctions<TArcSegment>::__IntInside,
+		  SegmentFunctions<TArcSegment>::__BegPoint,
+		  SegmentFunctions<TArcSegment>::__EndPoint,
+		  SegmentFunctions<TArcSegment>::__Under,
+		  SegmentFunctions<TArcSegment>::__FindAndRegIPointOnRightOfSWL,
+		  SegmentFunctions<TArcSegment>::__YAtX,
+		  SegmentFunctions<TArcSegment>::register_intersection,
+		  &int_numb,
+		  is_line = TArcSegment::is_line
+	  );
+	  switch (alg)
+	  {
+		  case triv:intersection_finder.trivial(SN, colls); break;
+		  case simple_sweep:intersection_finder.simple_sweep(SN, colls); break;
+		  case fast: intersection_finder.balaban_fast(SN, colls); break;
+		  case fast_no_ip:  break;//incompatible
+		  case optimal:intersection_finder.balaban_optimal(SN, colls); break;
+		  case fast_parallel:
+		  {
+			  PRegObj additional_reg_obj[n_threads];
+			  for (int i = 0; i < n_threads - 1; i++)
+			  {
+				  reg_objects[i*reg_obj_margin] = 0;
+				  additional_reg_obj[i] = (PRegObj *)reg_objects + i*reg_obj_margin;
+			  }
+			  intersection_finder.fast_parallel(SN, colls, n_threads, additional_reg_obj);
+			  for (int i = 0; i < n_threads - 1; i++)int_numb += *(double*)additional_reg_obj[i];
+		  }
+		  break;
+		  case bentley_ottmann:intersection_finder.bentley_ottmann(SN, colls); break;
+	  }
+
+	  memcpy(counters, intersection_finder.my_counter, sizeof(intersection_finder.my_counter));
+  }
+
+  
   return int_numb;
   };
 
