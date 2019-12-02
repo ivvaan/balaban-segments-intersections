@@ -32,7 +32,8 @@ enum _Algorithm
   optimal=8,
   fast_parallel=16,
   bentley_ottmann=32,
-  fast_no_ip=64
+  fast_no_ip=64,
+  mem_save=128
   };
 
 enum _Segment

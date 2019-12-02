@@ -28,6 +28,18 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #define MUL3 7657
 
 #include <random>
+#ifdef _DEBUG
+double randm()
+{
+    static int4 f1 = MUL1;
+    static int4 f2 = MUL2;
+    static int4 f3 = MUL3;
+    f1 = (f1 * MUL1) % PRIME1;
+    f2 = (f2 * MUL2) % PRIME2;
+    f3 = (f3 * MUL3) % PRIME3;
+    return ((double)f1 + (double)f2 * 200.0 + (double)f3 * 30000.0) / 100000000.0;
+};
+#else 
 double randm()
 {
     static   std::random_device generator;
@@ -35,28 +47,20 @@ double randm()
     static   std::uniform_real_distribution<double> distribution(0.0, 1.0);
  return distribution(generator);
 }
+#endif
 
-/*double randm()
-  {
-  static int4 f1=MUL1;
-  static int4 f2=MUL2;
-  static int4 f3=MUL3;
-  f1=(f1*MUL1)%PRIME1;
-  f2=(f2*MUL2)%PRIME2;
-  f3=(f3*MUL3)%PRIME3;
-  return (double)f1+(double)f2*200.0+(double)f3*30000.0;
-  };*/
-
+ 
 
 double CRandomValueGen::GetRandomDouble()
   {
   return randm();
   }
 
-BOOL CRandomValueGen::RandomChoose()
+bool CRandomValueGen::RandomChoose()
   {
-  double r=randm();
-  return randm()>r;
+  double q,r=randm();
+  do {q = randm();} while (q == r);
+  return q>r;
   }
 
 

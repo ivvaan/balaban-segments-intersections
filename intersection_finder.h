@@ -131,12 +131,14 @@ class CIntersectionFinder
   //begin fields and structures for Balaban algorithms
   //common
   uint4 nTotSegm;
+  uint4 len_of_Q;
   long int_numb;
   uint4 RBoundIdx;
   REAL B,E;
 
   int4 ringb_beg;
   int4 ringb_end;
+  bool from_begin;
 
   struct EndIndexes
     {
@@ -243,20 +245,25 @@ class CIntersectionFinder
     };
 
   //common  functions for fast and optimal algorithms
-  int4 SearchInStrip(int4 QP,int4 Size);
+  int4 SearchInStrip(int4 QP, int4 Size);
   void AllocMem(BOOL for_optimal);
   void FreeMem();
   void prepare_ends(uint4 n);
 
   //functions for fast algorithm
-   void FindInt(int4 QB,int4 QE,int4 l,PSeg s);
+   void FindInt(int4 qb,int4 qe,int4 l,PSeg s);
    void FindIntI(uint4 r_index,ProgramStackRec * stack_pos,PSeg seg);
-   void FindIntL(int4 QB,int4 QE,int4 segm_numb);
-   int4 InsDel(uint4 n,ProgramStackRec * stack_pos,int4 Size);
-   int4 Merge(uint4 LBoundIdx, int4 QB,int4 QE,int4 Size);
+   //void FindIntL(int4 qe,int4 segm_numb);
+   int4 InsDel(uint4 n, ProgramStackRec * stack_pos, int4 Size);
+   int4 Merge(uint4 LBoundIdx, int4 QB, int4 QE, int4 Size);
    int4 Split(int4 &step_index,int4 Size);
-   int4 FindR(int4 ladder_start_index,uint4 interval_left_index,uint4 interval_right_index,ProgramStackRec *stack_pos,int4 Size,int4 call_numb);
+   int4 FindR(int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec *stack_pos, int4 Size, int4 call_numb);
 
+   int4 msSearchInStrip(int4 QP, int4 Size);
+   int4 msInsDel(uint4 n, ProgramStackRec* stack_pos, int4 Size);
+   int4 msMerge(uint4 LBoundIdx, int4 QB, int4 QE, int4 Size);
+   int4 msSplit(int4 &step_index, int4 Size);
+   int4 msFindR(int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec *stack_pos, int4 Size, int4 call_numb);
 
   //same for optimal algorithm
    void optFindInt(int4 QB,int4 QE,int4 l,PSeg s);
@@ -278,19 +285,16 @@ class CIntersectionFinder
   int4 no_ipSearchInStrip(int4 QP,int4 Size);
   int4 no_ipFindR(int4 ladder_start_index,uint4 interval_left_index,uint4 interval_right_index,ProgramStackRec *stack_pos,int4 Size,int4 call_numb);
 
-  /*
-  //functions for space saving "no R" algorithm
-  int4 no_rSearchInStrip(int4 QP, int4 Size);
+  
+  //functions for space saving algorithm; instead of L and R ring buffer on L used
   void no_rAllocMem();
-  void no_rFindInt(int4 QB, int4 QE, int4 l, PSeg s);
-  void no_rFindIntI(uint4 r_index, ProgramStackRec * stack_pos, PSeg seg);
-  void no_rFindIntL(int4 QB, int4 QE, int4 segm_numb);
-  int4 no_rInsDel(uint4 n, ProgramStackRec * stack_pos, int4 Size);
-  int4 no_rMerge(uint4 LBoundIdx, int4 QB, int4 QE, int4 Size);
-  int4 no_rSplit(int4 &step_index, int4 Size, int4 stripe_divided);
-  int4 no_rSearchInStrip(int4 QP, int4 Size);
-  int4 no_rFindR(int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec *stack_pos, int4 Size, int4 call_numb);
-  */
+  void ring_bufFindIntL(int4 QB, int4 QE, int4 segm_numb);
+  int4 ring_bufInsDel(uint4 n, ProgramStackRec * stack_pos, int4 Size);
+  int4 ring_bufMerge(uint4 LBoundIdx, int4 QB, int4 QE, int4 Size);
+  int4 ring_bufSplit(int4 &step_index, int4 Size);
+  int4 ring_bufSearchInStrip(int4 QP, int4 Size);
+  int4 ring_bufFindR(int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec *stack_pos, int4 Size, int4 call_numb);
+  
 
   //additional functions for fast parallel algorithm
   void clone (CIntersectionFinder *master,PRegObj robj);// creates a copy of master to run concurrently
@@ -335,8 +339,10 @@ class CIntersectionFinder
 
     void balaban_fast(uint4 n,PSeg _Scoll[]);
 	void balaban_no_recursion(uint4 n, PSeg _Scoll[]);
+    void balaban_memory_save(uint4 n, PSeg _Scoll[]);
 
-    void balaban_no_ip(uint4 n,PSeg _Scoll[]);
+	void balaban_ring_buf(uint4 n, PSeg _Scoll[]);
+	void balaban_no_ip(uint4 n,PSeg _Scoll[]);
     void balaban_optimal(uint4 n,PSeg _Scoll[]);
     void fast_parallel(uint4 n, PSeg _Scoll[], int4 n_threads, PRegObj add_reg[]);//it should be provided n_threads-1 additional intersection registration objects 
  

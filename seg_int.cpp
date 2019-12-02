@@ -26,7 +26,28 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <chrono>
 
+
+#if defined(_WIN32) && !defined(_DEBUG)
+#include <windows.h>
+
+#define ON_BENCH_BEG \
+auto hThread=GetCurrentThread();\
+auto hProcess=GetCurrentProcess();\
+auto dwProcessPriSave = GetPriorityClass(hProcess);\
+SetPriorityClass(hProcess, REALTIME_PRIORITY_CLASS);\
+auto dwThreadPriSave = GetThreadPriority(GetCurrentThread()); \
+SetThreadPriority(hThread, THREAD_PRIORITY_TIME_CRITICAL);
+
+#define ON_BENCH_END \
+SetThreadPriority(hThread, dwThreadPriSave);\
+SetPriorityClass(hProcess, dwProcessPriSave);
+#undef small
+#else
+#define ON_BENCH_BEG
+#define ON_BENCH_END
+#endif
 
 //#include <tchar.h>
 
@@ -38,21 +59,29 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 
 double _benchmark(char *counters_string,int4 n,PSeg *coll,int4 s_type,int4 alg,double &res)
   {
-  double start,stop;
+  double timeit,tottime=0;
   double c[8];
   int4 n_call=0;
-  start=clock();
+  using namespace std::chrono;
+  double mint = 1.0e10;
   do
   {
-  res=find_intersections(s_type,n,coll,alg,c);
-  stop=clock();
-  n_call++;
-  }
-  while ((stop-start)<CLOCKS_PER_SEC);
+      auto start = high_resolution_clock::now();
+      res = find_intersections(s_type, n, coll, alg, c);
+	  tottime+=timeit = static_cast<duration<double>>(high_resolution_clock::now() - start).count();
+      if (timeit < mint)
+          mint = timeit;
+	  n_call++;
+  } while ((tottime < 2)||(n_call<3));
+  
+  
+
   if(counters_string)
    sprintf(counters_string,"%11.2f;%11.2f;%11.2f;%11.2f;%11.2f;%11.2f;%11.2f;%11.2f",c[0],c[1],c[2],c[3],c[4],c[5],c[6],c[7]);
    //printf("avg Size %11.2f\n",c[3]/(c[4]+1));
-  return (stop-start)/(n_call*CLOCKS_PER_SEC);
+
+  //return (stop - start) / (n_call*CLOCKS_PER_SEC);
+  return mint; //tottime / n_call;
   }
 
 
@@ -62,11 +91,11 @@ int main(int argc, char* argv[])
   int4 alg=63, seg_type=2, n = 20000, d=0;
   REAL p=1.0;
   double exec_time[33],nInt[33];
-  char *ss="Lla",*sd="rlmsp";
+  const char *ss="Lla",*sd="rlmsp";
   BOOL mute=FALSE,print_counters=FALSE,wait=FALSE, rtime_printout=FALSE;
   char counters_string[256],*pcs=NULL,*counters_mute,rpar[]="-r";
-  int4 alg_list[]={ triv, simple_sweep, fast, optimal, fast_parallel, bentley_ottmann,fast_no_ip};
-  char *alg_names[]={"trivial","simple_sweep","fast","optimal","fast_parallel","bentley_ottmann","fast no inters points"};
+  int4 alg_list[]={ triv, simple_sweep, fast, optimal, fast_parallel, bentley_ottmann,fast_no_ip,mem_save};
+  const char *alg_names[]={"trivial","simple_sweep","fast","optimal","fast_parallel","bentley_ottmann","fast no inters points","fast 'no R'"};
 
 #ifdef _DEBUG
   _CrtSetDbgFlag(_CRTDBG_CHECK_ALWAYS_DF);
@@ -97,8 +126,9 @@ counters_mute=counters_string;
     printf(" A=8: balaban optimal\n");
     printf(" A=16: balaban fast parallel for 6 treads\n");
     printf(" A=32: bentley & ottmann\n");
-    printf(" A=64: balaban fast;  intersection points aren't reported (only intersecting pairs)\n");
-    printf(" if you want several algorithms to test just sum up their values\n");
+	printf(" A=64: balaban fast;  intersection points aren't reported (only intersecting pairs)\n");
+	printf(" A=128: balaban fast;  ring buffer algorithm 4bytes less per segment\n");
+	printf(" if you want several algorithms to test just sum up their values\n");
     printf(" i.e. A=127 (=1+2+4+8+16+32+64) all algorithms\n");
     printf("-sS: type of segments\n");
     printf(" S=l: line segments representation y=a*x+b,x1<=x<=x2; a,b,x1,x2 - reals\n");
@@ -132,7 +162,7 @@ counters_mute=counters_string;
           case 'a':
             {
             alg=atoi(argv[i]+2);
-            if((alg<1)||(alg>127))
+            if((alg<1)||(alg>255))
               {alg=4; printf("some error in -a param. 4 used instead.\n");}
             }
             break;
@@ -211,11 +241,14 @@ counters_mute=counters_string;
   if((seg_type==arc)&&(d==mixed)) {printf("-sa -dm is not compartible!/n"); return 0;}
   if((seg_type==arc)&&(d==parallel)) {printf("-sa -dl is not compartible!/n"); return 0;}
   PSeg *coll=create_test_collection(seg_type,n,d,p);
+  ON_BENCH_BEG
 #ifndef _DEBUG
   {double c[8];  find_intersections(seg_type, min(15000, n), coll, triv, c); };//just to load and speedup processor;
 #endif // !1
-  for (int4 a = sizeof(alg_list) / sizeof(alg_list[0]) - 1;a>-1; a--)
-    {
+  
+  for (int4 a = sizeof(alg_list) / sizeof(alg_list[0]) - 1; a>-1; a--)
+  //for (int4 a = 0;a<sizeof(alg_list) / sizeof(alg_list[0]); a++)
+	  {
       if(alg&alg_list[a]) 
       {
         if ((alg_list[a]==fast_no_ip)&&(seg_type==arc)){ if(!mute)printf("fast no inters. points algorithm can handle only line segments\n");continue;}
@@ -242,7 +275,7 @@ counters_mute=counters_string;
 		  }
 	  };
   }
-
+  ON_BENCH_END
  
   delete_test_collection(seg_type,coll);
   if(wait){printf("\npress 'Enter' to continue"); getchar();}

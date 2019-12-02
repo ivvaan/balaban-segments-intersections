@@ -1,4 +1,4 @@
-/*
+/*																 fou
 *
 *      Copyright (c)  2011-2017  Ivan Balaban 
 *      ivvaan@gmail.com
@@ -19,7 +19,7 @@ You should have received a copy of the GNU General Public License
 along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 */ 
 #include "test_coll.h"
-//#include <stdio.h>
+#include <stdio.h>
 
 
 REAL sq(REAL x) {return x*x;}
@@ -61,6 +61,9 @@ class TLineSegment1
         org=org+0.5*(1.0-par)*shift;
         shift=par*shift;
         }
+#ifdef PRINT_SEG_AND_INT
+printf("[%6.3f,%6.3f,%6.3f,%6.3f],\n", org.x, org.y, org.x + shift.x, org.y + shift.y);
+#endif
       };
     TPlaneVect BegPoint()
       {return org;};
@@ -70,7 +73,7 @@ class TLineSegment1
       {x=org.x;y=org.y;};
     void EndPoint(REAL &x,REAL &y)
       {x=org.x+shift.x;y=org.y+shift.y;};
-    int4 under(TPlaneVect &v) //segment placed under point v
+    int4 under(const TPlaneVect &v) //segment placed under point v
       {REAL res=(v-org)%shift;
     //   if (fabs(res)==0.0) throw 1;
     return (res<=0);
@@ -194,7 +197,7 @@ class TLineSegment2
       {x=x1;y=a*x1+b;};
     void EndPoint(REAL &x,REAL &y)
       {x=x2;y=a*x2+b;};
-    int4 under(TPlaneVect &v)
+    int4 under(const TPlaneVect &v)
       {
       return v.y>=(v.x*a+b);
       };
@@ -334,18 +337,18 @@ class TArcSegment// arc formed by intersection of a vertical strip [x1,x2] with 
       else
         return org.y-sqrt(r2-sq(X-org.x));
       };
-    void BegPoint(REAL &x,REAL &y)
+      void BegPoint(REAL& x, REAL& y)
       {x=x1;y=is_upper?org.y+sqrt(r2-sq(x1-org.x)):org.y-sqrt(r2-sq(x1-org.x));};
     void EndPoint(REAL &x,REAL &y)
       {x=x2;y=is_upper?org.y+sqrt(r2-sq(x2-org.x)):org.y-sqrt(r2-sq(x2-org.x));};
 
-    int4 under(TPlaneVect &v)//arc placed under point v
+    int4 under(const TPlaneVect &v)//arc placed under point v
       {
       if(is_upper)
         return (v.y>org.y)&&((v-org).get_norm()>r2);
       return (v.y>org.y)||((v-org).get_norm()<r2);
       };
-    int4 upper(TPlaneVect &v)   
+      int4 upper(const TPlaneVect& v)   
       {
       return !under(v);
       };
@@ -431,9 +434,14 @@ class SegmentFunctions
   public:
     static void register_intersection(PRegObj r,PSeg s1,PSeg s2,int4 nInt,TPlaneVect *points)
       {
-      /*int4 n1=(SEGMENT*)s1-(SEGMENT*)first_segment_ptr,n2=(SEGMENT*)s2-(SEGMENT*)first_segment_ptr;
-      printf("found intersection s1=%i, s2=%i\n",n1,n2);//*/
-      (*(double *)r)+=nInt;
+#ifdef PRINT_SEG_AND_INT
+      int4 n1=(SEGMENT*)s1-(SEGMENT*)first_segment_ptr,n2=(SEGMENT*)s2-(SEGMENT*)first_segment_ptr;
+      if (n1<n2)
+		printf("found intersection s1=%i, s2=%i\n",n1,n2);
+      else
+        printf("found intersection s1=%i, s2=%i\n", n2, n1);
+#endif
+      (*(double*)r) += nInt;
       };
 
     static REAL __YAtX(PSeg s,REAL X)
@@ -609,6 +617,7 @@ double  find_intersections(int4 seg_type,int4 SN,PSeg *colls,int4 alg, double *c
 				  case triv:intersection_finder.trivial(SN, colls); break;
 				  case simple_sweep:intersection_finder.simple_sweep(SN, colls); break;
 				  case fast: intersection_finder.balaban_fast(SN, colls); break;
+				  case mem_save: intersection_finder.balaban_memory_save(SN, colls); break;
 				  case fast_no_ip: intersection_finder.balaban_no_ip(SN, colls); break;
 				  case optimal:intersection_finder.balaban_optimal(SN, colls); break;
 				  case fast_parallel:
@@ -650,6 +659,7 @@ double  find_intersections(int4 seg_type,int4 SN,PSeg *colls,int4 alg, double *c
 		  case triv:intersection_finder.trivial(SN, colls); break;
 		  case simple_sweep:intersection_finder.simple_sweep(SN, colls); break;
 		  case fast: intersection_finder.balaban_fast(SN, colls); break;
+      case mem_save:intersection_finder.balaban_memory_save(SN, colls);break;
 		  case fast_no_ip:  break;//incompatible
 		  case optimal:intersection_finder.balaban_optimal(SN, colls); break;
 		  case fast_parallel:

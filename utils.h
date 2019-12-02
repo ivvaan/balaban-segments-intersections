@@ -96,7 +96,7 @@ class CRandomValueGen
   public:
     double GetRandomDouble();
     //BOOL RandomChoose(double prop);
-    BOOL RandomChoose();
+    bool RandomChoose();
   };
 
 
