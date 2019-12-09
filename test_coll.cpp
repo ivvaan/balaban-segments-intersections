@@ -566,12 +566,13 @@ void  delete_test_collection(int4 seg_type,PSeg *colls)
 const int4 reg_obj_margin = 32;// for reg objects to be in different CPU cash blocks
 double reg_objects[reg_obj_margin*n_threads];
 
-double  find_intersections(int4 seg_type,int4 SN,PSeg *colls,int4 alg, double *counters)
+double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double* counters, bool dont_need_ip )
   {
   if(colls==NULL) return 0;
   double int_numb=0;
   
-  BOOL dont_need_ip=(alg== fast_no_ip);
+//  bool dont_need_ip = (alg == fast_no_ip);
+ 
   
   BOOL is_line;
   if ((seg_type == line1) || (seg_type == line2))

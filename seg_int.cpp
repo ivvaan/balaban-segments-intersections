@@ -57,7 +57,7 @@ SetPriorityClass(hProcess, dwProcessPriSave);
 
 
 
-double _benchmark(char *counters_string,int4 n,PSeg *coll,int4 s_type,int4 alg,double &res)
+double _benchmark(char* counters_string, int4 n, PSeg* coll, int4 s_type, int4 alg, double& res, bool dont_need_ip = false)
   {
   double timeit,tottime=0;
   double c[8];
@@ -67,7 +67,7 @@ double _benchmark(char *counters_string,int4 n,PSeg *coll,int4 s_type,int4 alg,d
   do
   {
       auto start = high_resolution_clock::now();
-      res = find_intersections(s_type, n, coll, alg, c);
+      res = find_intersections(s_type, n, coll, alg, c, dont_need_ip);
 	  tottime+=timeit = static_cast<duration<double>>(high_resolution_clock::now() - start).count();
       if (timeit < mint)
           mint = timeit;
@@ -241,24 +241,29 @@ counters_mute=counters_string;
   if((seg_type==arc)&&(d==mixed)) {printf("-sa -dm is not compartible!/n"); return 0;}
   if((seg_type==arc)&&(d==parallel)) {printf("-sa -dl is not compartible!/n"); return 0;}
   PSeg *coll=create_test_collection(seg_type,n,d,p);
+  bool dont_need_ip = (alg & fast_no_ip) != 0;
+
   ON_BENCH_BEG
+
 #ifndef _DEBUG
   {double c[8];  find_intersections(seg_type, min(15000, n), coll, triv, c); };//just to load and speedup processor;
 #endif // !1
-  
+
   for (int4 a = sizeof(alg_list) / sizeof(alg_list[0]) - 1; a>-1; a--)
   //for (int4 a = 0;a<sizeof(alg_list) / sizeof(alg_list[0]); a++)
 	  {
       if(alg&alg_list[a]) 
       {
         if ((alg_list[a]==fast_no_ip)&&(seg_type==arc)){ if(!mute)printf("fast no inters. points algorithm can handle only line segments\n");continue;}
-        exec_time[a]=_benchmark(pcs,n,coll,seg_type,alg_list[a],nInt[a]);
+        exec_time[a] = _benchmark(pcs, n, coll, seg_type, alg_list[a], nInt[a], dont_need_ip);
         if (mute)
             printf("a%i;s%c;d%c;n%i;i%13.0f;t%6.5f;p%f;%s\n", alg_list[a], ss[seg_type], sd[d], n, nInt[a], exec_time[a], p, counters_mute);
         else
             printf("alg=%s; inters numb=%13.0f; exec time=%6.5f;%s\n", alg_names[a], nInt[a], exec_time[a], counters_string);
         }
      };
+  ON_BENCH_END
+
   if (rtime_printout&&(alg&triv)&&(!mute))
   {
 	  double n_checks = n*0.5*(double)(n - 1);
@@ -275,7 +280,6 @@ counters_mute=counters_string;
 		  }
 	  };
   }
-  ON_BENCH_END
  
   delete_test_collection(seg_type,coll);
   if(wait){printf("\npress 'Enter' to continue"); getchar();}

@@ -48,6 +48,6 @@ const int4 n_threads = 6;
 
 PSeg* create_test_collection(int4 seg_type,int4 n,int4 distr,REAL par);
 void  delete_test_collection(int4 seg_type,PSeg* );
-double  find_intersections(int4 seg_type,int4 SN,PSeg *colls,int4 alg,double *counters);
+double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double* counters, bool dont_need_ip = false);
 
 #endif

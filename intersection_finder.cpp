@@ -49,15 +49,16 @@ void CIntersectionFinder<is_line_seg>::FindInt(int4 QB, int4 QE, int4 l, PSeg s)
 
 // no_ip case FindInt finds and reports intersection of segment whith staircase QB<stair_index<=QE, given location of the segment begin point - l
 template<bool is_line_seg>
-void CIntersectionFinder<is_line_seg>::no_ipFindInt(int4 QB, int4 QE, int4 l, PSeg s)
+void CIntersectionFinder<is_line_seg>::no_ipFindInt(int4 qb, int4 qe, int4 l, PSeg s)
 {
-	int4 c = l;
-	while ((c>QB) && (IntersectionsInCurStripe(no_ipQ[c].s, s))) //first get intersections below
-		c--;
-	if (c != l)return; //if found  it can't be any more
-	c = l + 1;
-	while ((c <= QE) && (IntersectionsInCurStripe(no_ipQ[c].s, s))) // get intersections above
-		c++;
+	  int4 c = l;
+    while ((c > qb) && (IntersectionsInCurStripe(no_ipQ[c].s, s))) //first get intersections below
+        --c;
+    if (c != l)
+        return; //if found  it can't be any more
+	  c = l + 1;
+    while ((c <= qe) && (IntersectionsInCurStripe(no_ipQ[c].s, s))) // get intersections above
+		  ++c;
 };
 
 // optFindInt finds and reports intersection of segment whith staircase QB<stair_index<=QE, given location of the segment begin point - l
@@ -145,11 +146,40 @@ void CIntersectionFinder<is_line_seg>::ring_bufFindIntL(int4 QB, int4 QE, int4 s
 template<bool is_line_seg>
 void CIntersectionFinder<is_line_seg>::no_ipFindIntL(int4 QB, int4 QE, int4 segm_numb)
 {
-	for (int4 i = 0; i<segm_numb; i++)
+	int4 loc;
+//  auto QEp1=QE+1;
+  for (int4 i = 0; i<segm_numb; ++i)
 	{
-		int4 s_idx = no_ipL[i].s;
-		if (SegmentBE[s_idx].E<RBoundIdx) //if segment is not covering the stripe
-			no_ipFindInt(QB, QE, Loc[i], Scoll[s_idx]);// find intersections
+    if ((loc = Loc[i]) != INT_MIN)
+      no_ipFindInt(QB, QE, loc, Scoll[no_ipL[i].s]); // find intersections
+    
+ /*   if((loc = Loc[i])==INT_MIN) continue;
+    auto s = Scoll[no_ipL[i].s];
+    REAL x, y;
+    _EndPoint(s,x,y);
+    auto l = QB;
+    auto r = QEp1;
+    while ((r - l) > 1) // binary search
+    {
+        auto m = (r + l) >> 1; //        m=(r+l)/2;
+        if (_YAtX(Scoll[no_ipQ[m].s], x) < y)
+            l = m;
+        else
+            r = m;
+    }
+    if (l<loc) {loc=l;l=Loc[i];}
+    int_numb+=l-loc;
+    auto pQ = no_ipQ+l;
+    auto lQ = no_ipQ + l;
+    while (pQ>lQ) 
+    {
+        _RegIntersection(_reg_obj, Scoll[pQ->s], s, 1, NULL);
+        --pQ;    
+    } 
+ */   
+
+
+
 	}
 }
 
@@ -902,13 +932,13 @@ int4 CIntersectionFinder<is_line_seg>::no_ipSplit(int4 &step_index, int4 Size, i
 			if (stripe_divided)cur_L_pos->y = _YAtX(ps, E); // Y coordinate of current segment at right edge of the stripe
 			while ((father_last_step<step) && (no_ipQ[step].y>cur_L_pos->y))// current segment intersects all segments of the staircase having bigger Y coords at the stripe right edge  
 			{
-				_RegIntersection(_reg_obj, Scoll[no_ipQ[step].s], ps, 1, NULL); step--;
+				_RegIntersection(_reg_obj, Scoll[no_ipQ[step].s], ps, 1, NULL); --step;
 			}// intersection point remains unknown, so we register only pair passing NULL as last param to _RegIntersection
 			if (step_index != step)
 			{
 				int_numb += step_index - step;
 				no_ipR[new_L_size] = *cur_L_pos;
-				Loc[new_L_size++] = step_index;
+				Loc[new_L_size++] = INT_MIN;
 			}
 			else
 			{
@@ -1117,10 +1147,8 @@ int4 CIntersectionFinder<is_line_seg>::FindR(int4 ladder_start_index, uint4 inte
               Size = FindR(stack_rec.Q_pos, interval_left_index, q, stack_pos, Size, 0);
               Size = InsDel(q, stack_pos, Size);
           }
-          if (q != m) {
-              Size = FindR(stack_rec.Q_pos, q, m, stack_pos, Size, 0);
-              Size = InsDel(m, stack_pos, Size);
-          }
+          Size = FindR(stack_rec.Q_pos, q, m, stack_pos, Size, 0);
+          Size = InsDel(m, stack_pos, Size);
           q = (interval_right_index + m) / 2;
           if (q != m) {
               Size = FindR(stack_rec.Q_pos, m, q, stack_pos, Size, 0);
@@ -1165,10 +1193,8 @@ int4 CIntersectionFinder<is_line_seg>::msFindR(int4 ladder_start_index, uint4 in
                 Size = msFindR(stack_rec.Q_pos, interval_left_index, q, stack_pos, Size, 0);
                 Size = msInsDel(q, stack_pos, Size);
             }
-            if (q != m) {
-                Size = msFindR(stack_rec.Q_pos, q, m, stack_pos, Size, 0);
-                Size = msInsDel(m, stack_pos, Size);
-            }
+            Size = msFindR(stack_rec.Q_pos, q, m, stack_pos, Size, 0);
+            Size = msInsDel(m, stack_pos, Size);
             q = (interval_right_index + m) / 2;
             if (q != m) {
                 Size = msFindR(stack_rec.Q_pos, m, q, stack_pos, Size, 0);
@@ -1578,8 +1604,8 @@ void CIntersectionFinder<is_line_seg>::balaban_no_recursion(uint4 n, PSeg _Scoll
 
 	struct SNoRecursionRec :public ProgramStackRec
 	{
-      uint4 left_bound, m;
-      int4   Q_pos_prev;
+    uint4 left_bound, m;
+    int4   Q_pos_prev;
 		SNoRecursionRec() :ProgramStackRec(-1,0){ left_bound = m = 0; };
 	} *stack = new SNoRecursionRec[32 * (max_call + 1)];
 
@@ -1592,7 +1618,7 @@ void CIntersectionFinder<is_line_seg>::balaban_no_recursion(uint4 n, PSeg _Scoll
 		B = ENDS[interval_left_index].x;
 		while ((interval_right_index - interval_left_index)>1)
 		{
-			stack++;
+			++stack;
 			stack->left_bound = interval_left_index; stack->right_bound = interval_right_index;
 			E = ENDS[RBoundIdx = interval_right_index].x;
 			stack->Q_pos_prev = ladder_start_index;
@@ -1601,12 +1627,7 @@ void CIntersectionFinder<is_line_seg>::balaban_no_recursion(uint4 n, PSeg _Scoll
 			if (Size>0)
 			{
 				Size = Split(ladder_start_index, Size);
-				if ((stack->Q_pos_prev<ladder_start_index))
-				{
-					//if(Size)FindIntL(stack->Q_pos_prev, ladder_start_index, Size);
-					//if(Size)FindIntL(ladder_start_index, Size);
-                    stack_pos = stack;
-				}
+				if (stack->Q_pos_prev<ladder_start_index)stack_pos = stack;
 			}
 			stack->m = m = (interval_right_index + interval_left_index) >> 1;
 			stack->Q_pos = ladder_start_index;
@@ -1627,7 +1648,7 @@ void CIntersectionFinder<is_line_seg>::balaban_no_recursion(uint4 n, PSeg _Scoll
 				B = ENDS[stack->left_bound].x;
 				Size = Merge(stack->left_bound,stack->Q_pos_prev, stack->Q_pos, Size);
 			};
-			stack--;
+			--stack;
 		}
 		if (stack == stack_bottom)break;
 		ladder_start_index = stack->Q_pos;
