@@ -339,13 +339,13 @@ public:
   bool UnderCurPoint(int4 s_) { auto s = collection + s_; return s->a*cur_point.x+s->b < cur_point.y; };//returns true if s is under current point 
   void PrepareEndpointsSortedList(uint4 *epoints)// endpoints allocated by caller and must contain space for at least 2*GetSegmNumb() points 
   {
-      /*
+      
 
       for (uint4 i = 0; i < 2 * N; ++i)     epoints[i] = i;
       std::sort(epoints, epoints + 2 * N, [x = ends](uint4 pt1, uint4 pt2) {
-          return ((x[pt1 << 1] < x[pt2 << 1]) || ((x[pt1 << 1] == x[pt2 << 1]) && (pt1 < pt2)));
-      });    */
-
+        return ((x[pt1 << 1] < x[pt2 << 1]) || ((x[pt1 << 1] == x[pt2 << 1]) && (pt1 < pt2)));
+      });
+/*
      auto _ends = ends;
   #define DAI_X(i) (_ends[(*i) << 1])
      uint4 NN = N << 1;
@@ -406,8 +406,8 @@ public:
          lr = RStack[StackTop];
          ll = LStack[StackTop];
      }
-
 #undef DAI_X
+*/
   }; 
   void clone(CLine2SegmentCollection * c, IntersectionRegistrator *r)
   {
