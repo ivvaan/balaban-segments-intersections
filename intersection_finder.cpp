@@ -1106,7 +1106,7 @@ int4 CIntersectionFinder<is_line_seg>::FindR(int4 ladder_start_index, uint4 inte
 	{
 
       uint4 m = (interval_left_index + interval_right_index) / 2;
-      if((call_numb>1)||(interval_left_index==0)||((interval_right_index+1)==(nTotSegm<<1))){// if L contains a lot of segments then cut on two parts
+      if(call_numb>1){// if L contains a lot of segments then cut on two parts
 		       Size = FindR(stack_rec.Q_pos, interval_left_index, m, stack_pos, Size, 0);
 		       Size = InsDel(m, stack_pos, Size);
 		       Size = FindR(stack_rec.Q_pos, m, interval_right_index, stack_pos, Size, 0);
