@@ -136,8 +136,6 @@ class CIntersectionFinder
   uint4 RBoundIdx;
   REAL B,E;
 
-  int4 ringb_beg;
-  int4 ringb_end;
   bool from_begin;
 
   struct EndIndexes

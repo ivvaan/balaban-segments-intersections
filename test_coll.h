@@ -23,6 +23,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "utils.h"
 #include "intersection_finder.h"
+#include <stdio.h>
 
 enum _Algorithm
   {
@@ -50,8 +51,8 @@ PSeg* create_test_collection(int4 seg_type,int4 n,int4 distr,REAL par);
 void  delete_test_collection(int4 seg_type,PSeg* );
 double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double* counters, bool dont_need_ip = false);
 
-double test(int4 n, PSeg segs);
-
+double test(int4 n, PSeg segs,int4 alg);
+//#define PRINT_SEG_AND_INT
 class TLineSegment1
 {
 public:
@@ -137,7 +138,7 @@ class TLineSegment2
 public:
   //int4 seg_n;
   static const int4 is_line = 1;
-  REAL x1, x2, a, b;
+  REAL x1, a, x2, b;
   TLineSegment2() { x1 = 0; x2 = 0; a = 0; b = 0; };
   void Init(TLineSegment1 &s) { x1 = s.org.x; x2 = s.org.x + s.shift.x; a = s.shift.y / s.shift.x; b = s.org.y - a*s.org.x; };
   void InitRandom(CRandomValueGen &rv, int4 s_n, int4 type, REAL par)
@@ -198,9 +199,18 @@ class JustCountingRegistrator
 {
 public:
   static const _RegistrationType reg_type = count;
-  double counter;
+  double counter=0;
   inline void begin_registration(uint4 inters_numb) { counter += inters_numb; };
-  inline void register_segments(segment*, segment*) {};
+  inline void register_segments(uint4 s1, uint4 s2) 
+  {
+#ifdef PRINT_SEG_AND_INT
+      if (s1<s2)
+      printf("found int %i %i\n", s1,s2);
+      else
+      printf("found int %i %i\n", s2, s1);
+
+#endif 
+  };
   inline void register_points(ipoint*) {};
   inline void end_registration() {};
 
@@ -294,7 +304,7 @@ public:
       {
         p.y = p.x*cur_seg.a + cur_seg.b;
         registrator->begin_registration(1);
-        registrator->register_segments(collection+cur_seg_idx, s);
+        registrator->register_segments(cur_seg_idx, s_);
         registrator->register_points(&p);
         registrator->end_registration();
         return true;
@@ -306,7 +316,7 @@ public:
       if ((x >= x1) && (x <= x2))
       {
         registrator->begin_registration(1);
-        registrator->register_segments(collection+cur_seg_idx, s);
+        registrator->register_segments(cur_seg_idx, s_);
         registrator->end_registration();
         return true;
       }
@@ -323,26 +333,99 @@ public:
     auto da = cur_seg.a - s->a;
     if (da == 0)return false;
     auto x = (s->b - cur_seg.b) / da;
-    return ((x >= x1) && (x <= x2))
+    return ((x >= x1) && (x <= x2));
   };
 
   bool UnderCurPoint(int4 s_) { auto s = collection + s_; return s->a*cur_point.x+s->b < cur_point.y; };//returns true if s is under current point 
   void PrepareEndpointsSortedList(uint4 *epoints)// endpoints allocated by caller and must contain space for at least 2*GetSegmNumb() points 
   {
-    for (uint4 i = 0; i < 2 * N; ++i)epoints[i] = i;
-    std::sort(epoints, epoints + 2 * N, [this](uint4 pt1, uint4 pt2) {return ToTheLeft(pt1, pt2); });
+      /*
+
+      for (uint4 i = 0; i < 2 * N; ++i)     epoints[i] = i;
+      std::sort(epoints, epoints + 2 * N, [x = ends](uint4 pt1, uint4 pt2) {
+          return ((x[pt1 << 1] < x[pt2 << 1]) || ((x[pt1 << 1] == x[pt2 << 1]) && (pt1 < pt2)));
+      });    */
+
+     auto _ends = ends;
+  #define DAI_X(i) (_ends[(*i) << 1])
+     uint4 NN = N << 1;
+     for (uint4 i = 0; i < NN; ++i)  epoints[i] = i;
+   
+     const uint4 maxStack = 32;
+     uint4* LStack[maxStack]; 
+     uint4* RStack[maxStack];
+     uint4 StackTop;
+     uint4 *ll, *lr, *lm, *nl, *nr;
+     REAL current; 
+     uint4 temp;
+     ll = epoints;
+     lr = epoints + (NN - 1);
+     StackTop = 0;
+
+     while (1) {
+         while (ll<lr ) {
+             nl = ll;
+             nr = lr;
+             lm = ll + ((lr-ll) >> 1);
+             current = DAI_X(lm);
+             // find keys for exchange
+             while (1) {
+                 while (DAI_X(nl) < current)
+                     nl++;
+                 while (current < DAI_X(nr))
+                     nr--;
+                 if ((nl + 2) > nr)
+                     break;
+                 std::swap(*nl,*nr);
+                 nl++;
+                 nr--;
+             };
+             if (nl <= nr) 
+             {
+                 if (nl < nr) 
+                     std::swap(*nl, *nr);
+                 nl++;
+                 nr--;
+             }
+             // select sub-lists to be processed next
+             if (nr < lm) {
+                 LStack[StackTop] = nl;
+                 RStack[StackTop] = lr;
+                 lr = nr;
+             } else {
+                 LStack[StackTop] = ll;
+                 RStack[StackTop] = nr;
+                 ll = nl;
+             }
+             StackTop++;
+         }; //  while(ll<lr)
+         if (StackTop == 0) {
+             return;
+         }
+         StackTop--;
+         lr = RStack[StackTop];
+         ll = LStack[StackTop];
+     }
+
+#undef DAI_X
   }; 
   void clone(CLine2SegmentCollection * c, IntersectionRegistrator *r)
   {
     clone_of = c;
+    N=c->N;
     registrator = r;
     collection = c->collection;
+    ends = reinterpret_cast<REAL*>(collection);
   };
   void SetRegistrator(IntersectionRegistrator *r) { registrator = r; };
   //IntersectionRegistrator *GetRegistrator() { return registrator; };
 
   void unclone() { if (clone_of == nullptr)return; collection = nullptr; clone_of = nullptr; };
-  uint4 SortAt(uint4 pt, uint4 n, int4 *L) { SetCurVLine(pt); std::sort(L, L+n, [this](int4 s1, int4 s2) {return Below(s1, s2); });};
+  void SortAt(uint4 pt, uint4 n, int4 *L) 
+  { 
+    SetCurVLine(pt); 
+    std::sort(L, L+n, [this](int4 s1, int4 s2) {return Below(s1, s2); });
+  };
   
   bool ToTheLeft(uint4 pt1,uint4 pt2)
   {
@@ -351,9 +434,16 @@ public:
       return ((x1<x2) ||
         ((x1 == x2) && (pt1<pt2)));
   };
-  void Init(uint4 n, TLineSegment2 *c) { N = n; collection = c; };
-private:
-  inline auto GetX(uint4 pt) { return is_last(pt) ? collection[get_segm(pt)].x2, collection[get_segm(pt)].x1; };
+  void Init(uint4 n, TLineSegment2* c)
+  {
+      N = n;
+      collection = c;
+      ends = reinterpret_cast<REAL*>(collection);
+  };
+
+  private:
+  inline auto GetX(uint4 pt){return ends[pt<<1];}; 
+  //{ return is_last(pt) ? collection[get_segm(pt)].x2 :collection[get_segm(pt)].x1; };
 
 
   IntersectionRegistrator *registrator=nullptr;
@@ -365,6 +455,7 @@ private:
   uint4 cur_seg_idx=0xFFFFFFFF;
   TLineSegment2 cur_seg;
   TLineSegment2 *collection;
+  REAL *ends;
 };
 
 #endif

@@ -72,7 +72,12 @@ double _benchmark(char* counters_string, int4 n, PSeg* coll, int4 s_type, int4 a
       if (timeit < mint)
           mint = timeit;
 	  n_call++;
-  } while ((tottime < 2)||(n_call<3));
+  }
+#ifndef _DEBUG  
+  while ((tottime < 2)||(n_call<3));
+#else
+  while (false);
+#endif
   
   
 
@@ -84,8 +89,8 @@ double _benchmark(char* counters_string, int4 n, PSeg* coll, int4 s_type, int4 a
   return mint; //tottime / n_call;
   }
 
-double _benchmark1( int4 n, PSeg* coll, double& res)
-{
+double _benchmark1(int4 n, PSeg* coll, int4 alg, double& res)
+  {
   double timeit, tottime = 0;
   int4 n_call = 0;
   using namespace std::chrono;
@@ -93,12 +98,18 @@ double _benchmark1( int4 n, PSeg* coll, double& res)
   do
   {
     auto start = high_resolution_clock::now();
-    res = test( n, coll[0]);
+    res = test( n, coll[0],alg);
     tottime += timeit = static_cast<duration<double>>(high_resolution_clock::now() - start).count();
     if (timeit < mint)
       mint = timeit;
     n_call++;
-  } while ((tottime < 2) || (n_call<3));
+  } 
+#ifndef _DEBUG
+  while ((tottime < 2) || (n_call < 3));
+#else
+  while (false);
+#endif
+  
 
 
 
@@ -113,8 +124,9 @@ int main(int argc, char* argv[])
   {
   int4 alg=63, seg_type=2, n = 20000, d=0;
   REAL p=1.0;
-  double exec_time[33],nInt[33];
-  const char *ss="Lla",*sd="rlmsp";
+  double exec_time[33], nInt[33];
+  double exec_time1[33], nInt1[33];
+  const char *ss = "Lla", *sd = "rlmsp";
   BOOL mute=FALSE,print_counters=FALSE,wait=FALSE, rtime_printout=FALSE;
   char counters_string[256],*pcs=NULL,*counters_mute,rpar[]="-r";
   int4 alg_list[]={ triv, simple_sweep, fast, optimal, fast_parallel, bentley_ottmann,fast_no_ip,mem_save};
@@ -271,9 +283,7 @@ counters_mute=counters_string;
 #ifndef _DEBUG
   {double c[8];  find_intersections(seg_type, min(15000, n), coll, triv, c); };//just to load and speedup processor;
 #endif // !1
-  double di;
-  double et = _benchmark1(n,coll,di);
-  printf("test %6.5f found %13.0f;\n", et, di);
+
   for (int4 a = sizeof(alg_list) / sizeof(alg_list[0]) - 1; a>-1; a--)
   //for (int4 a = 0;a<sizeof(alg_list) / sizeof(alg_list[0]); a++)
 	  {
@@ -281,11 +291,13 @@ counters_mute=counters_string;
       {
         if ((alg_list[a]==fast_no_ip)&&(seg_type==arc)){ if(!mute)printf("fast no inters. points algorithm can handle only line segments\n");continue;}
         exec_time[a] = _benchmark(pcs, n, coll, seg_type, alg_list[a], nInt[a], dont_need_ip);
+        exec_time1[a] = _benchmark1(n, coll, alg_list[a], nInt1[a]);
         if (mute)
             printf("a%i;s%c;d%c;n%i;i%13.0f;t%6.5f;p%f;%s\n", alg_list[a], ss[seg_type], sd[d], n, nInt[a], exec_time[a], p, counters_mute);
         else
             printf("alg=%s; inters numb=%13.0f; exec time=%6.5f;%s\n", alg_names[a], nInt[a], exec_time[a], counters_string);
-        }
+        printf("alt alg=%s; inters numb=%13.0f; exec time=%6.5f;\n", alg_names[a], nInt1[a], exec_time1[a]);
+      }
      };
   ON_BENCH_END
 
@@ -302,6 +314,18 @@ counters_mute=counters_string;
 		  {
         if ((alg_list[a] == fast_no_ip) && (seg_type == arc)) continue;
 			  printf("%s finds one intersection in %6.3f ICT \n", alg_names[a] , exec_time[a]/ check_time);
+		  }
+	  };
+	  check_time = exec_time1[0] / n_checks;
+	  printf("\nalt trivial alg made %13.0f intersection checks\n", n_checks);
+	  printf("one intersection check takes %6.3f ns, let's use intersection check time (ICT) as a time unit \n\n", 1E+09*check_time);
+	  check_time*=nInt1[0];
+	  for (int4 a = 0; a<sizeof(alg_list) / sizeof(alg_list[0]); a++)
+	  {
+		  if (alg&alg_list[a])
+		  {
+        if ((alg_list[a] == fast_no_ip) && (seg_type == arc)) continue;
+			  printf("%s finds one intersection in %6.3f ICT \n", alg_names[a] , exec_time1[a]/ check_time);
 		  }
 	  };
   }

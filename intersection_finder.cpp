@@ -476,7 +476,7 @@ int4 CIntersectionFinder<is_line_seg>::msMerge(uint4 LBoundIdx, int4 QB, int4 QE
 		{
 			if (SegmentBE[cur_seg].B>LBoundIdx) FindInt(QB, QE, QB, Scoll[cur_seg]);
 			_L[new_size--] = cur_seg;
-            cur_seg = _R[--cur_R_pos];
+       cur_seg = _R[--cur_R_pos];
 		}
 		while (cur_stair>QB)
 			_L[new_size--] = Q[cur_stair--];
@@ -893,12 +893,14 @@ int4 CIntersectionFinder<is_line_seg>::FindR(int4 ladder_start_index, uint4 inte
 	{
 
       uint4 m = (interval_left_index + interval_right_index) / 2;
-      if(Size>nTotSegm/100){// if L contains a lot of segments then cut on two parts
+      if(call_numb > 1)
+      {// if L contains a lot of segments then cut on two parts
 		       Size = FindR(stack_rec.Q_pos, interval_left_index, m, stack_pos, Size, 0);
 		       Size = InsDel(m, stack_pos, Size);
 		       Size = FindR(stack_rec.Q_pos, m, interval_right_index, stack_pos, Size, 0);
       }
-      else{// if L contains not so many segments than cut on four parts (works faster for some segment distributions)
+      else
+      {// if L contains not so many segments than cut on four parts (works faster for some segment distributions)
           uint4 q = (interval_left_index + m) / 2;
           if (interval_left_index != q) {
               Size = FindR(stack_rec.Q_pos, interval_left_index, q, stack_pos, Size, 0);
@@ -940,11 +942,14 @@ int4 CIntersectionFinder<is_line_seg>::msFindR(int4 ladder_start_index, uint4 in
     {
 
         uint4 m = (interval_left_index + interval_right_index) / 2;
-        if (Size > nTotSegm / 100) { // if L contains a lot of segments then cut on two parts
+        if (call_numb > 1) 
+        { // if L contains a lot of segments then cut on two parts
             Size = msFindR(stack_rec.Q_pos, interval_left_index, m, stack_pos, Size, 0);
             Size = msInsDel(m, stack_pos, Size);
             Size = msFindR(stack_rec.Q_pos, m, interval_right_index, stack_pos, Size, 0);
-        } else { // if L contains not so many segments than cut on four parts (works faster for some segment distributions)
+        } 
+        else 
+        { // if L contains not so many segments than cut on four parts (works faster for some segment distributions)
             uint4 q = (interval_left_index + m) / 2;
             if (interval_left_index != q) {
                 Size = msFindR(stack_rec.Q_pos, interval_left_index, q, stack_pos, Size, 0);
@@ -1005,12 +1010,14 @@ int4 CIntersectionFinder<is_line_seg>::optFindR(int4 father_first_step, int4 lad
 	else //cut stripe 
 	{
       uint4 m = (interval_left_index + interval_right_index) / 2;
-      if (Size>nTotSegm / 100) {// if L contains a lot of segments then cut on two parts
+      if (call_numb > 1) 
+      {// if L contains a lot of segments then cut on two parts
           Size = optFindR(father_first_step, stack_rec.Q_pos, interval_left_index, m, stack_pos, Size, 0);
           Size = optInsDel(m, stack_pos, Size);
           Size = optFindR(father_first_step, stack_rec.Q_pos, m, interval_right_index, stack_pos, Size, 0);
       }
-      else {// if L contains not so many segments than cut on four parts (works faster for some segment distributions)
+      else 
+      {// if L contains not so many segments than cut on four parts (works faster for some segment distributions)
           uint4 q = (interval_left_index + m) / 2;
           if (interval_left_index != q) {
               Size = optFindR(father_first_step, stack_rec.Q_pos, interval_left_index, q, stack_pos, Size, 0);

@@ -327,9 +327,9 @@ class SegmentFunctions
 #ifdef PRINT_SEG_AND_INT
       int4 n1=(SEGMENT*)s1-(SEGMENT*)first_segment_ptr,n2=(SEGMENT*)s2-(SEGMENT*)first_segment_ptr;
       if (n1<n2)
-		printf("found intersection s1=%i, s2=%i\n",n1,n2);
+		  printf("found int %i, %i\n",n1,n2);
       else
-        printf("found intersection s1=%i, s2=%i\n", n2, n1);
+      printf("found int %i, %i\n", n2, n1);
 #endif
       (*(double*)r) += nInt;
       };
@@ -579,8 +579,8 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
   };
 
   using CSimpleRegCol = CLine2SegmentCollection<SimpleLine2Counter>;
-
-  double test( int4 n, PSeg segs)
+ //const uint4 n_threads=16;
+  double test( int4 n, PSeg segs,int4 alg)
   {
     auto seg_type = line2;
     SimpleLine2Counter reg;
@@ -588,9 +588,43 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
     CSimpleRegCol coll;
     coll.Init(n, (TLineSegment2 *)segs);
     coll.SetRegistrator(&reg);
-    CFastIntFinder<CSimpleRegCol> fi;
-    //CTrivialIntFinder<CSimpleRegCol> fi;
-    fi.find_intersections(&coll);
+    switch (alg) {
+        case triv: {
+            CTrivialIntFinder<CSimpleRegCol> fi;
+            fi.find_intersections(&coll);
+        } break;
+        case simple_sweep:{
+            CSimpleSweepIntFinder<CSimpleRegCol> fi;
+            fi.find_intersections(&coll);
+        };
+            break;
+        case fast: {
+            CFastIntFinder<CSimpleRegCol> fi;
+            fi.find_intersections(&coll);
+        } break;
+        case mem_save:{
+            CMemSaveIntFinder<CSimpleRegCol> fi;
+            fi.find_intersections(&coll);
+        }
+            break;
+        case optimal: {
+        }
+            break;
+        case fast_parallel: {
+            SimpleLine2Counter reg_objects[reg_obj_margin * n_threads];
+            SimpleLine2Counter* additional_reg_obj[n_threads];
+            for (int i = 0; i < n_threads - 1; i++) {
+                //reg_objects[i * reg_obj_margin] = 0;
+                additional_reg_obj[i] = reg_objects + i * reg_obj_margin;
+            }
+            CFastIntFinder<CSimpleRegCol> fi;
+            fi.find_intersections(&coll, n_threads, additional_reg_obj);
+            for (int i = 0; i < n_threads - 1; i++)
+                reg.counter +=additional_reg_obj[i]->counter;
+
+        } break;
+
+    }
     return reg.counter;
   };
 
