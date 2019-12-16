@@ -84,6 +84,29 @@ double _benchmark(char* counters_string, int4 n, PSeg* coll, int4 s_type, int4 a
   return mint; //tottime / n_call;
   }
 
+double _benchmark1( int4 n, PSeg* coll, double& res)
+{
+  double timeit, tottime = 0;
+  int4 n_call = 0;
+  using namespace std::chrono;
+  double mint = 1.0e10;
+  do
+  {
+    auto start = high_resolution_clock::now();
+    res = test( n, coll[0]);
+    tottime += timeit = static_cast<duration<double>>(high_resolution_clock::now() - start).count();
+    if (timeit < mint)
+      mint = timeit;
+    n_call++;
+  } while ((tottime < 2) || (n_call<3));
+
+
+
+
+  //return (stop - start) / (n_call*CLOCKS_PER_SEC);
+  return mint; //tottime / n_call;
+}
+
 
 
 int main(int argc, char* argv[])
@@ -248,7 +271,9 @@ counters_mute=counters_string;
 #ifndef _DEBUG
   {double c[8];  find_intersections(seg_type, min(15000, n), coll, triv, c); };//just to load and speedup processor;
 #endif // !1
-
+  double di;
+  double et = _benchmark1(n,coll,di);
+  printf("test %6.5f found %13.0f;\n", et, di);
   for (int4 a = sizeof(alg_list) / sizeof(alg_list[0]) - 1; a>-1; a--)
   //for (int4 a = 0;a<sizeof(alg_list) / sizeof(alg_list[0]); a++)
 	  {
