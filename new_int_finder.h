@@ -277,17 +277,14 @@ protected:
     if (SegmentsColl::is_line_segments)
       {
         auto _L = L-1;
-        for (uint4 i = Size; i > 1; )
+        auto L_ = L;
+        for (uint4 i =1; i < Size; i++ )
         {
-          auto sn = _L[i];
+          auto sn = L_[i];
           segments->SetCurSegCutBE(sn);
-          uint4 j=--i;
-          while ((j)&&(segments->FindCurSegIntWith(_L[j])))
-          {
-            _L[j + 1] = _L[j];
-            --j;
-          }
-          _L[j + 1] = sn;
+          for(uint4 j=i; (j)&&(segments->FindCurSegIntWith(_L[j])); --j)
+            L_[j] = _L[j];
+          L_[j] = sn;
         }
       }
     else
@@ -300,7 +297,6 @@ protected:
         if (n_split)std::sort(L, L + Size, [segments](int4 s1, int4 s2) {return segments->Below(s1, s2); });
       }
     return Size;
-
   };
 
   void AllocMem(SegmentsColl *segments)
@@ -519,17 +515,14 @@ private:
       if (SegmentsColl::is_line_segments)
       {
         auto _L = L - 1;
-        for (uint4 i = Size; i > 1; )
+        auto L_ = L;
+        for (uint4 i = 1; i < Size; i++)
         {
-          auto sn = _L[i];
+          auto sn = L_[i];
           segments->SetCurSegCutBE(sn);
-          uint4 j = --i;
-          while ((j) && (segments->FindCurSegIntWith(_L[j])))
-          {
-            _L[j + 1] = _L[j];
-            --j;
-          }
-          _L[j + 1] = sn;
+          for (uint4 j = i; (j) && (segments->FindCurSegIntWith(_L[j])); --j)
+            L_[j] = _L[j];
+          L_[j] = sn;
         }
       }
       else
