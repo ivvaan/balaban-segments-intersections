@@ -274,13 +274,33 @@ protected:
 
   int4 SearchInStrip(SegmentsColl *segments,int4 qp, int4 Size)
   {
-    auto _L = L, q = Q + qp + 1, last = L + Size;
-    int4 n_split = 0, size = Size;
-    while (size = Split(segments,0,qp, size))++n_split; //it change QP must be after q = Q + QP + 1 
-                                             // at this point we can just place Q starting from QP+1 to L and sort it
-    for (; _L < last; ++_L, ++q)  *_L = *q;
-    if (n_split)std::sort(L, L + Size, [segments](int4 s1, int4 s2) {return segments->Below(s1, s2); }); 
+    if (SegmentsColl::is_line_segments)
+      {
+        auto _L = L-1;
+        for (uint4 i = Size; i > 1; )
+        {
+          auto sn = _L[i];
+          segments->SetCurSegCutBE(sn);
+          uint4 j=--i;
+          while ((j)&&(segments->FindCurSegIntWith(_L[j])))
+          {
+            _L[j + 1] = _L[j];
+            --j;
+          }
+          _L[j + 1] = sn;
+        }
+      }
+    else
+      {
+        auto _L = L, q = Q + qp + 1, last = L + Size;
+        int4 n_split = 0, size = Size;
+        while (size = Split(segments, 0, qp, size))++n_split; //it change QP must be after q = Q + QP + 1 
+                                                              // at this point we can just place Q starting from QP+1 to L and sort it
+        for (; _L < last; ++_L, ++q)  *_L = *q;
+        if (n_split)std::sort(L, L + Size, [segments](int4 s1, int4 s2) {return segments->Below(s1, s2); });
+      }
     return Size;
+
   };
 
   void AllocMem(SegmentsColl *segments)
@@ -493,18 +513,35 @@ private:
     int4 *L = nullptr;
     uint4 nTotSegm, len_of_Q, int_numb;
     bool from_begin = true;
+
     int4 SearchInStrip(SegmentsColl* segments, int4 qp, int4 Size)
     {
+      if (SegmentsColl::is_line_segments)
+      {
+        auto _L = L - 1;
+        for (uint4 i = Size; i > 1; )
+        {
+          auto sn = _L[i];
+          segments->SetCurSegCutBE(sn);
+          uint4 j = --i;
+          while ((j) && (segments->FindCurSegIntWith(_L[j])))
+          {
+            _L[j + 1] = _L[j];
+            --j;
+          }
+          _L[j + 1] = sn;
+        }
+      }
+      else
+      {
         auto _L = L, q = Q + qp + 1, last = L + Size;
         int4 n_split = 0, size = Size;
-        while (size = Split(segments, 0, qp, size))
-            ++n_split; //it change QP must be after q = Q + QP + 1
-        // at this point we can just place Q starting from QP+1 to L and sort it
-        for (; _L < last; ++_L, ++q)
-            *_L = *q;
-        if (n_split)
-            std::sort(L, L + Size, [segments](int4 s1, int4 s2) { return segments->Below(s1, s2); });
-        return Size;
+        while (size = Split(segments, 0, qp, size))++n_split; //it change QP must be after q = Q + QP + 1 
+                                                              // at this point we can just place Q starting from QP+1 to L and sort it
+        for (; _L < last; ++_L, ++q)  *_L = *q;
+        if (n_split)std::sort(L, L + Size, [segments](int4 s1, int4 s2) {return segments->Below(s1, s2); });
+      }
+      return Size;
     };
 
     void AllocMem(SegmentsColl* segments)

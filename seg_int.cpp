@@ -126,7 +126,7 @@ int main(int argc, char* argv[])
   REAL p=1.0;
   double exec_time[33], nInt[33];
   double exec_time1[33], nInt1[33];
-  const char *ss = "Lla", *sd = "rlmsp";
+  const char *ss = "Lla", *sd = "rlmspc";
   BOOL mute=FALSE,print_counters=FALSE,wait=FALSE, rtime_printout=FALSE;
   char counters_string[256],*pcs=NULL,*counters_mute,rpar[]="-r";
   int4 alg_list[]={ triv, simple_sweep, fast, optimal, fast_parallel, bentley_ottmann,fast_no_ip,mem_save};
@@ -177,6 +177,7 @@ counters_mute=counters_string;
     printf(" D=m: mixed random length almost x parallel 'long' segments (33%) and 'small' segments (67%), the bigger p/N the less parallel 'long' and longer 'short' segments\n");
     printf(" D=s: short segments: random segment with  length multiplied by p/N\n");
     printf(" D=p: random segment with  length multiplied by p\n");
+    printf(" D=c: segments ends are on the opposite sides of unit circul, each segment intesect each\n");
     printf("-m: if presented, means 'mute' mode - few information printed\n");
 	printf("-e: if presented, for each alg prints out relative (compared to checking two segments intersection) time to find one intersection (works only if A%2==1 and mute off)\n");
 	printf("-w: if presented, program wait until 'Enter' pressed before closing\n");   
@@ -224,7 +225,8 @@ counters_mute=counters_string;
               case 'l':d=parallel;break;
               case 'm':d=mixed;break;
               case 's':d=small;break;
-              case 'p':d=param_defined;break;
+              case 'p':d = param_defined; break;
+              case 'c':d = circul; break;
               default:
                 {
                 printf("some error in -d param. r used instead.\n");

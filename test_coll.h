@@ -24,6 +24,8 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include "utils.h"
 #include "intersection_finder.h"
 #include <stdio.h>
+#define _USE_MATH_DEFINES
+#include "math.h"
 
 enum _Algorithm
   {
@@ -43,7 +45,7 @@ enum _Segment
   };
 enum _Distribution
   {
-  random=0,parallel,mixed,small,param_defined
+  random=0,parallel,mixed,small,param_defined,circul
   };
 const int4 n_threads = 6;
 
@@ -72,6 +74,21 @@ public:
   void Init(TLineSegment1 &s) { org = s.org; shift = s.shift; };
   void InitRandom(CRandomValueGen &rv, int4 seg_n, int4 type, REAL par)
   {
+    if (circul == type)
+    {
+      //Segments ends are on the opposite sides of unit circul, each segment intesect each
+      double angle = 1.0 / 16.0+ 3.*M_PI*rv.GetRandomDouble() / 8.0;
+      org.x = 1. - cos(angle);
+      org.y = 1. - sin(angle);
+      shift.x = 1. + cos(angle) - org.x;
+      shift.y = 1. + sin(angle) - org.y;
+      Refine();
+
+#ifdef PRINT_SEG_AND_INT
+      printf("[%6.3f,%6.3f,%6.3f,%6.3f],\n", org.x, org.y, org.x + shift.x, org.y + shift.y);
+#endif
+      return;
+    }
     org.x = rv.GetRandomDouble();
     org.y = rv.GetRandomDouble();
     shift.x = rv.GetRandomDouble() - org.x;
