@@ -339,76 +339,14 @@ public:
   bool UnderCurPoint(int4 s_) { auto s = collection + s_; return s->a*cur_point.x+s->b < cur_point.y; };//returns true if s is under current point 
   void PrepareEndpointsSortedList(uint4 *epoints)// endpoints allocated by caller and must contain space for at least 2*GetSegmNumb() points 
   {
-      
-
-      for (uint4 i = 0; i < 2 * N; ++i)     epoints[i] = i;
-      std::sort(epoints, epoints + 2 * N, [x = ends](uint4 pt1, uint4 pt2) {
-        return ((x[pt1 << 1] < x[pt2 << 1]) || ((x[pt1 << 1] == x[pt2 << 1]) && (pt1 < pt2)));
+    auto NN = N << 1;
+    auto epts_last = epoints + NN;
+      for (uint4 i = 0; i < NN; ++i)     epoints[i] = i<<1;
+      std::sort(epoints, epts_last, [x = ends](uint4 pt1, uint4 pt2) {
+        return ((x[pt1] < x[pt2]) || ((x[pt1] == x[pt2]) && (pt1 < pt2)));
       });
-/*
-     auto _ends = ends;
-  #define DAI_X(i) (_ends[(*i) << 1])
-     uint4 NN = N << 1;
-     for (uint4 i = 0; i < NN; ++i)  epoints[i] = i;
-   
-     const uint4 maxStack = 32;
-     uint4* LStack[maxStack]; 
-     uint4* RStack[maxStack];
-     uint4 StackTop;
-     uint4 *ll, *lr, *lm, *nl, *nr;
-     REAL current; 
-     uint4 temp;
-     ll = epoints;
-     lr = epoints + (NN - 1);
-     StackTop = 0;
-
-     while (1) {
-         while (ll<lr ) {
-             nl = ll;
-             nr = lr;
-             lm = ll + ((lr-ll) >> 1);
-             current = DAI_X(lm);
-             // find keys for exchange
-             while (1) {
-                 while (DAI_X(nl) < current)
-                     nl++;
-                 while (current < DAI_X(nr))
-                     nr--;
-                 if ((nl + 2) > nr)
-                     break;
-                 std::swap(*nl,*nr);
-                 nl++;
-                 nr--;
-             };
-             if (nl <= nr) 
-             {
-                 if (nl < nr) 
-                     std::swap(*nl, *nr);
-                 nl++;
-                 nr--;
-             }
-             // select sub-lists to be processed next
-             if (nr < lm) {
-                 LStack[StackTop] = nl;
-                 RStack[StackTop] = lr;
-                 lr = nr;
-             } else {
-                 LStack[StackTop] = ll;
-                 RStack[StackTop] = nr;
-                 ll = nl;
-             }
-             StackTop++;
-         }; //  while(ll<lr)
-         if (StackTop == 0) {
-             return;
-         }
-         StackTop--;
-         lr = RStack[StackTop];
-         ll = LStack[StackTop];
-     }
-#undef DAI_X
-*/
-  }; 
+      for (; epoints < epts_last; ++epoints) *epoints >>= 1;
+  };
   void clone(CLine2SegmentCollection * c, IntersectionRegistrator *r)
   {
     clone_of = c;
