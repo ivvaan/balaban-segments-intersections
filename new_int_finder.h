@@ -49,7 +49,7 @@ public:
     {
       segments->SetCurSeg(i);
       for (uint4 j = i + 1; j < N; ++j)
-        segments->FindCurSegIntWith(j);
+        segments->TrivCurSegIntWith(j);
 
     }
   };
@@ -85,7 +85,7 @@ public:
             {
                 segments->SetCurSeg(s);
                 for (auto j = sgm; j < pos; ++j)
-                    segments->FindCurSegIntWith(*j);
+                    segments->SSCurSegIntWith(*j);
                 *pos = s;
                 ++pos;
             }

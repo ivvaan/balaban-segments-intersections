@@ -227,11 +227,11 @@ public:
 
   static inline bool is_last(uint4 pt)
   {
-    return pt & 1;
+    return pt & 2;
   };
   static inline uint4 get_segm(uint4 pt)
   {
-    return pt >> 1;
+    return pt >> 2;
   };
 
   //TPlaneVect
@@ -288,7 +288,7 @@ public:
   };
 
 
-  int4 FindCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+  int4 TrivCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
   {
     auto s = collection+s_;
     auto x1 = max(cur_seg.x1, s->x1);
@@ -325,6 +325,76 @@ public:
 
   };
 
+  int4 SSCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+  {
+    auto s = collection + s_;
+    auto da = cur_seg.a - s->a;
+    if (da == 0)return false;
+    auto x1 = max(cur_seg.x1, s->x1);
+    auto x2 = min(cur_seg.x2, s->x2);
+    if (_RegistrationType::point&IntersectionRegistrator::reg_type)
+    {
+      TPlaneVect p;
+      p.x = (s->b - cur_seg.b) / da;
+      if ((p.x >= x1) && (p.x <= x2))
+      {
+        p.y = p.x*cur_seg.a + cur_seg.b;
+        registrator->begin_registration(1);
+        registrator->register_segments(cur_seg_idx, s_);
+        registrator->register_points(&p);
+        registrator->end_registration();
+        return true;
+      }
+    }
+    else
+    {
+      auto x = (s->b - cur_seg.b) / da;
+      if ((x >= x1) && (x <= x2))
+      {
+        registrator->begin_registration(1);
+        registrator->register_segments(cur_seg_idx, s_);
+        registrator->end_registration();
+        return true;
+      }
+    }
+    return false;
+
+  };
+
+  int4 FindCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+  {
+    auto s = collection + s_;
+    auto da = cur_seg.a - s->a;
+    if (da == 0)return false;
+    if (_RegistrationType::point&IntersectionRegistrator::reg_type)
+    {
+      TPlaneVect p;
+      p.x = (s->b - cur_seg.b) / da;
+      if ((p.x >= cur_seg.x1) && (p.x <= cur_seg.x2))
+      {
+        p.y = p.x*cur_seg.a + cur_seg.b;
+        registrator->begin_registration(1);
+        registrator->register_segments(cur_seg_idx, s_);
+        registrator->register_points(&p);
+        registrator->end_registration();
+        return true;
+      }
+    }
+    else
+    {
+      auto x = (s->b - cur_seg.b) / da;
+      if ((x >= cur_seg.x1) && (x <= cur_seg.x2))
+      {
+        registrator->begin_registration(1);
+        registrator->register_segments(cur_seg_idx, s_);
+        registrator->end_registration();
+        return true;
+      }
+    }
+    return false;
+
+  };
+
   int4 IsIntersectsCurSeg(int4 s_)//check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
   {
     auto s = collection+s_;
@@ -340,12 +410,12 @@ public:
   void PrepareEndpointsSortedList(uint4 *epoints)// endpoints allocated by caller and must contain space for at least 2*GetSegmNumb() points 
   {
     auto NN = N << 1;
-    auto epts_last = epoints + NN;
       for (uint4 i = 0; i < NN; ++i)     epoints[i] = i<<1;
-      std::sort(epoints, epts_last, [x = ends](uint4 pt1, uint4 pt2) {
-        return ((x[pt1] < x[pt2]) || ((x[pt1] == x[pt2]) && (pt1 < pt2)));
-      });
-      for (; epoints < epts_last; ++epoints) *epoints >>= 1;
+      std::sort (epoints, epoints + NN, 
+            [x = ends](uint4 pt1, uint4 pt2) {
+            return ((x[pt1] < x[pt2]) || ((x[pt1] == x[pt2]) && (pt1 < pt2)));
+            }
+      );
   };
   void clone(CLine2SegmentCollection * c, IntersectionRegistrator *r)
   {
@@ -380,7 +450,7 @@ public:
   };
 
   private:
-  inline auto GetX(uint4 pt){return ends[pt<<1];}; 
+  inline auto GetX(uint4 pt){return ends[pt];}; 
   //{ return is_last(pt) ? collection[get_segm(pt)].x2 :collection[get_segm(pt)].x1; };
 
 
