@@ -276,13 +276,14 @@ protected:
   {
     if (SegmentsColl::is_line_segments)
       {
-        auto _L = L-1;
         auto L_ = L;
+        auto _L = L_-1;
         for (uint4 i =1; i < Size; i++ )
         {
           auto sn = L_[i];
           segments->SetCurSegCutBE(sn);
-          for(uint4 j=i; (j)&&(segments->FindCurSegIntWith(_L[j])); --j)
+          uint4 j = i;
+          for(;(j)&&(segments->FindCurSegIntWith(_L[j])); --j)
             L_[j] = _L[j];
           L_[j] = sn;
         }
@@ -514,13 +515,14 @@ private:
     {
       if (SegmentsColl::is_line_segments)
       {
-        auto _L = L - 1;
-        auto L_ = L;
+        auto L_ = from_begin ? L  : L + (nTotSegm - Size);
+        auto _L = L_ - 1;
         for (uint4 i = 1; i < Size; i++)
         {
           auto sn = L_[i];
           segments->SetCurSegCutBE(sn);
-          for (uint4 j = i; (j) && (segments->FindCurSegIntWith(_L[j])); --j)
+          uint4 j = i;
+          for (; (j) && (segments->FindCurSegIntWith(_L[j])); --j)
             L_[j] = _L[j];
           L_[j] = sn;
         }
