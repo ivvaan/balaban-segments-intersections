@@ -21,6 +21,8 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include "test_coll.h"
 #include <stdio.h>
 #include "new_int_finder.h"
+#include "fast_finder.h"
+#include "mem_save_finder.h"
 
 
 REAL sq(REAL x) {return x*x;}
