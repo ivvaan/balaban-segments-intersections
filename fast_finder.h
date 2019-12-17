@@ -125,6 +125,10 @@ protected:
   {
     if (SegmentsColl::is_line_segments)
     {
+      //For line segments we can do more efficient insertion sorting using intersection check as comparison.
+      //If s1<s2 at the left bound then s1 intersects s2 inside the stripe means s1>s2 at the right bound of the stripe.
+      //All segments are sorted at the left bound by precondition, so intesection is the same as comparison
+      // at the right bound. Byproduct of the sorting is intersections detection.
       auto L_ = L;
       auto _L = L_ - 1;
       for (uint4 i = 1; i < Size; i++)
