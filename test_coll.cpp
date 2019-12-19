@@ -23,6 +23,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include "new_int_finder.h"
 #include "fast_finder.h"
 #include "mem_save_finder.h"
+#include "optimal_finder.h"
 
 
 REAL sq(REAL x) {return x*x;}
@@ -610,6 +611,8 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
         }
             break;
         case optimal: {
+          COptimalIntFinder<CSimpleRegCol> fi;
+          fi.find_intersections(&coll);
         }
             break;
         case fast_parallel: {

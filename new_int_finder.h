@@ -94,11 +94,11 @@ public:
 
   struct ProgramStackRec //structure to use program stack to store list of starcases above current call
   {
-    ProgramStackRec *prev; //link to program stack record storing parent staircase information 
+    ProgramStackRec *prev=nullptr; //link to program stack record storing parent staircase information 
     int4 Q_pos; //starting position and 
     uint4 right_bound;//right boind of current staircase
     inline ProgramStackRec(int4 qp) :Q_pos(qp) {};
-    inline ProgramStackRec(int4 qp, uint4 rb) :prev(NULL), Q_pos(qp), right_bound(rb) {};
+    inline ProgramStackRec(int4 qp, uint4 rb) : Q_pos(qp), right_bound(rb) {};
     inline ProgramStackRec *Set(ProgramStackRec *p, uint4 rb) { prev = p, right_bound = rb; return this; };
   };
 
@@ -106,6 +106,8 @@ template <class SegmentsColl>
 class CommonImpl 
 {
 protected:
+    static const int4 max_call = 5; //max number of sequential recursive call (opt)FindR before dividing current strip
+
     uint4 *SegL = nullptr, *SegR = nullptr, *ENDS = nullptr;
     int4 *Q = nullptr;
     void AllocMem(uint4 N)
@@ -146,15 +148,13 @@ protected:
         while ((c <= qe) && (segments->FindCurSegIntWith(Q[c]))) // get intersections above
             ++c;
     };
-    ;
-    void FindIntI(SegmentsColl* segments, uint4 r_index, ProgramStackRec* stack_pos /*, uint4 seg*/)
+
+    void FindIntI(SegmentsColl* segments, uint4 r_index, ProgramStackRec* stack_pos)
     {
         while (stack_pos->right_bound <= r_index)
             stack_pos = stack_pos->prev; // go from bottom to top and find staircase to start
-        //    segments->SetCurPointAtBeg(seg);
-        //    segments->SetCurSeg(seg);
         int4 l, r, m, QB, QE = stack_pos->Q_pos;
-        for (stack_pos = stack_pos->prev; stack_pos; stack_pos = stack_pos->prev) {
+        for (stack_pos = stack_pos->prev; stack_pos!=nullptr; stack_pos = stack_pos->prev) {
             l = QB = stack_pos->Q_pos;
             r = QE + 1;
             while ((r - l) > 1) // binary search
@@ -168,7 +168,7 @@ protected:
             FindInt(segments, QB, QE, l);
             QE = QB; // move staircase bound to parent staircase
         };
-    } //*/
+    };
 };
 
 

@@ -293,11 +293,11 @@ counters_mute=counters_string;
       {
         if ((alg_list[a]==fast_no_ip)&&(seg_type==arc)){ if(!mute)printf("fast no inters. points algorithm can handle only line segments\n");continue;}
         exec_time1[a] = _benchmark1(n, coll, alg_list[a], nInt1[a]);
-/*        exec_time[a] = _benchmark(pcs, n, coll, seg_type, alg_list[a], nInt[a], dont_need_ip);
+        exec_time[a] = _benchmark(pcs, n, coll, seg_type, alg_list[a], nInt[a], dont_need_ip);
         if (mute)
             printf("a%i;s%c;d%c;n%i;i%13.0f;t%6.5f;p%f;%s\n", alg_list[a], ss[seg_type], sd[d], n, nInt[a], exec_time[a], p, counters_mute);
         else
-            printf("alg=%s; inters numb=%13.0f; exec time=%6.5f;%s\n", alg_names[a], nInt[a], exec_time[a], counters_string);*/
+            printf("alg=%s; inters numb=%13.0f; exec time=%6.5f;%s\n", alg_names[a], nInt[a], exec_time[a], counters_string);
         printf("alt alg=%s; inters numb=%13.0f; exec time=%6.5f;\n", alg_names[a], nInt1[a], exec_time1[a]);
       }
      };
@@ -307,7 +307,7 @@ counters_mute=counters_string;
   {
 	  double n_checks = n*0.5*(double)(n - 1);
 	  double check_time = exec_time[0] / n_checks;
-/*	  printf("\ntrivial alg made %13.0f intersection checks\n", n_checks);
+	  printf("\ntrivial alg made %13.0f intersection checks\n", n_checks);
 	  printf("one intersection check takes %6.3f ns, let's use intersection check time (ICT) as a time unit \n\n", 1E+09*check_time);
 	  check_time*=nInt[0];
 	  for (int4 a = 0; a<sizeof(alg_list) / sizeof(alg_list[0]); a++)
@@ -317,7 +317,7 @@ counters_mute=counters_string;
         if ((alg_list[a] == fast_no_ip) && (seg_type == arc)) continue;
 			  printf("%s finds one intersection in %6.3f ICT \n", alg_names[a] , exec_time[a]/ check_time);
 		  }
-	  };*/
+	  };
 	  check_time = exec_time1[0] / n_checks;
 	  printf("\nalt trivial alg made %13.0f intersection checks\n", n_checks);
 	  printf("one intersection check takes %6.3f ns, let's use intersection check time (ICT) as a time unit \n\n", 1E+09*check_time);

@@ -48,14 +48,6 @@ typedef void (*FRegIntersection)(PRegObj intersection_registrator,PSeg s1,PSeg s
   n - the number of the intesection points, p- pointer to intersection points array*/
   
 
-const int4 undef_loc = 0;
-
-const int4 inherit_each=32; // defines how often in optimal algorithm stairs are inherited,  one inherited per inherit_each
-const int4 inherit_offset = inherit_each / 2; // first stair to inherit; must be in [1..inherit_each-1]
-// so inherited stair positions are: inherit_offset,inherit_offset+inherit_each,inherit_offset+2*inherit_each,...
-const int4 big_staircase_threshold = 1024;//used in optFindR
-
-const int4 max_call=5; //max number of sequential recursive call (opt)FindR before dividing current strip
 
 
 
@@ -91,7 +83,16 @@ struct CSegmCompare
 template<bool is_line_seg>
 class CIntersectionFinder
   {
- 
+  static const int4 max_call = 5; //max number of sequential recursive call (opt)FindR before dividing current strip
+
+  static const int4 undef_loc = 0;
+
+  static const int4 inherit_each = 16; // defines how often in optimal algorithm stairs are inherited,  one inherited per inherit_each
+  static const int4 inherit_offset = inherit_each / 2; // first stair to inherit; must be in [1..inherit_each-1]
+                                                // so inherited stair positions are: inherit_offset,inherit_offset+inherit_each,inherit_offset+2*inherit_each,...
+  static const int4 big_staircase_threshold = inherit_each*8;// 1024;//used in optFindR
+
+
   int4 is_line_segments;//shows if segments is straitline and more fast calculations are possible
   
   //begin functions to deal with segments

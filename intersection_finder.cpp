@@ -257,7 +257,7 @@ template<bool is_line_seg>
 int4 CIntersectionFinder<is_line_seg>::InsDel(uint4 end_index, ProgramStackRec * stack_pos, int4 Size)
 {
 	int4 i;
-    auto sn = ENDS[end_index].s();
+  auto sn = ENDS[end_index].s();
 	if (ENDS[end_index].islast()) // if endpoint - delete
 	{
 		i = --Size;
@@ -386,28 +386,31 @@ int4 CIntersectionFinder<is_line_seg>::no_ipInsDel(uint4 end_index, ProgramStack
 template<bool is_line_seg>
 int4 CIntersectionFinder<is_line_seg>::optInsDel(uint4 end_index, ProgramStackRec *stack_pos, int4 Size)
 {
-	int4 i;
-	TSegmEnd *current_end = ENDS + end_index;
-//	ExchangeLR();
-	if (current_end->islast())
-	{
-		int4 sn = L[Size] = current_end->s();
-		for (i = 0; L[i] != sn; i++);
-		//_ASSERTE(i!=Size);
-		Size--;
-		for (; i<Size; i++)L[i] = L[i + 1];
-	}
-	else
-	{
-		PSeg seg = Scoll[current_end->s()];
-		for (i = Size - 1; (i>-1) && (!_Under(Scoll[L[i]], seg)); i--)
-			L[i + 1] = L[i];
-		L[i + 1] = current_end->s();
-		Size++;
+  int4 i;
+  auto sn = ENDS[end_index].s();
+  if (ENDS[end_index].islast()) // if endpoint - delete
+  {
+    i = --Size;
+    auto cur = L[i];
+    while (cur != sn)
+    {
+      --i;
+      auto buf = cur;
+      cur = L[i];
+      L[i] = buf;
+    }
+  }
+  else// if startpoint - insert
+  {
+    PSeg seg = Scoll[sn];
+    for (i = Size - 1; (i > -1) && (!_Under(Scoll[L[i]], seg)); --i)
+      L[i + 1] = L[i];
+    L[i + 1] = sn;
+    Size++;
 
-		optFindIntI(SegmentBE[current_end->s()].E, stack_pos, seg);
-	}
-	return Size;
+    optFindIntI(SegmentBE[sn].E, stack_pos, seg);// get internal intersections
+  }
+  return Size;
 }
 
 // Merge merges R and current staircase QB<stair_index<=QE on right bound of the stripe and place it in L, 
@@ -811,7 +814,9 @@ int4 CIntersectionFinder<is_line_seg>::optSplit(int4 cur_father_pos, int4 &step_
 		father_loc[step_index] = cur_father_pos;
 		Q[step_index] = Q[cur_father_pos];
 	};
-	//  ExchangeLR();
+  for (int4 i = 0; i<new_L_size; i++)
+    optFindInt(father_last_step, step_index, R[i], Scoll[L[i]]);//R[i] should contain the location of the segment Scoll[L[i]]
+
 	return new_L_size;
 };
 
@@ -825,7 +830,8 @@ int4 CIntersectionFinder<is_line_seg>::SearchInStrip(int4 QP, int4 Size)
     while (size = Split(QP, size))++n_split; //it change QP must be after q = Q + QP + 1 
     // at this point we can just place Q starting from QP+1 to L and sort it
     for (; _L < last; ++_L, ++q)  *_L = *q;
-    if(n_split)std::sort(L, last, CSegmCompare(Scoll, _Below, E));
+    if(n_split)
+      std::sort(L, last, CSegmCompare(Scoll, _Below, E));
     return Size;
 }
 
@@ -984,12 +990,10 @@ int4 CIntersectionFinder<is_line_seg>::optFindR(int4 father_first_step, int4 lad
         return Size > 1 ? SearchInStrip(ladder_start_index, Size):Size;
 	ProgramStackRec stack_rec(ladder_start_index);
 	int_numb = 0;// variable to count intersections on Split stage
-  bool use_opt = (ladder_start_index- father_first_step>big_staircase_threshold);
+  bool use_opt = (ladder_start_index - father_first_step > big_staircase_threshold);
   if (use_opt)
   {// use optimal variant if father staircase is big
       Size = optSplit(father_first_step, stack_rec.Q_pos, Size);
-      for (int4 i = 0; i<Size; i++)
-          optFindInt(ladder_start_index, stack_rec.Q_pos, R[i], Scoll[L[i]]);//R[i] should contain the location of the segment Scoll[L[i]]
       stack_pos = stack_rec.Set(stack_pos, interval_right_index);
       father_first_step = ladder_start_index + inherit_offset;
   }
@@ -1113,7 +1117,8 @@ void CIntersectionFinder<is_line_seg>::AllocMem(BOOL for_optimal)
 		// for optimal alg it needs additional space reserve nTotSegm/(inherit_each-1)+inherit_each+1 to store inherited stairs
 		len_of_Q = nTotSegm + nTotSegm / (inherit_each - 1) + inherit_each + 1;
 		father_loc = new int4[len_of_Q];
-		father_loc[undef_loc] = undef_loc;//nesessary precondition for optFindIntI
+    for (int4 i = 0; i < len_of_Q; i++)father_loc[i] = undef_loc;
+		//father_loc[undef_loc] = undef_loc;//nesessary precondition for optFindIntI
 	}
 	Q = new int4[len_of_Q];
 };

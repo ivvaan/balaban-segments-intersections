@@ -98,9 +98,14 @@ public:
       shift.y *= par;
     if (mixed == type)
     {
+      org.y = org.y + 0.5*(1.0 - par)*shift.y;
       shift.y *= par;
       if (seg_n % 3 != 0)
+      {
+        org.x = org.x + 0.5*(1.0 - par)*shift.x;
         shift.x *= par;
+      }
+        
     }
     if (type>mixed)
     {
@@ -222,9 +227,9 @@ public:
   {
 #ifdef PRINT_SEG_AND_INT
       if (s1<s2)
-      printf("found int %i %i\n", s1,s2);
+      printf("alt int %i %i\n", s1,s2);
       else
-      printf("found int %i %i\n", s2, s1);
+      printf("alt int %i %i\n", s2, s1);
 
 #endif 
   };
@@ -253,12 +258,12 @@ public:
 
   //TPlaneVect
   uint4  GetSegmNumb() { return N; };
-  void SetCurStripe(uint4 left, uint4 right) 
+  inline void SetCurStripe(uint4 left, uint4 right) 
   {
-    SetCurStripeLeft(left);
-    SetCurStripeRight(right);
+    B = GetX(left);
+    E =  GetX(right);
   };
-  inline void SetCurStripeRight(uint4 right) { X = E = GetX(right); };
+  inline void SetCurStripeRight(uint4 right) {  E = GetX(right); };
   inline void SetCurStripeLeft(uint4 left) { B = GetX(left); };
   void SetCurPoint(uint4 pt) 
   { 
@@ -275,7 +280,7 @@ public:
   {
     collection[s].EndPoint(cur_point.x, cur_point.y);
   };
-  void SetCurVLine(uint4 pt) { X = GetX(pt); };
+  inline void SetCurVLine(uint4 pt) { X = GetX(pt); };
   void SetCurSegCutBE(uint4 s)
   {
     SetCurSeg(s);
@@ -415,12 +420,10 @@ public:
   int4 IsIntersectsCurSeg(int4 s_)//check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
   {
     auto s = collection+s_;
-    auto x1 = max(cur_seg.x1, s->x1);
-    auto x2 = min(cur_seg.x2, s->x2);
     auto da = cur_seg.a - s->a;
     if (da == 0)return false;
     auto x = (s->b - cur_seg.b) / da;
-    return ((x >= x1) && (x <= x2));
+    return ((x >= cur_seg.x1) && (x <= cur_seg.x2));
   };
 
   bool UnderCurPoint(int4 s_) { auto s = collection + s_; return s->a*cur_point.x+s->b < cur_point.y; };//returns true if s is under current point 
