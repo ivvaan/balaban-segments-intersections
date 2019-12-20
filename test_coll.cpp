@@ -26,13 +26,13 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include "optimal_finder.h"
 
 
-REAL sq(REAL x) {return x*x;}
+
 
 //PSeg first_segment_ptr=NULL;
 
 
 
-int4 below(REAL X,TLineSegment1* s1,TLineSegment1* s2)
+bool below(REAL X,TLineSegment1* s1,TLineSegment1* s2)
   { 
   if(s1==s2) return 0;
   REAL dx1=s1->shift.x,dx2=s2->shift.x;
@@ -111,7 +111,7 @@ int4 IntInside(REAL b,REAL e,TLineSegment1* s1,TLineSegment1* s2)
 
 
 
-int4 below(REAL X,TLineSegment2* s1,TLineSegment2* s2)
+bool below(REAL X,TLineSegment2* s1,TLineSegment2* s2)
   { 
 
   return (s1!=s2)&&((X*s1->a+s1->b)<(X*s2->a+s2->b));
@@ -172,96 +172,9 @@ int4 IntInside(REAL b,REAL e,TLineSegment2 *s1,TLineSegment2 *s2)
   }
 
 
-class TArcSegment// arc formed by intersection of a vertical strip [x1,x2] with a circle having center org and square of radius r2 
-  {
-  public:
-    static const int4 is_line=0;
-    REAL x1,x2,r2;
-    TPlaneVect org;
-    BOOL is_upper;// upper or lower part of the intersection
-    TArcSegment(){x1=0;x2=0;r2=0;};
-    //void Init(TLineSegment1 &s){x1=s.org.x;x2=s.org.x+s.shift.x;a=s.shift.y/s.shift.x;b=s.org.y-a*s.org.x;};
-    void InitRandom(CRandomValueGen &rv,int4 seg_n,int4 type,REAL par)
-      {
-      REAL tmp,r;
-      x1=rv.GetRandomDouble();
-      tmp=rv.GetRandomDouble();
-      if(x1<tmp)x2=tmp;
-      else{x2=x1;x1=tmp;}
-      if(type<2) par=1.0;
-      REAL delta=x2-x1;
-      x1=0.5*(x1*(1.0+par)+x2*(1.0-par));
-      x2=x1+par*delta;
-      org.x=rv.GetRandomDouble();
-      org.y=rv.GetRandomDouble();
-      tmp=max(fabs(x1-org.x),fabs(x2-org.x));
-      par=max(1.0,par);
-      while((r=par*rv.GetRandomDouble())<=tmp);
-      r2=r*r;
-      is_upper=rv.RandomChoose();
-      }
 
 
-    TPlaneVect BegPoint()
-      {
-      if(is_upper)
-        return TPlaneVect(x1,org.y+sqrt(r2-sq(x1-org.x)));
-      else
-        return TPlaneVect(x1,org.y-sqrt(r2-sq(x1-org.x)));
-      };
-    TPlaneVect EndPoint()
-      {
-      if(is_upper)
-        return TPlaneVect(x2,org.y+sqrt(r2-sq(x2-org.x)));
-      else
-        return TPlaneVect(x2,org.y-sqrt(r2-sq(x2-org.x)));
-      };
-    TPlaneVect PointAtX(REAL x)
-      {
-      if(is_upper)
-        return TPlaneVect(x,org.y+sqrt(r2-sq(x-org.x)));
-      else
-        return TPlaneVect(x,org.y-sqrt(r2-sq(x-org.x)));
-      };
-    REAL YAtX(REAL X)
-      {
-      if(is_upper)
-        return org.y+sqrt(r2-sq(X-org.x));
-      else
-        return org.y-sqrt(r2-sq(X-org.x));
-      };
-      void BegPoint(REAL& x, REAL& y)
-      {x=x1;y=is_upper?org.y+sqrt(r2-sq(x1-org.x)):org.y-sqrt(r2-sq(x1-org.x));};
-    void EndPoint(REAL &x,REAL &y)
-      {x=x2;y=is_upper?org.y+sqrt(r2-sq(x2-org.x)):org.y-sqrt(r2-sq(x2-org.x));};
-
-    int4 under(const TPlaneVect &v)//arc placed under point v
-      {
-      if(is_upper)
-        return (v.y>org.y)&&((v-org).get_norm()>r2);
-      return (v.y>org.y)||((v-org).get_norm()<r2);
-      };
-      int4 upper(const TPlaneVect& v)   
-      {
-      return !under(v);
-      };
-    int4 IsTheSamePart(TPlaneVect &v)
-      {
-      if(is_upper)return v.y>=org.y;
-      return v.y<=org.y;
-      };
-    friend int4 below(REAL X,TArcSegment *s1,TArcSegment *s2);
-    friend int4 IntPointsInStripe(REAL x1,REAL x2,TArcSegment *s1,TArcSegment *s2,TPlaneVect *p);
-    template <bool _ret_ip> friend int4 IntPoint(TArcSegment *s1,TArcSegment *s2,TPlaneVect *p);
-    template <bool _ret_ip> friend int4 StripePoint(REAL b,REAL e,TArcSegment *s1,TArcSegment *s2,TPlaneVect *p);
-    //for optimal alg only
-    friend int4 IntInside(REAL b,REAL e,TArcSegment *s1,TArcSegment *s2);
-
-  };
-
-
-
-int4 below(REAL X,TArcSegment* s1,TArcSegment* s2)
+bool below(REAL X,TArcSegment* s1,TArcSegment* s2)
   { 
   return (s1!=s2)&&(s1->under(s2->PointAtX(X)));
   }
@@ -342,7 +255,7 @@ class SegmentFunctions
         return ((SEGMENT *)s)->YAtX(X);
       };
 
-    static int4 __Below(REAL x,PSeg s1,PSeg s2)
+    static bool __Below(REAL x,PSeg s1,PSeg s2)
       {
       return below(x,(SEGMENT*)s1,(SEGMENT*)s2);
       };
@@ -581,48 +494,52 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
   return int_numb;
   };
 
-  using CSimpleRegCol = CLine2SegmentCollection<SimpleLine2Counter>;
+  using CLines2CollSimpleReg = CLine2SegmentCollection<SimpleCounter>;
+  using CArcCollSimpleReg = CArcSegmentCollection<SimpleCounter>;
+
+
  //const uint4 n_threads=16;
-  double test( int4 n, PSeg segs,int4 alg)
+  template<class RegistratingSegmentsCollection>
+  double find_int( int4 n, PSeg segs,int4 alg)
   {
     auto seg_type = line2;
-    SimpleLine2Counter reg;
+    SimpleCounter reg;
     reg.counter = 0;
-    CSimpleRegCol coll;
-    coll.Init(n, (TLineSegment2 *)segs);
+    RegistratingSegmentsCollection coll;
+    coll.Init(n, segs);
     coll.SetRegistrator(&reg);
     switch (alg) {
         case triv: {
-            CTrivialIntFinder<CSimpleRegCol> fi;
+            CTrivialIntFinder<RegistratingSegmentsCollection> fi;
             fi.find_intersections(&coll);
         } break;
         case simple_sweep:{
-            CSimpleSweepIntFinder<CSimpleRegCol> fi;
+            CSimpleSweepIntFinder<RegistratingSegmentsCollection> fi;
             fi.find_intersections(&coll);
         };
             break;
         case fast: {
-            CFastIntFinder<CSimpleRegCol> fi;
+            CFastIntFinder<RegistratingSegmentsCollection> fi;
             fi.find_intersections(&coll);
         } break;
         case mem_save:{
-            CMemSaveIntFinder<CSimpleRegCol> fi;
+            CMemSaveIntFinder<RegistratingSegmentsCollection> fi;
             fi.find_intersections(&coll);
         }
             break;
         case optimal: {
-          COptimalIntFinder<CSimpleRegCol> fi;
+          COptimalIntFinder<RegistratingSegmentsCollection> fi;
           fi.find_intersections(&coll);
         }
             break;
         case fast_parallel: {
-            SimpleLine2Counter reg_objects[reg_obj_margin * n_threads];
-            SimpleLine2Counter* additional_reg_obj[n_threads];
+            SimpleCounter reg_objects[reg_obj_margin * n_threads];
+            SimpleCounter* additional_reg_obj[n_threads];
             for (int i = 0; i < n_threads - 1; i++) {
                 //reg_objects[i * reg_obj_margin] = 0;
                 additional_reg_obj[i] = reg_objects + i * reg_obj_margin;
             }
-            CFastIntFinder<CSimpleRegCol> fi;
+            CFastIntFinder<RegistratingSegmentsCollection> fi;
             fi.find_intersections(&coll, n_threads, additional_reg_obj);
             for (int i = 0; i < n_threads - 1; i++)
                 reg.counter +=additional_reg_obj[i]->counter;
@@ -633,3 +550,11 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
     return reg.counter;
   };
 
+  double new_find_int(int4 seg_type, int4 n, PSeg segs, int4 alg)
+  {
+    switch (seg_type) {
+//    case line1:return find_int(n, segs, alg);
+    case line2:return find_int<CLines2CollSimpleReg>(n, segs, alg);
+    case arc:return find_int<CArcCollSimpleReg>(n, segs, alg);
+    }
+  };

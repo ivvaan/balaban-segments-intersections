@@ -89,7 +89,7 @@ double _benchmark(char* counters_string, int4 n, PSeg* coll, int4 s_type, int4 a
   return mint; //tottime / n_call;
   }
 
-double _benchmark1(int4 n, PSeg* coll, int4 alg, double& res)
+double _benchmark1(int4 n, PSeg* coll, int4 s_type, int4 alg, double& res)
   {
   double timeit, tottime = 0;
   int4 n_call = 0;
@@ -98,7 +98,7 @@ double _benchmark1(int4 n, PSeg* coll, int4 alg, double& res)
   do
   {
     auto start = high_resolution_clock::now();
-    res = test( n, coll[0],alg);
+    res = new_find_int(s_type, n, coll[0],alg);
     tottime += timeit = static_cast<duration<double>>(high_resolution_clock::now() - start).count();
     if (timeit < mint)
       mint = timeit;
@@ -292,7 +292,7 @@ counters_mute=counters_string;
       if(alg&alg_list[a]) 
       {
         if ((alg_list[a]==fast_no_ip)&&(seg_type==arc)){ if(!mute)printf("fast no inters. points algorithm can handle only line segments\n");continue;}
-        exec_time1[a] = _benchmark1(n, coll, alg_list[a], nInt1[a]);
+        exec_time1[a] = _benchmark1(n, coll, seg_type, alg_list[a], nInt1[a]);
         exec_time[a] = _benchmark(pcs, n, coll, seg_type, alg_list[a], nInt[a], dont_need_ip);
         if (mute)
             printf("a%i;s%c;d%c;n%i;i%13.0f;t%6.5f;p%f;%s\n", alg_list[a], ss[seg_type], sd[d], n, nInt[a], exec_time[a], p, counters_mute);

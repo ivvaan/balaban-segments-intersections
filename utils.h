@@ -37,15 +37,14 @@ typedef int  BOOL;
 #ifndef min
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
 #endif
-
+inline REAL sq(REAL x) { return x*x; }
 
 template<class real> 
 class couple{
 public:
-    real x;
-    real y;
-    couple()
-      { x=0; y=0;}
+    real x=0;
+    real y=0;
+    couple() :x(0), y(0) {};
     couple(const real &xc,const real &yc):x(xc),y(yc){};
     int operator<(couple<real>   & v2)
       { return ((x<v2.x)||(x==v2.x) && (y<v2.y));};
