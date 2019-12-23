@@ -105,8 +105,10 @@ public:
 template <class SegmentsColl>
 class CommonImpl 
 {
+public:
+    bool dont_split_stripe;
+    static const int4 max_call = 16; //max number of sequential recursive call (opt)FindR before dividing current strip
 protected:
-    static const int4 max_call = 5; //max number of sequential recursive call (opt)FindR before dividing current strip
 
     uint4 *SegL = nullptr, *SegR = nullptr, *ENDS = nullptr;
     int4 *Q = nullptr;
@@ -171,7 +173,58 @@ protected:
     };
 };
 
+template <class IntersectionFinder,class SegmentsColl>
+int4 FindR(IntersectionFinder *i_f,SegmentsColl* segments, int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec* stack_pos, uint4 Size, uint4 call_numb,uint4 max_call=30)
+  {
+    segments->SetCurStripe(i_f->ENDS[interval_left_index], i_f->ENDS[interval_right_index]);
+    if (interval_right_index - interval_left_index == 1)
+        return Size>1 ? i_f->SearchInStrip(segments, ladder_start_index, Size) : Size;
+     
+    ProgramStackRec stack_rec(ladder_start_index);
+    if (Size>0)
+    {
+      Size = i_f->Split(segments, interval_right_index, stack_rec.Q_pos, Size);
+      if (ladder_start_index<stack_rec.Q_pos)
+        stack_pos = stack_rec.Set(stack_pos, interval_right_index);
+    };
+    if (i_f->dont_split_stripe && (call_numb < max_call)) //if found a lot of intersections repeat FindR
+      Size = FindR(i_f,segments, stack_rec.Q_pos, interval_left_index, interval_right_index, stack_pos, Size, call_numb + 1,max_call);
+    else //cut stripe 
+    {
+      uint4 m = (interval_left_index + interval_right_index) >> 1;
+      if (call_numb>1)
+      { // if L contains a lot of segments then cut on two parts
+        max_call-=2;
+        Size = FindR(i_f,segments, stack_rec.Q_pos, interval_left_index, m, stack_pos, Size, 0,max_call);
+        Size = i_f->InsDel(segments, m, stack_pos, Size);
+        Size = FindR(i_f,segments, stack_rec.Q_pos, m, interval_right_index, stack_pos, Size, 0,max_call);
+      }
+      else
+      {// if L contains not so many segments than cut on four parts (works faster for some segment distributions)
+          max_call -= 4;
+          uint4 q = (interval_left_index + m) >> 1;
+        if (interval_left_index != q) {
+          Size = FindR(i_f,segments, stack_rec.Q_pos, interval_left_index, q, stack_pos, Size, 0,max_call);
+          Size = i_f->InsDel(segments, q, stack_pos, Size);
+        }
+        Size = FindR(i_f, segments, stack_rec.Q_pos, q, m, stack_pos, Size, 0, max_call);
+        Size = i_f->InsDel(segments, m, stack_pos, Size);
+        q = (interval_right_index + m) >> 1;
+        if (q != m) {
+          Size = FindR(i_f, segments, stack_rec.Q_pos, m, q, stack_pos, Size, 0, max_call);
+          Size = i_f->InsDel(segments, q, stack_pos, Size);
+        }
+        Size = FindR(i_f, segments, stack_rec.Q_pos, q, interval_right_index, stack_pos, Size, 0, max_call);
+      }
+    }
+    if (ladder_start_index >= stack_rec.Q_pos) return Size;
+    return i_f->Merge(segments, interval_left_index, ladder_start_index, stack_rec.Q_pos, Size);
+  };
 
-
+uint4 get_max_call(uint4 N) {
+    uint4 max_call = 8;
+    for (; N; N >>= 1) max_call += 2;
+    return max_call;
+};
 
 //#undef MY_FREE_ARR_MACRO

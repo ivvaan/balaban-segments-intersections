@@ -83,7 +83,7 @@ struct CSegmCompare
 template<bool is_line_seg>
 class CIntersectionFinder
   {
-  static const int4 max_call = 5; //max number of sequential recursive call (opt)FindR before dividing current strip
+  static const int4 max_call = 16; //max number of sequential recursive call (opt)FindR before dividing current strip
 
   static const int4 undef_loc = 0;
 
@@ -256,13 +256,13 @@ class CIntersectionFinder
    int4 InsDel(uint4 n, ProgramStackRec * stack_pos, int4 Size);
    int4 Merge(uint4 LBoundIdx, int4 QB, int4 QE, int4 Size);
    int4 Split(int4 &step_index,int4 Size);
-   int4 FindR(int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec *stack_pos, int4 Size, int4 call_numb);
+   int4 FindR(int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec* stack_pos, int4 Size, uint4 call_numb, uint4 _max_call = 18);
 
    int4 msSearchInStrip(int4 QP, int4 Size);
    int4 msInsDel(uint4 n, ProgramStackRec* stack_pos, int4 Size);
    int4 msMerge(uint4 LBoundIdx, int4 QB, int4 QE, int4 Size);
    int4 msSplit(int4 &step_index, int4 Size);
-   int4 msFindR(int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec *stack_pos, int4 Size, int4 call_numb);
+   int4 msFindR(int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec *stack_pos, int4 Size, uint4 call_numb,uint4 _max_call=18);
 
   //same for optimal algorithm
    void optFindInt(int4 QB,int4 QE,int4 l,PSeg s);

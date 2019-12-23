@@ -29,7 +29,7 @@ template <class SegmentsColl>
 class CMemSaveIntFinder : private CommonImpl<SegmentsColl> {
 public:
   using CIMP = CommonImpl<SegmentsColl>;
-  CIMP::max_call;
+  using CIMP::max_call;using CIMP::dont_split_stripe;
   using CIMP::prepare_ends; using CIMP::FindInt; using CIMP::FindIntI;
   using CIMP::SegL; using CIMP::SegR; using CIMP::ENDS; using CIMP::Q;
 
@@ -40,15 +40,9 @@ public:
     ProgramStackRec stack_rec(-1, 2 * nTotSegm); //need to be initialized this way
     L[0] = SegmentsColl::get_segm(ENDS[0]);
     from_begin = true;
-    FindR(segments, -1, 0, 2 * nTotSegm - 1, &stack_rec, 1, 0);
+    FindR(this,segments, -1, 0, 2 * nTotSegm - 1, &stack_rec, 1, 0,get_max_call(2*nTotSegm));
     FreeMem();
   }
-
-private:
-  int4 *L = nullptr;
-  uint4 nTotSegm, len_of_Q, int_numb;
-  bool from_begin = true;
-
   int4 SearchInStrip(SegmentsColl* segments, int4 qp, int4 Size)
   {
     if (SegmentsColl::is_line_segments)
@@ -72,26 +66,11 @@ private:
       while (size = SplitSIS(segments, qp, size))++n_split; //it change QP must be after q = Q + QP + 1 
                                                             // at this point we can just place Q starting from QP+1 to L and sort it
       for (; _L < last; ++_L, ++q)  *_L = *q;
-      if (n_split)std::sort(L, L + Size, [segments](int4 s1, int4 s2) {return segments->Below(s1, s2); });
+      if (n_split)std::sort(L, L + Size, [segments](int4 s1, int4 s2) {return segments->RBelow(s1, s2); });
     }
     return Size;
   };
 
-  void AllocMem(SegmentsColl* segments)
-  {
-    nTotSegm = len_of_Q = segments->GetSegmNumb();
-    L = new int4[nTotSegm];
-    Q = new int4[len_of_Q];
-  };
-
-  void FreeMem()
-  {
-    MY_FREE_ARR_MACRO(L);
-    MY_FREE_ARR_MACRO(Q);
-    CIMP::FreeMem();
-  };
-
-  //functions for fast algorithm
 
   int4 InsDel(SegmentsColl* segments, uint4 end_index, ProgramStackRec* stack_pos, int4 Size)
   {
@@ -162,7 +141,7 @@ private:
       auto cur_stair = QE, _Size = -Size;
       cur_seg = _R[cur_R_pos];
       while ((cur_stair > QB) && (cur_R_pos > _Size)) {
-        if (segments->Below(Q[cur_stair], cur_seg)) {
+        if (segments->RBelow(Q[cur_stair], cur_seg)) {
           if (SegL[cur_seg] > LBoundIdx) {
             segments->SetCurSegCutEnd(cur_seg);
             FindInt(segments, QB, QE, cur_stair);
@@ -190,7 +169,7 @@ private:
     int4 cur_stair = QB;
     cur_seg = _R[cur_R_pos];
     while ((cur_stair < QE) && (cur_R_pos < Size)) {
-      if (segments->Below(cur_seg, Q[cur_stair + 1])) {
+      if (segments->RBelow(cur_seg, Q[cur_stair + 1])) {
         if (SegL[cur_seg] > LBoundIdx) {
           segments->SetCurSegCutEnd(cur_seg);
           FindInt(segments, QB, QE, cur_stair);
@@ -221,6 +200,7 @@ private:
     int4 step_index = _step_index;
     int4 father_last_step = step_index, new_L_size = 0;
     auto Q_tail = Q + len_of_Q;
+    long long n_int=0;
     for (int4 cur_L_pos = 0; cur_L_pos < Size; cur_L_pos++)
     {
       int4 cur_seg = _L[cur_L_pos];
@@ -228,9 +208,8 @@ private:
       segments->SetCurSegCutBE(cur_seg);
       while ((father_last_step < step) && (segments->FindCurSegIntWith(Q[step])))
         step--;
-      int4 n_int = step_index - step;
 
-      if (n_int == 0)
+      if (step_index == step)
       {
         if (SegR[cur_seg] >= RBoundIdx) //segment is covering current stripe and doesn't intersect ladder stairs
           Q[++step_index] = cur_seg;
@@ -243,7 +222,7 @@ private:
       }
       else
       {
-        int_numb += n_int;
+        n_int+=step_index-step;
         //place segment in L
         L[new_L_size++] = cur_seg;
         //storing segment position in Q_tail
@@ -251,19 +230,42 @@ private:
       }
     }
     Q_tail = Q + len_of_Q;
-    int4 loc;
+    int4 c;
     for (int4 i = 0; i < new_L_size; ++i)
-      if ((loc = *(--Q_tail)) != INT_MAX) {
-        auto c = loc;
+      if ((c = *(--Q_tail)) != INT_MAX) {
         segments->SetCurSegCutBE(L[i]);
+        auto loc=c;
         while ((c <= step_index) && (segments->FindCurSegIntWith(Q[c++])));
-        int_numb += c - loc;
+        n_int+=c-loc;
       }
+//    dont_split_stripe = step_index != _step_index;
+    dont_split_stripe = n_int>new_L_size;
     _step_index = step_index;
     from_begin = true;
     return new_L_size;
   };
 
+
+private:
+  int4 *L = nullptr;
+  uint4 nTotSegm, len_of_Q;
+  bool from_begin = true;
+
+  void AllocMem(SegmentsColl* segments)
+  {
+    nTotSegm = len_of_Q = segments->GetSegmNumb();
+    L = new int4[nTotSegm];
+    Q = new int4[len_of_Q];
+  };
+
+  void FreeMem()
+  {
+    MY_FREE_ARR_MACRO(L);
+    MY_FREE_ARR_MACRO(Q);
+    CIMP::FreeMem();
+  };
+
+  //functions for fast algorithm
   int4 SplitSIS(SegmentsColl* segments, int4& step_index, int4 Size)//simplified version for SearchInStrip
   {
     auto _L = from_begin ? L : L + (nTotSegm - Size);
@@ -298,54 +300,5 @@ private:
   };
 
 
-  int4 FindR(SegmentsColl* segments, int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec* stack_pos, int4 Size, int4 call_numb)
-  {
-    segments->SetCurStripe(ENDS[interval_left_index], ENDS[interval_right_index]);
-    if (interval_right_index - interval_left_index == 1)
-      {
-        segments->SetCurVLine(ENDS[interval_right_index]); 
-        return Size>1 ? SearchInStrip(segments, ladder_start_index, Size) : Size;
-      }
-     
-    ProgramStackRec stack_rec(ladder_start_index);
-    int_numb = 0; // variable to count intersections on Split stage
-    if (Size > 0) {
-      Size = Split(segments, interval_right_index, stack_rec.Q_pos, Size);
-      if (ladder_start_index < stack_rec.Q_pos)
-        stack_pos = stack_rec.Set(stack_pos, interval_right_index);
-    };
-    if ((int_numb > Size) && (call_numb < max_call)) //if found a lot of intersections repeat FindR
-      Size = FindR(segments, stack_rec.Q_pos, interval_left_index, interval_right_index, stack_pos, Size, call_numb + 1);
-    else //cut stripe
-    {
-
-      uint4 m = (interval_left_index + interval_right_index) >> 1;
-      if (call_numb > 1)
-      { // if L contains a lot of segments then cut on two parts
-        Size = FindR(segments, stack_rec.Q_pos, interval_left_index, m, stack_pos, Size, 0);
-        Size = InsDel(segments, m, stack_pos, Size);
-        Size = FindR(segments, stack_rec.Q_pos, m, interval_right_index, stack_pos, Size, 0);
-      }
-      else
-      { // if L contains not so many segments than cut on four parts (works faster for some segment distributions)
-        uint4 q = (interval_left_index + m) >> 1;
-        if (interval_left_index != q) {
-          Size = FindR(segments, stack_rec.Q_pos, interval_left_index, q, stack_pos, Size, 0);
-          Size = InsDel(segments, q, stack_pos, Size);
-        }
-        Size = FindR(segments, stack_rec.Q_pos, q, m, stack_pos, Size, 0);
-        Size = InsDel(segments, m, stack_pos, Size);
-        q = (interval_right_index + m) >> 1;
-        if (q != m) {
-          Size = FindR(segments, stack_rec.Q_pos, m, q, stack_pos, Size, 0);
-          Size = InsDel(segments, q, stack_pos, Size);
-        }
-        Size = FindR(segments, stack_rec.Q_pos, q, interval_right_index, stack_pos, Size, 0);
-      }
-    }
-    if (ladder_start_index >= stack_rec.Q_pos) return Size;
-    segments->SetCurVLine(ENDS[interval_right_index]);
-    return Merge(segments, interval_left_index, ladder_start_index, stack_rec.Q_pos, Size);
-  };
 };
 

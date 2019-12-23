@@ -34,7 +34,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 
 bool below(REAL X,TLineSegment1* s1,TLineSegment1* s2)
   { 
-  if(s1==s2) return 0;
+  if(s1==s2) return false;
   REAL dx1=s1->shift.x,dx2=s2->shift.x;
   REAL dy1=s1->shift.y,dy2=s2->shift.y;
   REAL y1,y2;
@@ -494,6 +494,7 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
   return int_numb;
   };
 
+  using CLines1CollSimpleReg = CLine1SegmentCollection<SimpleCounter>;
   using CLines2CollSimpleReg = CLine2SegmentCollection<SimpleCounter>;
   using CArcCollSimpleReg = CArcSegmentCollection<SimpleCounter>;
 
@@ -553,8 +554,9 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
   double new_find_int(int4 seg_type, int4 n, PSeg segs, int4 alg)
   {
     switch (seg_type) {
-//    case line1:return find_int(n, segs, alg);
+    case line1:return find_int<CLines1CollSimpleReg>(n, segs, alg);
     case line2:return find_int<CLines2CollSimpleReg>(n, segs, alg);
     case arc:return find_int<CArcCollSimpleReg>(n, segs, alg);
     }
+    return 0;
   };

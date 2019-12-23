@@ -32,7 +32,7 @@ public:
   using CFAST = CFastIntFinder<SegmentsColl>;
   using CIMP::SegL; using CIMP::SegR; using CIMP::ENDS; using CIMP::Q;
   using CIMP::prepare_ends; CIMP::max_call;
-  using CFAST::L; using CFAST::R; CFAST::nTotSegm; using CFAST::len_of_Q; using CFAST::int_numb;
+  using CFAST::L; using CFAST::R; CFAST::nTotSegm; using CFAST::len_of_Q; 
 
   void find_intersections(SegmentsColl *segments)
   {
@@ -92,7 +92,6 @@ private:
         if (!segments->IsIntersectsCurSeg(Q[c])) break;
       c--;
     }
-    int_numb += l - c;
     if (SegmentsColl::is_line_segments && (c != l))return;
     c = ++l;
     while (c <= qe)
@@ -105,7 +104,6 @@ private:
         if (!segments->IsIntersectsCurSeg(Q[c])) break;
       c++;
     }
-    int_numb += c - l;
   };
 
   void FindIntI(SegmentsColl* segments, uint4 r_index, ProgramStackRec* stack_pos)
@@ -187,7 +185,7 @@ private:
     int4 cur_seg = _R[cur_R_pos];
     while ((cur_stair<QE) && (cur_R_pos<Size))
     {
-      if (segments->Below(cur_seg, Q[cur_stair + 1]))
+      if (segments->RBelow(cur_seg, Q[cur_stair + 1]))
       {
         if (SegL[cur_seg]>LBoundIdx)
         {
@@ -228,7 +226,7 @@ private:
     {
       cur_seg = L[cur_L_pos];
       segments->SetCurSegCutBE(cur_seg);
-      if (segments->Below( cur_seg, Q[cur_father_pos])) // current segment below candidate to inherit
+      if (segments->LBelow( cur_seg, Q[cur_father_pos])) // current segment below candidate to inherit
       {
         if ((SegR[cur_seg] < RBoundIdx)// current segment not covering strip
           || (step_index>father_last_step) && segments->IsIntersectsCurSeg(Q[step_index])// or intersects last stair
@@ -301,19 +299,14 @@ private:
   int4 FindR(SegmentsColl *segments, int4 father_first_step, int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec *stack_pos, int4 Size, int4 call_numb)
   {
     segments->SetCurStripe(ENDS[interval_left_index], ENDS[interval_right_index]);
-    segments->SetCurVLine(ENDS[interval_right_index]);
     if (interval_right_index - interval_left_index == 1)
-      {
-        segments->SetCurVLine(ENDS[interval_right_index]);
         return Size>1 ? CFAST::SearchInStrip(segments, ladder_start_index, Size) : Size;
-      }
      
     ProgramStackRec stack_rec(ladder_start_index);
-    int_numb = 0;// variable to count intersections on Split stage
     bool use_opt = (ladder_start_index - father_first_step > big_staircase_threshold);
     if (use_opt)
     {// use optimal variant if father staircase is big
-      segments->SetCurVLine(ENDS[interval_left_index]);
+//      segments->SetCurVLine(ENDS[interval_left_index]);
       Size = Split(segments, interval_right_index, father_first_step, stack_rec.Q_pos, Size);
       stack_pos = stack_rec.Set(stack_pos, interval_right_index);
       father_first_step = ladder_start_index + inherit_offset;
@@ -329,7 +322,7 @@ private:
         father_first_step = ladder_start_index + inherit_offset;
       }
     }
-    if ((int_numb>Size) && (call_numb<max_call)) //if found a lot of intersections repeat optFindR
+    if ((ladder_start_index < stack_rec.Q_pos) && (call_numb < max_call)) //if found a lot of intersections repeat optFindR
       Size = FindR(segments,father_first_step, stack_rec.Q_pos, interval_left_index, interval_right_index, stack_pos, Size, call_numb + 1);
     else //cut stripe 
     {
@@ -361,7 +354,7 @@ private:
 
     }
     if (ladder_start_index >= stack_rec.Q_pos) return Size;
-    segments->SetCurVLine(ENDS[interval_right_index]);
+//    segments->SetCurVLine(ENDS[interval_right_index]);
     if (use_opt)
       return Merge(segments, interval_left_index, ladder_start_index, stack_rec.Q_pos, Size);
     return CFAST::Merge(segments, interval_left_index, ladder_start_index, stack_rec.Q_pos, Size);
