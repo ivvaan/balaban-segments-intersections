@@ -39,6 +39,31 @@ typedef int  BOOL;
 #endif
 inline REAL sq(REAL x) { return x*x; }
 
+typedef void(*PSeg);
+typedef void(*PRegObj);
+
+enum _Algorithm
+{
+  triv = 1,
+  simple_sweep = 2,
+  fast = 4,
+  optimal = 8,
+  fast_parallel = 16,
+  bentley_ottmann = 32,
+  fast_no_ip = 64,
+  mem_save = 128
+};
+
+enum _Segment
+{
+  line1 = 0, line2, arc
+};
+enum _Distribution
+{
+  random = 0, parallel, mixed, small, param_defined, circul
+};
+
+
 template<class real> 
 class couple{
 public:

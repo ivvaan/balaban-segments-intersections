@@ -27,10 +27,6 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <time.h>
 
 
-typedef void (*PSeg);
-typedef void (*PRegObj);
-
-
 typedef bool (*FBelow)(REAL x,PSeg s1,PSeg s2);//retuns if s1 below s2 at x
 typedef int4 (*FFindAndRegIPoints)(PSeg s1,PSeg s2,PRegObj intersection_registrator);/*finds all intersections of s1 and s2 and 
   register them. If no_ip is true function doesn't find and register intersection pointints but only pairs. */

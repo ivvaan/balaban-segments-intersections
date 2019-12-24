@@ -57,17 +57,17 @@ SetPriorityClass(hProcess, dwProcessPriSave);
 
 
 
-double _benchmark(char* counters_string, int4 n, PSeg* coll, int4 s_type, int4 alg, double& res, bool dont_need_ip = false)
+double _benchmark_old(char* counters_string, int4 n, PSeg* seg_ptr_coll, int4 s_type, int4 alg, double& res, bool dont_need_ip = false)
   {
   double timeit,tottime=0;
-  double c[8];
+  double c[8] = {0,0,0,0,0,0,0,0};
   int4 n_call=0;
   using namespace std::chrono;
   double mint = 1.0e10;
   do
   {
       auto start = high_resolution_clock::now();
-      res = find_intersections(s_type, n, coll, alg, c, dont_need_ip);
+      res = find_intersections(s_type, n, seg_ptr_coll, alg, c, dont_need_ip);
 	  tottime+=timeit = static_cast<duration<double>>(high_resolution_clock::now() - start).count();
       if (timeit < mint)
           mint = timeit;
@@ -78,9 +78,6 @@ double _benchmark(char* counters_string, int4 n, PSeg* coll, int4 s_type, int4 a
 #else
   while (false);
 #endif
-  
-  
-
   if(counters_string)
    sprintf(counters_string,"%11.2f;%11.2f;%11.2f;%11.2f;%11.2f;%11.2f;%11.2f;%11.2f",c[0],c[1],c[2],c[3],c[4],c[5],c[6],c[7]);
    //printf("avg Size %11.2f\n",c[3]/(c[4]+1));
@@ -89,7 +86,7 @@ double _benchmark(char* counters_string, int4 n, PSeg* coll, int4 s_type, int4 a
   return mint; //tottime / n_call;
   }
 
-double _benchmark1(int4 n, PSeg* coll, int4 s_type, int4 alg, double& res)
+double _benchmark_new(int4 n, PSeg seg_coll, int4 s_type, int4 alg, double& res)
   {
   double timeit, tottime = 0;
   int4 n_call = 0;
@@ -98,7 +95,7 @@ double _benchmark1(int4 n, PSeg* coll, int4 s_type, int4 alg, double& res)
   do
   {
     auto start = high_resolution_clock::now();
-    res = new_find_int(s_type, n, coll[0],alg);
+    res = new_find_int(s_type, n, seg_coll,alg);
     tottime += timeit = static_cast<duration<double>>(high_resolution_clock::now() - start).count();
     if (timeit < mint)
       mint = timeit;
@@ -109,47 +106,98 @@ double _benchmark1(int4 n, PSeg* coll, int4 s_type, int4 alg, double& res)
 #else
   while (false);
 #endif
-  
-
-
-
-
   //return (stop - start) / (n_call*CLOCKS_PER_SEC);
   return mint; //tottime / n_call;
 }
 
+enum _Implementation
+{
+  impl_old = 1,
+  impl_new = 2
+};
+
+void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr_type,REAL distr_param,bool print_less,bool rtime_printout,bool dont_need_ip,int4 n, PSeg seg_coll,PSeg *seg_ptr_coll) {
+  double exec_time[33], nInt[33];
+  double exec_time_new[33], nInt_new[33];
+  const char *ss = "Lla", *sd = "rlmspc";
+  char counters_string[256],*counters_mute;
+  int4 alg_list[] = { triv, simple_sweep, fast, optimal, fast_parallel, bentley_ottmann,fast_no_ip,mem_save };
+  const char *alg_names[] = { "trivial","simple_sweep","fast","optimal","fast_parallel","bentley_ottmann","fast no inters points","fast 'no R'" };
+
+  counters_string[0] = 0;
+
+#ifdef COUNTERS_ON
+  if(use_counters)strcpy(counters_string, "\ncounters:");
+#endif
+  counters_mute = counters_string + strlen(counters_string);
+  if (impl== _Implementation::impl_old)
+    printf("old implementation testing... ************************************************\n");
+  else
+    printf("new implementation testing... ************************************************\n");
+
+  ON_BENCH_BEG
+
+
+    for (int4 a = sizeof(alg_list) / sizeof(alg_list[0]) - 1; a>-1; a--)
+      //for (int4 a = 0;a<sizeof(alg_list) / sizeof(alg_list[0]); a++)
+    {
+      if (alg&alg_list[a])
+      {
+        if ((alg_list[a] == fast_no_ip) && (seg_type == arc)) { if (!print_less)printf("fast no inters. points algorithm can handle only line segments\n"); continue; }
+        if (impl == _Implementation::impl_old)
+          exec_time[a] = _benchmark_old(use_counters?counters_mute:NULL, n, seg_ptr_coll, seg_type, alg_list[a], nInt[a], dont_need_ip);
+        else
+          exec_time[a] = _benchmark_new(n, seg_coll, seg_type, alg_list[a], nInt[a]);
+        
+        if (print_less)
+          printf("a%i;s%c;distr_type%c;n%i;i%13.0f;t%6.5f;distr_param%f;%s\n", alg_list[a], ss[seg_type], sd[distr_type], n, nInt[a], exec_time[a], distr_param, counters_mute);
+        else
+          printf("alg=%s; inters numb=%13.0f; exec time=%6.5f;%s\n", alg_names[a], nInt[a], exec_time[a], counters_string);
+      }
+    };
+  ON_BENCH_END
+
+    if (rtime_printout && (alg&triv) && (!print_less))
+    {
+      double n_checks = n*0.5*(double)(n - 1);
+      double check_time = exec_time[0] / n_checks;
+      printf("\ntrivial alg made %13.0f intersection checks\n", n_checks);
+      printf("one intersection check takes %6.3f ns, let's use intersection check time (ICT) as a time unit \n\n", 1E+09*check_time);
+      check_time *= nInt[0];
+      for (int4 a = 0; a<sizeof(alg_list) / sizeof(alg_list[0]); a++)
+      {
+        if (alg&alg_list[a])
+        {
+          if ((alg_list[a] == fast_no_ip) && (seg_type == arc)) continue;
+          printf("%s finds one intersection in %6.3f ICT \n", alg_names[a], exec_time[a] / check_time);
+        }
+      };
+    }
+
+};
 
 
 int main(int argc, char* argv[])
   {
-  int4 alg=63, seg_type=2, n = 20000, d=0;
-  REAL p=1.0;
-  double exec_time[33], nInt[33];
-  double exec_time1[33], nInt1[33];
+  int4 alg=255, seg_type=2, n = 20000, distr_type=0;
+  REAL distr_param=1.0;
+  BOOL print_less=FALSE,print_counters=FALSE,wait=FALSE, rtime_printout=FALSE;
+  bool use_counters = false;
+  char rpar[]="-r";
+  int4 impl = _Implementation::impl_old + _Implementation::impl_new;
   const char *ss = "Lla", *sd = "rlmspc";
-  BOOL mute=FALSE,print_counters=FALSE,wait=FALSE, rtime_printout=FALSE;
-  char counters_string[256],*pcs=NULL,*counters_mute,rpar[]="-r";
-  int4 alg_list[]={ triv, simple_sweep, fast, optimal, fast_parallel, bentley_ottmann,fast_no_ip,mem_save};
-  const char *alg_names[]={"trivial","simple_sweep","fast","optimal","fast_parallel","bentley_ottmann","fast no inters points","fast 'no R'"};
+  const char *alg_names[] = { "trivial","simple_sweep","fast","optimal","fast_parallel","bentley_ottmann","fast no inters points","fast 'no R'" };
+
 
 #ifdef _DEBUG
   _CrtSetDbgFlag(_CRTDBG_CHECK_ALWAYS_DF);
 #endif
-
-#ifdef COUNTERS_ON
-strcpy(counters_string,"\ncounters:");
-counters_mute=counters_string+strlen(counters_string);
-#else
-counters_string[0]=0;
-counters_mute=counters_string;
-#endif
-
   
 
   if (argc==1)
     {
 #ifdef COUNTERS_ON
-    printf("usage: seg_int -aA -sS -dD -nN -pP -r -m -w -c\n");
+    printf("usage: seg_int -aA -sS -dD -nN -pP -iI -r -m -w -c\n");
 #else    
     printf("usage: seg_int -aA -sS -dD -nN -pP -r -m -e -w\n");
 #endif    
@@ -169,17 +217,21 @@ counters_mute=counters_string;
     printf(" S=l: line segments representation y=a*x+b,x1<=x<=x2; a,b,x1,x2 - reals\n");
     printf(" S=L: line segments representation r=b+a*t,0<=t<=1; b,a - vectors\n");
     printf(" S=a: arcs\n");
+    printf("-iI: implementation\n");
+    printf(" I=1: 'old' function pointers segment collection interface\n");
+    printf(" I=2: 'new' template based segment collection interface\n");
+    printf(" I=3: both\n");
     printf("-nN: number of segments\n");
     printf("-pP: parameter value, must be positive\n");
     printf("-dD: type of distribution\n");
     printf(" D=r: random segments\n");
-    printf(" D=l: random length almost x parallel segments, the bigger p/N the less parallel segments\n");
-    printf(" D=m: mixed random length almost x parallel 'long' segments (33%) and 'small' segments (67%), the bigger p/N the less parallel 'long' and longer 'short' segments\n");
-    printf(" D=s: short segments: random segment with  length multiplied by p/N\n");
-    printf(" D=p: random segment with  length multiplied by p\n");
+    printf(" D=l: random length almost x parallel segments, the bigger distr_param/N the less parallel segments\n");
+    printf(" D=m: mixed random length almost x parallel 'long' segments (33%) and 'small' segments (67%), the bigger distr_param/N the less parallel 'long' and longer 'short' segments\n");
+    printf(" D=s: short segments: random segment with  length multiplied by distr_param/N\n");
+    printf(" D=distr_param: random segment with  length multiplied by distr_param\n");
     printf(" D=c: segments ends are on the opposite sides of unit circul, each segment intesect each\n");
-    printf("-m: if presented, means 'mute' mode - few information printed\n");
-	printf("-e: if presented, for each alg prints out relative (compared to checking two segments intersection) time to find one intersection (works only if A%2==1 and mute off)\n");
+    printf("-m: if presented, means 'print less' mode - few information printed\n");
+	printf("-e: if presented, for each alg prints out relative (compared to checking two segments intersection) time to find one intersection (works only if A%2==1 and print_less off)\n");
 	printf("-w: if presented, program wait until 'Enter' pressed before closing\n");   
 
 #ifdef COUNTERS_ON
@@ -202,6 +254,15 @@ counters_mute=counters_string;
               {alg=4; printf("some error in -a param. 4 used instead.\n");}
             }
             break;
+          case 'i':
+          {
+            impl = atoi(argv[i] + 2);
+            if ((impl<1) || (impl>3))
+            {
+              impl = 3; printf("some error in -i param. 3 used instead.\n");
+            }
+          }
+          break;
           case 's':
             {
             switch(argv[i][2])
@@ -221,16 +282,16 @@ counters_mute=counters_string;
             {
             switch(argv[i][2])
               {
-              case 'r':d=random;break;
-              case 'l':d=parallel;break;
-              case 'm':d=mixed;break;
-              case 's':d=small;break;
-              case 'p':d = param_defined; break;
-              case 'c':d = circul; break;
+              case 'r':distr_type=random;break;
+              case 'l':distr_type=parallel;break;
+              case 'm':distr_type=mixed;break;
+              case 's':distr_type=small;break;
+              case 'p':distr_type = param_defined; break;
+              case 'c':distr_type = circul; break;
               default:
                 {
-                printf("some error in -d param. r used instead.\n");
-                d=random; 
+                printf("some error in -distr_type param. r used instead.\n");
+                distr_type=random; 
                 }
               };
             };
@@ -244,14 +305,14 @@ counters_mute=counters_string;
             break;
           case 'p':
             {
-            p=fabs(atof(argv[i]+2));
-            if(p<=0)
-              {p=1.0; printf("some error in -p param. 1.0 used instead.\n");}
+            distr_param=fabs(atof(argv[i]+2));
+            if(distr_param<=0)
+              {distr_param=1.0; printf("some error in -distr_param param. 1.0 used instead.\n");}
             }
             break;
    		  case 'm':
 		  {
-			  mute = TRUE;
+			  print_less = TRUE;
 		  }
 		  break;
 		  case 'e':
@@ -267,72 +328,32 @@ counters_mute=counters_string;
 #ifdef COUNTERS_ON
           case 'c':
             {
-              pcs=counters_mute;
+              use_counters=true;
             }
             break;
 #endif
           }
         }
     }
-  if(!mute)printf("actual params is: -a%i -s%c -d%c -n%i -p%f\n", alg, ss[seg_type], sd[d], n, p);
-  if((seg_type==arc)&&(d==mixed)) {printf("-sa -dm is not compartible!/n"); return 0;}
-  if((seg_type==arc)&&(d==parallel)) {printf("-sa -dl is not compartible!/n"); return 0;}
-  PSeg *coll=create_test_collection(seg_type,n,d,p);
+  if(!print_less)printf("actual params is: -a%i -s%c -d%c -i%i -n%i -p%f\n", alg, ss[seg_type], sd[distr_type],impl, n, distr_param);
+  if((seg_type==arc)&&(distr_type==mixed)) {printf("-sa -dm is not compartible!/n"); if (wait) { printf("\npress 'Enter' to continue"); getchar(); } return 0;}
+  if((seg_type==arc)&&(distr_type==parallel)) {printf("-sa -dl is not compartible!/n"); if (wait) { printf("\npress 'Enter' to continue"); getchar(); } return 0;}
+  PSeg *seg_ptr_coll = nullptr;
+  PSeg seg_coll;
+  if(impl&_Implementation::impl_old)
+    seg_coll = create_test_collection(seg_type, n, distr_type, distr_param, &seg_ptr_coll);
+  else
+    seg_coll = create_test_collection(seg_type, n, distr_type, distr_param, nullptr);
+
   bool dont_need_ip = (alg & fast_no_ip) != 0;
 
-  ON_BENCH_BEG
+  if (impl&_Implementation::impl_old)
+    perform_tests(use_counters, _Implementation::impl_old, alg, seg_type, distr_type, distr_param, print_less, rtime_printout, dont_need_ip, n, seg_coll, seg_ptr_coll);
+  if (impl&_Implementation::impl_new)
+    perform_tests(use_counters, _Implementation::impl_new, alg, seg_type, distr_type, distr_param, print_less, rtime_printout, dont_need_ip, n, seg_coll, seg_ptr_coll);
 
-#ifndef _DEBUG
-  {double c[8];  find_intersections(seg_type, min(15000, n), coll, triv, c); };//just to load and speedup processor;
-#endif // !1
+  delete_test_collection(seg_type, seg_coll, seg_ptr_coll);
 
-  for (int4 a = sizeof(alg_list) / sizeof(alg_list[0]) - 1; a>-1; a--)
-  //for (int4 a = 0;a<sizeof(alg_list) / sizeof(alg_list[0]); a++)
-	  {
-      if(alg&alg_list[a]) 
-      {
-        if ((alg_list[a]==fast_no_ip)&&(seg_type==arc)){ if(!mute)printf("fast no inters. points algorithm can handle only line segments\n");continue;}
-        exec_time1[a] = _benchmark1(n, coll, seg_type, alg_list[a], nInt1[a]);
-        exec_time[a] = _benchmark(pcs, n, coll, seg_type, alg_list[a], nInt[a], dont_need_ip);
-        if (mute)
-            printf("a%i;s%c;d%c;n%i;i%13.0f;t%6.5f;p%f;%s\n", alg_list[a], ss[seg_type], sd[d], n, nInt[a], exec_time[a], p, counters_mute);
-        else
-            printf("alg=%s; inters numb=%13.0f; exec time=%6.5f;%s\n", alg_names[a], nInt[a], exec_time[a], counters_string);
-        printf("alt alg=%s; inters numb=%13.0f; exec time=%6.5f;\n", alg_names[a], nInt1[a], exec_time1[a]);
-      }
-     };
-  ON_BENCH_END
-
-  if (rtime_printout&&(alg&triv)&&(!mute))
-  {
-	  double n_checks = n*0.5*(double)(n - 1);
-	  double check_time = exec_time[0] / n_checks;
-	  printf("\ntrivial alg made %13.0f intersection checks\n", n_checks);
-	  printf("one intersection check takes %6.3f ns, let's use intersection check time (ICT) as a time unit \n\n", 1E+09*check_time);
-	  check_time*=nInt[0];
-	  for (int4 a = 0; a<sizeof(alg_list) / sizeof(alg_list[0]); a++)
-	  {
-		  if (alg&alg_list[a])
-		  {
-        if ((alg_list[a] == fast_no_ip) && (seg_type == arc)) continue;
-			  printf("%s finds one intersection in %6.3f ICT \n", alg_names[a] , exec_time[a]/ check_time);
-		  }
-	  };
-	  check_time = exec_time1[0] / n_checks;
-	  printf("\nalt trivial alg made %13.0f intersection checks\n", n_checks);
-	  printf("one intersection check takes %6.3f ns, let's use intersection check time (ICT) as a time unit \n\n", 1E+09*check_time);
-	  check_time*=nInt1[0];
-	  for (int4 a = 0; a<sizeof(alg_list) / sizeof(alg_list[0]); a++)
-	  {
-		  if (alg&alg_list[a])
-		  {
-        if ((alg_list[a] == fast_no_ip) && (seg_type == arc)) continue;
-			  printf("%s finds one intersection in %6.3f ICT \n", alg_names[a] , exec_time1[a]/ check_time);
-		  }
-	  };
-  }
- 
-  delete_test_collection(seg_type,coll);
   if(wait){printf("\npress 'Enter' to continue"); getchar();}
   return 0;
   }
