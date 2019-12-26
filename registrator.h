@@ -1,5 +1,4 @@
-#ifndef TEST_COLL_H
-#define TEST_COLL_H
+#pragma once
 /*
 *
 *      Copyright (c)  2011-2020  Ivan Balaban
@@ -20,29 +19,32 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 */
+// NEW IMPLEMENTATION
 
 #include "utils.h"
-#include <stdio.h>
-#define _USE_MATH_DEFINES
-#include "math.h"
-#include <cstddef>
-
-
-PSeg create_test_collection(int4 seg_type,int4 n,int4 distr,REAL par,PSeg **seg_ptr_coll_ptr=nullptr);
-void  delete_test_collection(int4 seg_type,PSeg,PSeg* );
-double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double* counters, bool dont_need_ip = false);
-
-double new_find_int(int4 seg_type, int4 n, PSeg segs,int4 alg);
-enum _RegistrationType
+template <class ipoint>
+class JustCountingRegistrator
 {
-  count = 1,
-  segments = 2,
-  point = 4,
-  count_and_segments =3,
-  full=7
+public:
+  static const _RegistrationType reg_type = count;
+  double counter = 0;
+  inline void begin_registration(uint4 inters_numb) { counter += inters_numb; };
+  inline void register_segments(uint4 s1, uint4 s2)
+  {
+#ifdef PRINT_SEG_AND_INT
+    if (s1<s2)
+      printf("alt int %i %i\n", s1, s2);
+    else
+      printf("alt int %i %i\n", s2, s1);
+
+#endif 
+  };
+  inline void register_points(ipoint*) {};
+  inline void end_registration() {};
+
+
 };
 
+typedef JustCountingRegistrator<TPlaneVect> SimpleCounter;
 
-//******************************************************************************************************
 
-#endif

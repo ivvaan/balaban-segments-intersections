@@ -2,7 +2,7 @@
 #define UTILS_FOR_SEGMENT_INTERSECTION
 /*
 *
-*      Copyright (c)  2011-2017  Ivan Balaban 
+*      Copyright (c)  2011-2020  Ivan Balaban 
 *      ivvaan@gmail.com
 *
 This file is part of Seg_int library.
@@ -37,15 +37,39 @@ typedef int  BOOL;
 #ifndef min
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
 #endif
+inline REAL sq(REAL x) { return x*x; }
+
+typedef void(*PSeg);
+typedef void(*PRegObj);
+
+enum _Algorithm
+{
+  triv = 1,
+  simple_sweep = 2,
+  fast = 4,
+  optimal = 8,
+  fast_parallel = 16,
+  bentley_ottmann = 32,
+  fast_no_ip = 64,
+  mem_save = 128
+};
+
+enum _Segment
+{
+  line1 = 0, line2, arc
+};
+enum _Distribution
+{
+  random = 0, parallel, mixed, small, param_defined, circul
+};
 
 
 template<class real> 
 class couple{
 public:
-    real x;
-    real y;
-    couple()
-      { x=0; y=0;}
+    real x=0;
+    real y=0;
+    couple() :x(0), y(0) {};
     couple(const real &xc,const real &yc):x(xc),y(yc){};
     int operator<(couple<real>   & v2)
       { return ((x<v2.x)||(x==v2.x) && (y<v2.y));};
