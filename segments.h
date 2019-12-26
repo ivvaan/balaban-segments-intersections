@@ -6,6 +6,8 @@
 #include "math.h"
 #include <cstddef>
 
+
+
 class TLineSegment1
 {
 public:
@@ -56,13 +58,14 @@ public:
   REAL YAtX(REAL X)
   {
     return org.y + shift.y*(X - org.x) / shift.x;
-  };
-  friend bool below(REAL X, TLineSegment1 *s1, TLineSegment1 *s2);
-  template <bool _ret_ip> friend int4 IntPoint(TLineSegment1 *s1, TLineSegment1 *s2, TPlaneVect *p);
-  template <bool _ret_ip> friend int4 StripePoint(REAL b, REAL e, TLineSegment1 *s1, TLineSegment1 *s2, TPlaneVect *p);
-  //for optimal alg only
-  friend int4 IntInside(REAL b, REAL e, TLineSegment1 *s1, TLineSegment1 *s2);
+  };   
 };
+  bool below(REAL X, TLineSegment1 *s1, TLineSegment1 *s2);
+  template <bool _ret_ip>  int4 IntPoint(TLineSegment1 *s1, TLineSegment1 *s2, TPlaneVect *p);
+  template <bool _ret_ip>  int4 StripePoint(REAL b, REAL e, TLineSegment1 *s1, TLineSegment1 *s2, TPlaneVect *p);
+  //for optimal alg only
+  int4 IntInside(REAL b, REAL e, TLineSegment1 *s1, TLineSegment1 *s2);
+
 
 class TLineSegment2
 {
@@ -109,13 +112,14 @@ public:
   {
     return a*X + b;
   };
-  friend bool below(REAL X, TLineSegment2 *s1, TLineSegment2 *s2);
-  template <bool _ret_ip> friend int4 IntPoint(TLineSegment2 *s1, TLineSegment2 *s2, TPlaneVect *p);
-  template <bool _ret_ip> friend int4 StripePoint(REAL b, REAL e, TLineSegment2 *s1, TLineSegment2 *s2, TPlaneVect *p);
-  //for optimal alg only
-  friend int4 IntInside(REAL b, REAL e, TLineSegment2 *s1, TLineSegment2 *s2);
-
 };
+  bool below(REAL X, TLineSegment2 *s1, TLineSegment2 *s2);
+  template <bool _ret_ip>  int4 IntPoint(TLineSegment2 *s1, TLineSegment2 *s2, TPlaneVect *p);
+  template <bool _ret_ip>  int4 StripePoint(REAL b, REAL e, TLineSegment2 *s1, TLineSegment2 *s2, TPlaneVect *p);
+  //for optimal alg only
+  int4 IntInside(REAL b, REAL e, TLineSegment2 *s1, TLineSegment2 *s2);
+
+
 
 class TArcSegment// arc formed by intersection of a vertical strip [x1,x2] with a circle having center org and square of radius r2 
 {
@@ -183,13 +187,12 @@ public:
   {
     if (is_upper)return v.y >= org.y;
     return v.y <= org.y;
-  };
-  friend bool below(REAL X, TArcSegment *s1, TArcSegment *s2);
-  friend int4 IntPointsInStripe(REAL x1, REAL x2, TArcSegment *s1, TArcSegment *s2, TPlaneVect *p);
-  template <bool _ret_ip> friend int4 IntPoint(TArcSegment *s1, TArcSegment *s2, TPlaneVect *p);
-  template <bool _ret_ip> friend int4 StripePoint(REAL b, REAL e, TArcSegment *s1, TArcSegment *s2, TPlaneVect *p);
-  //for optimal alg only
-  friend int4 IntInside(REAL b, REAL e, TArcSegment *s1, TArcSegment *s2);
-
+  };  
 };
+  bool below(REAL X, TArcSegment *s1, TArcSegment *s2);
+  int4 IntPointsInStripe(REAL x1, REAL x2, TArcSegment *s1, TArcSegment *s2, TPlaneVect *p);
+  template <bool _ret_ip>  int4 IntPoint(TArcSegment *s1, TArcSegment *s2, TPlaneVect *p);
+  template <bool _ret_ip>  int4 StripePoint(REAL b, REAL e, TArcSegment *s1, TArcSegment *s2, TPlaneVect *p);
+  //for optimal alg only
+  int4 IntInside(REAL b, REAL e, TArcSegment *s1, TArcSegment *s2);
 

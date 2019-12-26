@@ -71,7 +71,7 @@ class SegmentFunctions
     template<bool  _reg_ip>
     static  int4 __FindAndRegIPoints(PSeg s1,PSeg s2,PRegObj intersection_registrator)
       {
-      TPlaneVect P[2];
+      TPlaneVect P[2];                     
       int4 n=IntPoint<_reg_ip>((SEGMENT*)s1,(SEGMENT*)s2,P);
       if(n)
 		  register_intersection(intersection_registrator,s1,s2,n, _reg_ip?P:NULL);

@@ -278,7 +278,7 @@ class CIntersectionFinder
   int4 no_ipMerge(uint4 LBoundIdx, int4 QB,int4 QE,int4 Size);
   int4 no_ipSplit(int4 &step_index,int4 Size,int4 stripe_divided);
   int4 no_ipSearchInStrip(int4 QP,int4 Size);
-  int4 no_ipFindR(int4 ladder_start_index,uint4 interval_left_index,uint4 interval_right_index,ProgramStackRec *stack_pos,int4 Size,int4 call_numb);
+  int4 no_ipFindR(int4 ladder_start_index,uint4 interval_left_index,uint4 interval_right_index,ProgramStackRec *stack_pos,int4 Size, uint4 call_numb, uint4 _max_call);
 
   
   //functions for space saving algorithm; instead of L and R ring buffer on L used
@@ -327,10 +327,10 @@ class CIntersectionFinder
      );
 
     void balaban_fast(uint4 n,PSeg _Scoll[]);
-	void balaban_no_recursion(uint4 n, PSeg _Scoll[]);
+	  void balaban_no_recursion(uint4 n, PSeg _Scoll[]);
     void balaban_memory_save(uint4 n, PSeg _Scoll[]);
 
-	void balaban_no_ip(uint4 n,PSeg _Scoll[]);
+	  void balaban_no_ip(uint4 n,PSeg _Scoll[]);
     void balaban_optimal(uint4 n,PSeg _Scoll[]);
     void fast_parallel(uint4 n, PSeg _Scoll[], int4 n_threads, PRegObj add_reg[]);//it should be provided n_threads-1 additional intersection registration objects 
  

@@ -131,9 +131,9 @@ void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr
 #endif
   counters_mute = counters_string + strlen(counters_string);
   if (impl== _Implementation::impl_old)
-    printf("old implementation testing... ************************************************\n");
+    printf("\nold implementation testing... ************************************************\n");
   else
-    printf("new implementation testing... ************************************************\n");
+    printf("\nnew implementation testing... ************************************************\n");
 
   ON_BENCH_BEG
 
@@ -143,8 +143,11 @@ void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr
     {
       if (alg&alg_list[a])
       {
+        exec_time[a]=-1;
         if ((alg_list[a] == fast_no_ip) && (seg_type == arc)) { if (!print_less)printf("fast no inters. points algorithm can handle only line segments\n"); continue; }
-        if (impl == _Implementation::impl_old)
+        if ((alg_list[a] == bentley_ottmann) && (impl == impl_new)) { if (!print_less)printf("new implementation does't support segments functions for Bentley & Ottman algorithm\n"); continue; }
+        if ((alg_list[a] == fast_no_ip) && (impl == impl_new)) { if (!print_less)printf("new implementation does't support segments functions for no inters. points algorithm \n"); continue; }
+        if (impl == impl_old)
           exec_time[a] = _benchmark_old(use_counters?counters_mute:NULL, n, seg_ptr_coll, seg_type, alg_list[a], nInt[a], dont_need_ip);
         else
           exec_time[a] = _benchmark_new(n, seg_coll, seg_type, alg_list[a], nInt[a]);
@@ -168,8 +171,8 @@ void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr
       {
         if (alg&alg_list[a])
         {
-          if ((alg_list[a] == fast_no_ip) && (seg_type == arc)) continue;
-          printf("%s finds one intersection in %6.3f ICT \n", alg_names[a], exec_time[a] / check_time);
+          if (exec_time[a]>0)
+            printf("%s finds one intersection in %6.3f ICT \n", alg_names[a], exec_time[a] / check_time);
         }
       };
     }
@@ -210,7 +213,7 @@ int main(int argc, char* argv[])
     printf(" A=16: balaban fast parallel for 6 treads\n");
     printf(" A=32: bentley & ottmann\n");
 	printf(" A=64: balaban fast;  intersection points aren't reported (only intersecting pairs)\n");
-	printf(" A=128: balaban fast;  ring buffer algorithm 4bytes less per segment\n");
+	printf(" A=128: balaban fast;  memory save algorithm 4 bytes less per segment\n");
 	printf(" if you want several algorithms to test just sum up their values\n");
     printf(" i.e. A=127 (=1+2+4+8+16+32+64) all algorithms\n");
     printf("-sS: type of segments\n");

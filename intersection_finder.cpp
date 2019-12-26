@@ -1061,7 +1061,7 @@ int4 CIntersectionFinder<is_line_seg>::optFindR(int4 father_first_step, int4 lad
 
 template<bool is_line_seg>
 int4 CIntersectionFinder<is_line_seg>::no_ipFindR(int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index,
-	ProgramStackRec *stack_pos, int4 Size, int4 call_numb)
+	ProgramStackRec *stack_pos, int4 Size, uint4 call_numb,uint4 _max_call)
 {
 	//  int4 RSize;
 	B = ENDS[interval_left_index].x; E = ENDS[RBoundIdx = interval_right_index].x;
@@ -1078,14 +1078,15 @@ int4 CIntersectionFinder<is_line_seg>::no_ipFindR(int4 ladder_start_index, uint4
 			stack_pos = stack_rec.Set(stack_pos, interval_right_index);
 		}
 	};
-	if ((int_numb>Size) && (call_numb<max_call)) //if found a lot of intersections repeat FindR
-		Size = no_ipFindR(stack_rec.Q_pos, interval_left_index, interval_right_index, stack_pos, Size, call_numb + 1);
+	if ((int_numb>Size) && (call_numb<_max_call)) //if found a lot of intersections repeat FindR
+		Size = no_ipFindR(stack_rec.Q_pos, interval_left_index, interval_right_index, stack_pos, Size, call_numb + 1, _max_call);
 	else //cut stripe on the middle
 	{
+    _max_call -= 2;
 		uint4 m = (interval_left_index + interval_right_index) / 2;
-		Size = no_ipFindR(stack_rec.Q_pos, interval_left_index, m, stack_pos, Size, 0);
+		Size = no_ipFindR(stack_rec.Q_pos, interval_left_index, m, stack_pos, Size, 0, _max_call);
 		Size = no_ipInsDel(m, stack_pos, Size);
-		Size = no_ipFindR(stack_rec.Q_pos, m, interval_right_index, stack_pos, Size, 0);
+		Size = no_ipFindR(stack_rec.Q_pos, m, interval_right_index, stack_pos, Size, 0, _max_call);
 	}
 	if (ladder_start_index >= stack_rec.Q_pos) return Size;
 	B = ENDS[interval_left_index].x;   E = ENDS[interval_right_index].x;
@@ -1384,7 +1385,7 @@ void CIntersectionFinder<is_line_seg>::balaban_no_ip(uint4 n, PSeg _Scoll[])
 	prepare_ends(n);
 	ProgramStackRec stack_rec(-1, 2 * n);  //need to be initialized this way
   no_ipL[0].s = ENDS[0].s();
-	no_ipFindR(-1, 0, 2*n-1, &stack_rec, 1, 0);
+	no_ipFindR(-1, 0, 2*n-1, &stack_rec, 1, 0, get_maxcall(2 * n));
 	FreeMem();
 }
 
