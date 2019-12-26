@@ -1,4 +1,26 @@
 #pragma once
+/*
+*
+*      Copyright (c)  2011-2020  Ivan Balaban
+*      ivvaan@gmail.com
+*
+This file is part of Seg_int library.
+
+Seg_int is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Seg_int is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
+*/
+// NEW IMPLEMENTATION
+
 #include "segments.h"
 template<class IntersectionRegistrator>
 class CLine1SegmentCollection

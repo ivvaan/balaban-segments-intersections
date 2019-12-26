@@ -2,7 +2,7 @@
 #define TEST_COLL_H
 /*
 *
-*      Copyright (c)  2011  Ivan Balaban 
+*      Copyright (c)  2011-2020  Ivan Balaban
 *      ivvaan@gmail.com
 *
 This file is part of Seg_int library.
@@ -19,7 +19,7 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
-*/ 
+*/
 
 #include "utils.h"
 #include <stdio.h>

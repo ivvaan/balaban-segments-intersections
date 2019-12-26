@@ -2,7 +2,7 @@
 #define UTILS_FOR_SEGMENT_INTERSECTION
 /*
 *
-*      Copyright (c)  2011-2017  Ivan Balaban 
+*      Copyright (c)  2011-2020  Ivan Balaban 
 *      ivvaan@gmail.com
 *
 This file is part of Seg_int library.
