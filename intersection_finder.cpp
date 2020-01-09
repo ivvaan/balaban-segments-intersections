@@ -642,6 +642,7 @@ int4 CIntersectionFinder<is_line_seg>::Split(int4 &step_index, int4 Size)
       if (!is_line_seg) *(--Q_tail) = step_index + 1;
 		}
 	}
+  if (father_last_step == step_index)return new_L_size;
   Q_tail = Q + len_of_Q;
   if (!is_line_seg)
       R_pos = L + new_L_size;
@@ -695,6 +696,9 @@ int4 CIntersectionFinder<is_line_seg>::msSplit(int4 &step_index, int4 Size)
 			*(--Q_tail) = is_line_seg ? INT_MAX : step_index+1;
 		}
 	}
+  from_begin = true;
+  if (father_last_step == step_index)return new_L_size;
+
     Q_tail = Q + len_of_Q;
     for (int4 i = 0; i < new_L_size; ++i) 
 	{
@@ -704,8 +708,6 @@ int4 CIntersectionFinder<is_line_seg>::msSplit(int4 &step_index, int4 Size)
         while ((c <= step_index) && (IntersectionsInCurStripe(Q[c++], s)));
         int_numb += c - loc;
     }
-
-	from_begin = true;
 	return new_L_size;
 };
 
