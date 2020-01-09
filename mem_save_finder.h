@@ -231,6 +231,12 @@ public:
         *(--Q_tail) = SegmentsColl::is_line_segments ? INT_MAX : step_index + 1;
       }
     }
+    from_begin = true;
+    if (step_index == _step_index)
+    {
+      dont_split_stripe = false;
+      return new_L_size;
+    }
     Q_tail = Q + len_of_Q;
     int4 c;
     for (int4 i = 0; i < new_L_size; ++i)
@@ -243,7 +249,7 @@ public:
 //    dont_split_stripe = step_index != _step_index;
     dont_split_stripe = n_int>new_L_size;
     _step_index = step_index;
-    from_begin = true;
+    
     return new_L_size;
   };
 

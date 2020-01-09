@@ -230,6 +230,11 @@ public:
         if (!SegmentsColl::is_line_segments) *(--Q_tail) = step_index + 1;
       }
     }
+    if(step_index == _step_index)
+    { 
+      dont_split_stripe = false;
+      return new_L_size;
+    }
     Q_tail = Q + len_of_Q;
     if (!SegmentsColl::is_line_segments)
       R_pos = L + new_L_size;
