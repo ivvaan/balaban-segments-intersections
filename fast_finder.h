@@ -243,7 +243,7 @@ public:
       segments->SetCurSegCutBE(*_R);
       int4 c = *(--Q_tail);          // getting position from tail of Q
       auto loc=c;
-      while ((c <= step_index) && (segments->FindCurSegIntWith(Q[c++])));
+      for (auto cur_Q = Q + c; (c <= step_index) && (segments->FindCurSegIntWith(*cur_Q)); ++cur_Q, ++c);
       n_int+=c-loc;
     }
     dont_split_stripe = n_int > new_L_size;
