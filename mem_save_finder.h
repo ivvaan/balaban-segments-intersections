@@ -208,8 +208,7 @@ public:
       int4 cur_seg = _L[cur_L_pos];
       int4 step = step_index;
       segments->SetCurSegCutBE(cur_seg);
-      while ((father_last_step < step) && (segments->FindCurSegIntWith(Q[step])))
-        step--;
+      for (auto cur_Q = Q + step; (father_last_step < step) && (segments->FindCurSegIntWith(*cur_Q)); --step, --cur_Q);
 
       if (step_index == step)
       {
