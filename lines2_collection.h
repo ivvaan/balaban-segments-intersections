@@ -111,10 +111,10 @@ public:
       if ((p.x >= x1) && (p.x <= x2))
       {
         p.y = p.x*cur_seg.a + cur_seg.b;
-        registrator->begin_registration(1);
-        registrator->register_segments(cur_seg_idx, s_);
-        registrator->register_points(&p);
-        registrator->end_registration();
+        registrator->begin_registration(1)->
+        register_segments(cur_seg_idx, s_)->
+        register_point(p)->
+        end_registration();
         return true;
       }
     }
@@ -123,9 +123,9 @@ public:
       auto x = (s->b - cur_seg.b) / da;
       if ((x >= x1) && (x <= x2))
       {
-        registrator->begin_registration(1);
-        registrator->register_segments(cur_seg_idx, s_);
-        registrator->end_registration();
+        registrator->begin_registration(1)->
+        register_segments(cur_seg_idx, s_)->
+        end_registration();
         return true;
       }
     }
@@ -147,10 +147,10 @@ public:
       if ((p.x >= x1) && (p.x <= x2))
       {
         p.y = p.x*cur_seg.a + cur_seg.b;
-        registrator->begin_registration(1);
-        registrator->register_segments(cur_seg_idx, s_);
-        registrator->register_points(&p);
-        registrator->end_registration();
+        registrator->begin_registration(1)->
+        register_segments(cur_seg_idx, s_)->
+        register_point(p)->
+        end_registration();
         return true;
       }
     }
@@ -159,9 +159,9 @@ public:
       auto x = (s->b - cur_seg.b) / da;
       if ((x >= x1) && (x <= x2))
       {
-        registrator->begin_registration(1);
-        registrator->register_segments(cur_seg_idx, s_);
-        registrator->end_registration();
+        registrator->begin_registration(1)->
+        register_segments(cur_seg_idx, s_)->
+        end_registration();
         return true;
       }
     }
@@ -181,10 +181,10 @@ public:
       if ((p.x >= cur_seg.x1) && (p.x <= cur_seg.x2))
       {
         p.y = p.x*cur_seg.a + cur_seg.b;
-        registrator->begin_registration(1);
-        registrator->register_segments(cur_seg_idx, s_);
-        registrator->register_points(&p);
-        registrator->end_registration();
+        registrator->begin_registration(1)->
+        register_segments(cur_seg_idx, s_)->
+        register_point(p)->
+        end_registration();
         return true;
       }
     }
@@ -193,9 +193,9 @@ public:
       auto x = (s->b - cur_seg.b) / da;
       if ((x >= cur_seg.x1) && (x <= cur_seg.x2))
       {
-        registrator->begin_registration(1);
-        registrator->register_segments(cur_seg_idx, s_);
-        registrator->end_registration();
+        registrator->begin_registration(1)->
+        register_segments(cur_seg_idx, s_)->
+        end_registration();
         return true;
       }
     }

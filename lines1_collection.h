@@ -124,16 +124,16 @@ public:
         if (_RegistrationType::point&IntersectionRegistrator::reg_type)
         {
           TPlaneVect p(xc, s2->org.y - mul*s2->shift.y);
-          registrator->begin_registration(1);
-          registrator->register_segments(cur_seg_idx, s_);
-          registrator->register_points(&p);
-          registrator->end_registration();
+          registrator->begin_registration(1)->
+          register_segments(cur_seg_idx, s_)->
+          register_point(p)->
+          end_registration();
         }
         else
         {
-          registrator->begin_registration(1);
-          registrator->register_segments(cur_seg_idx, s_);
-          registrator->end_registration();
+          registrator->begin_registration(1)->
+          register_segments(cur_seg_idx, s_)->
+          end_registration();
         }
       }
       return true;

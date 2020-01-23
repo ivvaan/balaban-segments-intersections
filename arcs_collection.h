@@ -96,16 +96,16 @@ public:
 #define REGISTER_INTERSECTION(s1,s2,p)\
   if (_RegistrationType::point&IntersectionRegistrator::reg_type)\
   {\
-    registrator->begin_registration(1);\
-    registrator->register_segments(s1, s2-collection);\
-    registrator->register_points(&p);\
-    registrator->end_registration();\
+    registrator->begin_registration(1)->\
+    register_segments(s1, s2-collection)->\
+    register_point(p)->\
+    end_registration();\
   }\
   else\
   {\
-    registrator->begin_registration(1);\
-    registrator->register_segments(s1, s2-collection);\
-    registrator->end_registration();\
+    registrator->begin_registration(1)->\
+    register_segments(s1, s2-collection)->\
+    end_registration();\
   }
 
 
