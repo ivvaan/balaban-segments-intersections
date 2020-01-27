@@ -118,7 +118,6 @@ enum _Implementation
 
 void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr_type,REAL distr_param,bool print_less,bool rtime_printout,bool dont_need_ip,int4 n, PSeg seg_coll,PSeg *seg_ptr_coll) {
   double exec_time[33], nInt[33];
-  double exec_time_new[33], nInt_new[33];
   const char *ss = "Lla", *sd = "rlmspc";
   char counters_string[256],*counters_mute;
   int4 alg_list[] = { triv, simple_sweep, fast, optimal, fast_parallel, bentley_ottmann,fast_no_ip,mem_save };

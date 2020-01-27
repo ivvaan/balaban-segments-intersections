@@ -27,24 +27,27 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <thread>
 
 
-template <class SegmentsColl>
-class CMemSaveIntFinder : private CommonImpl<SegmentsColl> {
+class CMemSaveIntFinder : public CommonImpl 
+{
 public:
-  using CIMP = CommonImpl<SegmentsColl>;
+  using CIMP = CommonImpl;
   using CIMP::max_call;using CIMP::dont_split_stripe;
   using CIMP::prepare_ends; using CIMP::FindInt; using CIMP::FindIntI;
   using CIMP::SegL; using CIMP::SegR; using CIMP::ENDS; using CIMP::Q;
 
+
+  template<class SegmentsColl>
   void find_intersections(SegmentsColl* segments)
   {
     AllocMem(segments);
-    prepare_ends(segments);
     ProgramStackRec stack_rec(-1, 2 * nTotSegm); //need to be initialized this way
     L[0] = SegmentsColl::get_segm(ENDS[0]);
     from_begin = true;
-    FindR(this,segments, -1, 0, 2 * nTotSegm - 1, &stack_rec, 1, 0,get_max_call(2*nTotSegm));
+    FindR(this, segments, -1, 0, 2 * nTotSegm - 1, &stack_rec, 1, 0, get_max_call(2 * nTotSegm));
     FreeMem();
   }
+
+  template<class SegmentsColl>
   int4 SearchInStrip(SegmentsColl* segments, int4 qp, int4 Size)
   {
     if (SegmentsColl::is_line_segments)
@@ -73,7 +76,7 @@ public:
     return Size;
   };
 
-
+  template<class SegmentsColl>
   int4 InsDel(SegmentsColl* segments, uint4 end_index, ProgramStackRec* stack_pos, int4 Size)
   {
     int4 i;
@@ -132,6 +135,7 @@ public:
     return Size;
   };
 
+  template<class SegmentsColl>
   int4 Merge(SegmentsColl* segments, uint4 LBoundIdx, int4 QB, int4 QE, int4 Size)
   {
     int4 cur_R_pos = 0, new_size = 0;
@@ -196,6 +200,7 @@ public:
     return new_size;
   };
 
+  template<class SegmentsColl>
   int4 Split(SegmentsColl* segments, uint4 RBoundIdx, int4& _step_index, int4 Size)
   {
     auto _L = from_begin ? L : L + (nTotSegm - Size);
@@ -252,12 +257,20 @@ public:
     return new_L_size;
   };
 
+  void FreeMem()
+  {
+    MY_FREE_ARR_MACRO(L);
+    MY_FREE_ARR_MACRO(Q);
+    //CIMP::FreeMem();
+  };
+
 
 private:
   int4 *L = nullptr;
   uint4 nTotSegm, len_of_Q;
   bool from_begin = true;
 
+  template<class SegmentsColl>
   void AllocMem(SegmentsColl* segments)
   {
     nTotSegm = len_of_Q = segments->GetSegmNumb();
@@ -265,14 +278,9 @@ private:
     Q = new int4[len_of_Q];
   };
 
-  void FreeMem()
-  {
-    MY_FREE_ARR_MACRO(L);
-    MY_FREE_ARR_MACRO(Q);
-    CIMP::FreeMem();
-  };
 
   //functions for fast algorithm
+  template<class SegmentsColl>
   int4 SplitSIS(SegmentsColl* segments, int4& step_index, int4 Size)//simplified version for SearchInStrip
   {
     auto _L = from_begin ? L : L + (nTotSegm - Size);

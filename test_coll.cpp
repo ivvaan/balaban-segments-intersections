@@ -336,16 +336,19 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
         };
             break;
         case fast: {
-            CFastIntFinder<RegistratingSegmentsCollection> fi;
+            CFastIntFinder fi;
+            fi.prepare_ends(&coll);
             fi.find_intersections(&coll);
         } break;
         case mem_save:{
-            CMemSaveIntFinder<RegistratingSegmentsCollection> fi;
+            CMemSaveIntFinder fi;
+            fi.prepare_ends(&coll);
             fi.find_intersections(&coll);
         }
             break;
         case optimal: {
-          COptimalIntFinder<RegistratingSegmentsCollection> fi;
+          COptimalIntFinder fi;
+          fi.prepare_ends(&coll);
           fi.find_intersections(&coll);
         }
             break;
@@ -356,7 +359,8 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
                 //reg_objects[i * reg_obj_margin] = 0;
                 additional_reg_obj[i] = reg_objects + i * reg_obj_margin;
             }
-            CFastIntFinder<RegistratingSegmentsCollection> fi;
+            CFastIntFinder fi;
+            fi.prepare_ends(&coll);
             fi.find_intersections(&coll, n_threads, additional_reg_obj);
             for (int i = 0; i < n_threads - 1; i++)
                 reg.counter +=additional_reg_obj[i]->counter;

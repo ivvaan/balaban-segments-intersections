@@ -26,25 +26,30 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <vector>
 #include <thread>
 
-template<class SegmentsColl>
-class COptimalIntFinder : protected CFastIntFinder<SegmentsColl>
+class COptimalIntFinder : public CFastIntFinder
 {
 public:
-  using  CIMP = CommonImpl<SegmentsColl>;
-  using CFAST = CFastIntFinder<SegmentsColl>;
+  using  CIMP = CommonImpl;
+  using CFAST = CFastIntFinder;
   using CIMP::SegL; using CIMP::SegR; using CIMP::ENDS; using CIMP::Q;
   using CIMP::prepare_ends; CIMP::max_call;
   using CFAST::L; using CFAST::R; CFAST::nTotSegm; using CFAST::len_of_Q; 
 
+  ~COptimalIntFinder() { FreeMem(); };
+  template<class SegmentsColl>
   void find_intersections(SegmentsColl *segments)
   {
     AllocMem(segments);
-    prepare_ends(segments);
     ProgramStackRec stack_rec(inherit_each, 2 * nTotSegm);  //need to be initialized this way 
     L[0] = SegmentsColl::get_segm(ENDS[0]);
     FindR(segments, inherit_each + 1, inherit_each, 0, 2 * nTotSegm - 1, &stack_rec, 1, 0);
-    FreeMem();
+    //FreeMem();
   }
+
+  void FreeMem()
+  {
+    MY_FREE_ARR_MACRO(father_loc);
+  };
 
 
 private:
@@ -57,6 +62,7 @@ private:
 
   int4 *father_loc = nullptr;
 
+  template<class SegmentsColl>
   void AllocMem(SegmentsColl *segments)
   {
     nTotSegm =  segments->GetSegmNumb();
@@ -69,17 +75,10 @@ private:
     //father_loc[undef_loc] = undef_loc;//nesessary precondition for optFindIntI
   };
 
-  void FreeMem()
-  {
-    MY_FREE_ARR_MACRO(L);
-    MY_FREE_ARR_MACRO(R);
-    MY_FREE_ARR_MACRO(Q);
-    MY_FREE_ARR_MACRO(father_loc);
-    CIMP::FreeMem();
-  };
- 
+
   static inline bool is_original(int4 v) { return v < 1; };
 
+  template<class SegmentsColl>
   void FindInt(SegmentsColl* segments, int4 qb, int4 qe, int4 l)
   {
     
@@ -108,6 +107,7 @@ private:
     }
   };
 
+  template<class SegmentsColl>
   void FindIntI(SegmentsColl* segments, uint4 r_index, ProgramStackRec* stack_pos)
   {
     while (stack_pos->right_bound <= r_index)stack_pos = stack_pos->prev;// go from bottom to top and find staircase to start
@@ -149,7 +149,7 @@ private:
     };
   };
 
-
+  template<class SegmentsColl>
   int4 InsDel(SegmentsColl *segments, uint4 end_index, ProgramStackRec * stack_pos, int4 Size)
   {
     int4 i;
@@ -179,7 +179,7 @@ private:
     return Size;
   }
 
-
+  template<class SegmentsColl>
   int4 Merge(SegmentsColl *segments, uint4 LBoundIdx, int4 QB, int4 QE, int4 Size)
   {
     int4 cur_R_pos = 0, new_size = 0, cur_stair = QB;
@@ -218,6 +218,7 @@ private:
     return new_size;
   };
 
+  template<class SegmentsColl>
   int4 Split(SegmentsColl* segments, uint4 RBoundIdx, int4 cur_father_pos, int4& _step_index, int4 Size)
   {
     auto step_index = _step_index;
@@ -297,7 +298,7 @@ private:
 
   };
 
-
+  template<class SegmentsColl>
   int4 FindR(SegmentsColl *segments, int4 father_first_step, int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec *stack_pos, int4 Size, int4 call_numb)
   {
     segments->SetCurStripe(ENDS[interval_left_index], ENDS[interval_right_index]);

@@ -103,12 +103,27 @@ public:
     inline ProgramStackRec *Set(ProgramStackRec *p, uint4 rb) { prev = p, right_bound = rb; return this; };
   };
 
-template <class SegmentsColl>
+
 class CommonImpl 
 {
 public:
     bool dont_split_stripe;
     static const int4 max_call = 16; //max number of sequential recursive call (opt)FindR before dividing current strip
+
+    template <class SegmentsColl>
+    void prepare_ends(SegmentsColl* segments)
+    {
+      auto N = segments->GetSegmNumb();
+      AllocMem(N);
+      segments->PrepareEndpointsSortedList(ENDS);
+      for (uint4 i = 0; i < 2 * N; i++)
+        if (SegmentsColl::is_last(ENDS[i]))
+          SegR[SegmentsColl::get_segm(ENDS[i])] = i;
+        else
+          SegL[SegmentsColl::get_segm(ENDS[i])] = i;
+    };
+
+    ~CommonImpl() { FreeMem(); };
 protected:
 
   template <class IntersectionFinder, class SegmentsColl>
@@ -176,19 +191,8 @@ static  int4 FindR(IntersectionFinder *i_f, SegmentsColl* segments, int4 ladder_
         MY_FREE_ARR_MACRO(ENDS);
     };
 
-    void prepare_ends(SegmentsColl* segments)
-    {
-        auto N = segments->GetSegmNumb();
-        AllocMem(N);
-        segments->PrepareEndpointsSortedList(ENDS);
-        for (uint4 i = 0; i < 2 * N; i++)
-            if (SegmentsColl::is_last(ENDS[i]))
-                SegR[SegmentsColl::get_segm(ENDS[i])] = i;
-            else
-                SegL[SegmentsColl::get_segm(ENDS[i])] = i;
-    };
-
     //functions for fast algorithm
+    template <class SegmentsColl>
     void FindInt(SegmentsColl* segments, int4 qb, int4 qe, int4 l)
     {
         int4 c = l;
@@ -201,6 +205,7 @@ static  int4 FindR(IntersectionFinder *i_f, SegmentsColl* segments, int4 ladder_
             ++c;
     };
 
+    template <class SegmentsColl>
     void FindIntI(SegmentsColl* segments, uint4 r_index, ProgramStackRec* stack_pos)
     {
         while (stack_pos->right_bound <= r_index)
