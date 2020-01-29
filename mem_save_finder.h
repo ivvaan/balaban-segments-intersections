@@ -203,56 +203,62 @@ public:
   template<class SegmentsColl>
   int4 Split(SegmentsColl* segments, uint4 RBoundIdx, int4& _step_index, int4 Size)
   {
+    auto _Q = Q + _step_index;
+    auto location = _step_index + 1;
     auto _L = from_begin ? L : L + (nTotSegm - Size);
-    int4 step_index = _step_index;
-    int4 father_last_step = step_index, new_L_size = 0;
+    int4  new_L_size = 0,_Q_pos=0;
     auto Q_tail = Q + len_of_Q;
     long long n_int=0;
     for (int4 cur_L_pos = 0; cur_L_pos < Size; cur_L_pos++)
     {
       int4 cur_seg = _L[cur_L_pos];
-      int4 step = step_index;
+      auto step = _Q_pos;
       segments->SetCurSegCutBE(cur_seg);
-      for (auto cur_Q = Q + step; (father_last_step < step) && (segments->FindCurSegIntWith(*cur_Q)); --step, --cur_Q);
+      for (auto cur_Q = _Q + step; (step!=0) && (segments->FindCurSegIntWith(*cur_Q)); --step, --cur_Q);
 
-      if (step_index == step)
+      if (_Q_pos == step)
       {
         if (SegR[cur_seg] >= RBoundIdx) //segment is covering current stripe and doesn't intersect ladder stairs
-          Q[++step_index] = cur_seg;
+        {
+          ++_Q_pos;
+          ++location;
+          _Q[_Q_pos] = cur_seg;
+        }
         else {
           //place segment in L
           L[new_L_size++] = cur_seg;
           //storing segment position in Q_tail
-          *(--Q_tail) = step_index + 1;
+          *(--Q_tail) = location;
         }
       }
       else
       {
-        n_int+=step_index-step;
+        n_int+= _Q_pos -step;
         //place segment in L
         L[new_L_size++] = cur_seg;
         //storing segment position in Q_tail
-        *(--Q_tail) = SegmentsColl::is_line_segments ? INT_MAX : step_index + 1;
+        *(--Q_tail) = SegmentsColl::is_line_segments ? INT_MAX : location;
       }
     }
     from_begin = true;
-    if (step_index == _step_index)
+    if (_Q_pos == 0)
     {
       dont_split_stripe = false;
       return new_L_size;
     }
     Q_tail = Q + len_of_Q;
     int4 c;
+    _L = L;
     for (int4 i = 0; i < new_L_size; ++i)
       if ((c = *(--Q_tail)) != INT_MAX) {
-        segments->SetCurSegCutBE(L[i]);
+        segments->SetCurSegCutBE(_L[i]);
         auto loc=c;
-        for (auto cur_Q = Q + c; (c <= step_index) && (segments->FindCurSegIntWith(*cur_Q));++cur_Q,++c);
+        for (auto cur_Q = Q + c; (c < location) && (segments->FindCurSegIntWith(*cur_Q));++cur_Q,++c);
         n_int+=c-loc;
       }
-//    dont_split_stripe = step_index != _step_index;
+//    dont_split_stripe = location != _step_index;
     dont_split_stripe = n_int>new_L_size;
-    _step_index = step_index;
+    _step_index += _Q_pos;
     
     return new_L_size;
   };
