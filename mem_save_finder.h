@@ -204,7 +204,6 @@ public:
   int4 Split(SegmentsColl* segments, uint4 RBoundIdx, int4& _step_index, int4 Size)
   {
     auto _Q = Q + _step_index;
-    auto location = _step_index + 1;
     auto _L = from_begin ? L : L + (nTotSegm - Size);
     int4  new_L_size = 0,_Q_pos=0;
     auto Q_tail = Q + len_of_Q;
@@ -219,16 +218,12 @@ public:
       if (_Q_pos == step)
       {
         if (SegR[cur_seg] >= RBoundIdx) //segment is covering current stripe and doesn't intersect ladder stairs
-        {
-          ++_Q_pos;
-          ++location;
-          _Q[_Q_pos] = cur_seg;
-        }
+          _Q[++_Q_pos] = cur_seg;
         else {
           //place segment in L
           L[new_L_size++] = cur_seg;
           //storing segment position in Q_tail
-          *(--Q_tail) = location;
+          *(--Q_tail) = _Q_pos;
         }
       }
       else
@@ -237,7 +232,7 @@ public:
         //place segment in L
         L[new_L_size++] = cur_seg;
         //storing segment position in Q_tail
-        *(--Q_tail) = SegmentsColl::is_line_segments ? INT_MAX : location;
+        *(--Q_tail) = SegmentsColl::is_line_segments ? INT_MAX : _Q_pos;
       }
     }
     from_begin = true;
@@ -247,14 +242,16 @@ public:
       return new_L_size;
     }
     Q_tail = Q + len_of_Q;
-    int4 c;
+    int4 loc;
     _L = L;
+    // important to start from stair above current segm, meanwhile _Q[loc] is stair below
+    _Q++;// so we incremement _Q and _Q[loc] become stair above
     for (int4 i = 0; i < new_L_size; ++i)
-      if ((c = *(--Q_tail)) != INT_MAX) {
+      if ((loc = *(--Q_tail)) != INT_MAX) {
         segments->SetCurSegCutBE(_L[i]);
-        auto loc=c;
-        for (auto cur_Q = Q + c; (c < location) && (segments->FindCurSegIntWith(*cur_Q));++cur_Q,++c);
-        n_int+=c-loc;
+        auto c=loc;
+        for (auto cur_Q = _Q + loc; (loc < _Q_pos) && (segments->FindCurSegIntWith(*cur_Q));++cur_Q,++loc);
+        n_int+=loc-c;
       }
 //    dont_split_stripe = location != _step_index;
     dont_split_stripe = n_int>new_L_size;
