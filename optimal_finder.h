@@ -79,7 +79,7 @@ private:
   static inline bool is_original(int4 v) { return v < 1; };
 
   template<class SegmentsColl>
-  void FindInt(SegmentsColl* segments, int4 qb, int4 qe, int4 l)
+  int4 FindInt(SegmentsColl* segments, int4 qb, int4 qe, int4 l)
   {
     
     int4 c = l;
@@ -93,7 +93,8 @@ private:
         if (!segments->IsIntersectsCurSeg(Q[c])) break;
       c--;
     }
-    if (SegmentsColl::is_line_segments && (c != l))return;
+    int4 res = l - c;
+    if (SegmentsColl::is_line_segments && (c != l))return res;
     c = ++l;
     while (c <= qe)
     {
@@ -105,6 +106,7 @@ private:
         if (!segments->IsIntersectsCurSeg(Q[c])) break;
       c++;
     }
+    return res + c-l;
   };
 
   template<class SegmentsColl>
@@ -287,26 +289,27 @@ private:
       father_loc[step_index] = cur_father_pos;
       Q[step_index] = Q[cur_father_pos];
     };
-
+    long long n_int = 0;
     for (int4 i = 0; i < new_L_size; i++)
     {
       segments->SetCurSegCutBE(L[i]);
-      FindInt(segments,father_last_step, step_index, location[i]);//location[i] should contain the location of the segment L[i]
+      n_int +=FindInt(segments,father_last_step, step_index, location[i]);//location[i] should contain the location of the segment L[i]
     }
+    dont_split_stripe = n_int > new_L_size;
     _step_index = step_index;
     return new_L_size;
 
   };
 
   template<class SegmentsColl>
-  int4 FindR(SegmentsColl *segments, int4 father_first_step, int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec *stack_pos, int4 Size, int4 call_numb)
+  int4 FindR(SegmentsColl *segments, int4 father_first_step, int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec *stack_pos, int4 Size, uint4 call_numb,uint4 _max_call=max_call)
   {
     segments->SetCurStripe(ENDS[interval_left_index], ENDS[interval_right_index]);
     if (interval_right_index - interval_left_index == 1)
         return Size>1 ? CFAST::SearchInStrip(segments, ladder_start_index, Size) : Size;
      
     ProgramStackRec stack_rec(ladder_start_index);
-    bool use_opt = (ladder_start_index - father_first_step > big_staircase_threshold);
+    bool use_opt =  (ladder_start_index - father_first_step > big_staircase_threshold);
     if (use_opt)
     {// use optimal variant if father staircase is big
 //      segments->SetCurVLine(ENDS[interval_left_index]);
@@ -325,34 +328,38 @@ private:
         father_first_step = ladder_start_index + inherit_offset;
       }
     }
-    if ((ladder_start_index < stack_rec.Q_pos) && (call_numb < max_call)) //if found a lot of intersections repeat optFindR
-      Size = FindR(segments,father_first_step, stack_rec.Q_pos, interval_left_index, interval_right_index, stack_pos, Size, call_numb + 1);
+    if (dont_split_stripe && (call_numb < _max_call)) //if found a lot of intersections repeat optFindR
+      Size = FindR(segments,father_first_step, stack_rec.Q_pos, interval_left_index, interval_right_index, stack_pos, Size, call_numb + 1,_max_call);
     else //cut stripe 
     {
       uint4 m = (interval_left_index + interval_right_index) >>1;
       if (call_numb > 1)
-      {// if L contains a lot of segments then cut on two parts
-        Size = FindR(segments,father_first_step, stack_rec.Q_pos, interval_left_index, m, stack_pos, Size, 0);
+      {
+        _max_call -=  (_max_call > 4) * 2;
+        // if L contains a lot of segments then cut on two parts
+        Size = FindR(segments,father_first_step, stack_rec.Q_pos, interval_left_index, m, stack_pos, Size, 0, _max_call);
         Size = InsDel(segments,m, stack_pos, Size);
-        Size = FindR(segments,father_first_step, stack_rec.Q_pos, m, interval_right_index, stack_pos, Size, 0);
+        Size = FindR(segments,father_first_step, stack_rec.Q_pos, m, interval_right_index, stack_pos, Size, 0, _max_call);
       }
       else
       {// if L contains not so many segments than cut on four parts (works faster for some segment distributions)
+        _max_call -=  (_max_call > 8) * 4;
+
         uint4 q = (interval_left_index + m) >>1;
         if (interval_left_index != q) {
-          Size = FindR(segments,father_first_step, stack_rec.Q_pos, interval_left_index, q, stack_pos, Size, 0);
+          Size = FindR(segments,father_first_step, stack_rec.Q_pos, interval_left_index, q, stack_pos, Size, 0, _max_call);
           Size = InsDel(segments, q, stack_pos, Size);
         }
         if (q != m) {
-          Size = FindR(segments, father_first_step, stack_rec.Q_pos, q, m, stack_pos, Size, 0);
+          Size = FindR(segments, father_first_step, stack_rec.Q_pos, q, m, stack_pos, Size, 0, _max_call);
           Size = InsDel(segments, m, stack_pos, Size);
         }
         q = (interval_right_index + m) / 2;
         if (q != m) {
-          Size = FindR(segments, father_first_step, stack_rec.Q_pos, m, q, stack_pos, Size, 0);
+          Size = FindR(segments, father_first_step, stack_rec.Q_pos, m, q, stack_pos, Size, 0, _max_call);
           Size = InsDel(segments, q, stack_pos, Size);
         }
-        Size = FindR(segments, father_first_step, stack_rec.Q_pos, q, interval_right_index, stack_pos, Size, 0);
+        Size = FindR(segments, father_first_step, stack_rec.Q_pos, q, interval_right_index, stack_pos, Size, 0, _max_call);
       }
 
     }
