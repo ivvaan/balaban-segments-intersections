@@ -52,7 +52,7 @@ public:
   {
     if (SegmentsColl::is_line_segments)
     {
-      auto L_ = from_begin ? L : L + (nTotSegm - Size);
+      auto L_ = from_begin ? L : L + (LR_len - Size);
       auto _L = L_ - 1;
       for (uint4 i = 1; i < Size; i++)
       {
@@ -110,7 +110,7 @@ public:
     {
       if (SegmentsColl::is_last(ENDS[end_index])) // if endpoint - delete
       {
-        i = nTotSegm - Size;
+        i = LR_len - Size;
         --Size;
         auto cur = L[i];
         while (cur != sn) {
@@ -123,7 +123,7 @@ public:
       else // if startpoint - insert
       {
         segments->SetCurPointAtBeg(sn);
-        for (i = nTotSegm - Size; (i < nTotSegm) && (segments->UnderCurPoint(L[i])); ++i)
+        for (i = LR_len - Size; (i < LR_len) && (segments->UnderCurPoint(L[i])); ++i)
           L[i - 1] = L[i];
         L[i - 1] = sn;
         ++Size;
@@ -143,7 +143,7 @@ public:
     if (from_begin)
     {
       auto _R = L + Size - 1;
-      auto _L = L + (nTotSegm - 1);
+      auto _L = L + (LR_len - 1);
       auto cur_stair = QE, _Size = -Size;
       cur_seg = _R[cur_R_pos];
       while ((cur_stair > QB) && (cur_R_pos > _Size)) {
@@ -171,7 +171,7 @@ public:
       from_begin = false;
       return -new_size;
     }
-    auto _R = L + (nTotSegm - Size);
+    auto _R = L + (LR_len - Size);
     int4 cur_stair = QB;
     cur_seg = _R[cur_R_pos];
     while ((cur_stair < QE) && (cur_R_pos < Size)) {
@@ -204,7 +204,7 @@ public:
   int4 Split(SegmentsColl* segments, uint4 RBoundIdx, int4& _step_index, int4 Size)
   {
     auto _Q = Q + _step_index;
-    auto _L = from_begin ? L : L + (nTotSegm - Size);
+    auto _L = from_begin ? L : L + (LR_len - Size);
     int4  new_L_size = 0,_Q_pos=0;
     auto Q_tail = Q + len_of_Q;
     long long n_int=0;
@@ -276,8 +276,9 @@ private:
   template<class SegmentsColl>
   void AllocMem(SegmentsColl* segments)
   {
-    nTotSegm = len_of_Q = segments->GetSegmNumb();
-    L = new int4[nTotSegm];
+    nTotSegm  = segments->GetSegmNumb();
+    len_of_Q = LR_len;
+    L = new int4[LR_len];
     Q = new int4[len_of_Q];
   };
 
@@ -286,7 +287,7 @@ private:
   template<class SegmentsColl>
   int4 SplitSIS(SegmentsColl* segments, int4& step_index, int4 Size)//simplified version for SearchInStrip
   {
-    auto _L = from_begin ? L : L + (nTotSegm - Size);
+    auto _L = from_begin ? L : L + (LR_len - Size);
     int4 father_last_step = step_index, new_L_size = 0;
     auto Q_tail = Q + len_of_Q;
     for (int4 cur_L_pos = 0; cur_L_pos < Size; cur_L_pos++)

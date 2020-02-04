@@ -66,9 +66,9 @@ private:
   void AllocMem(SegmentsColl *segments)
   {
     nTotSegm =  segments->GetSegmNumb();
-    L = new int4[nTotSegm];
-    R = new int4[nTotSegm];
-    len_of_Q = nTotSegm + nTotSegm / (inherit_each - 1) + inherit_each + 1;
+    L = new int4[LR_len];
+    R = new int4[LR_len];
+    len_of_Q = LR_len + LR_len / (inherit_each - 1) + inherit_each + 1;
     Q = new int4[len_of_Q];
     father_loc = new int4[len_of_Q];
     for (int4 i = 0; i < len_of_Q; i++)father_loc[i] = undef_loc;

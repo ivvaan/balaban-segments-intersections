@@ -113,14 +113,26 @@ public:
     template <class SegmentsColl>
     void prepare_ends(SegmentsColl* segments)
     {
-      auto N = segments->GetSegmNumb();
+      auto N= segments->GetSegmNumb();
       AllocMem(N);
       segments->PrepareEndpointsSortedList(ENDS);
+      
+      uint4 max_segm_on_vline=0,nsegm_on_vline = 0;
       for (uint4 i = 0; i < 2 * N; i++)
         if (SegmentsColl::is_last(ENDS[i]))
+        {
           SegR[SegmentsColl::get_segm(ENDS[i])] = i;
+          --nsegm_on_vline;
+        }
         else
+        {
           SegL[SegmentsColl::get_segm(ENDS[i])] = i;
+          ++nsegm_on_vline;
+          if (nsegm_on_vline > max_segm_on_vline)
+            max_segm_on_vline = nsegm_on_vline;
+        }
+      LR_len = max_segm_on_vline+1;
+          
     };
 
     ~CommonImpl() { FreeMem(); };
@@ -177,6 +189,7 @@ static  int4 FindR(IntersectionFinder *i_f, SegmentsColl* segments, int4 ladder_
 
     uint4 *SegL = nullptr, *SegR = nullptr, *ENDS = nullptr;
     int4 *Q = nullptr;
+    uint4 LR_len = 0;
     void AllocMem(uint4 N)
     {
         SegL = new uint4[N];

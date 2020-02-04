@@ -36,7 +36,7 @@ public:
   using CIMP::SegL; using CIMP::SegR; using CIMP::ENDS; using CIMP::Q;
   using CIMP::prepare_ends; using CIMP::FindInt; using CIMP::FindIntI;
 
-  ~CFastIntFinder() { FreeMem(); };
+  ~CFastIntFinder() { unclone(); FreeMem(); };
 
   template<class SegmentsColl>
   void find_intersections(SegmentsColl *segments)
@@ -298,13 +298,14 @@ public:
   void clone(CTHIS* master)
   {
       nTotSegm = master->nTotSegm;
-      len_of_Q = nTotSegm;
+      LR_len = master->LR_len;
+      len_of_Q = LR_len;
       SegL = master->SegL;
       SegR = master->SegR;
       ENDS = master->ENDS;
-      L = new int4[nTotSegm];
-      Q = new int4[nTotSegm];
-      R = new int4[nTotSegm];
+      L = new int4[LR_len];
+      Q = new int4[len_of_Q];
+      R = new int4[LR_len];
       clone_of = master;
   };
 
@@ -333,9 +334,10 @@ public:
   template<class SegmentsColl>
   void AllocMem(SegmentsColl* segments)
   {
-      nTotSegm = len_of_Q = segments->GetSegmNumb();
-      L = new int4[nTotSegm];
-      R = new int4[nTotSegm];
+      nTotSegm =  segments->GetSegmNumb();
+      len_of_Q = LR_len;
+      L = new int4[LR_len];
+      R = new int4[LR_len];
       Q = new int4[len_of_Q];
   };
 public:
