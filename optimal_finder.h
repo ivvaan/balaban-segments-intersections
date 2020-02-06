@@ -34,7 +34,7 @@ public:
   using  CIMP = CommonImpl;
   using CFAST = CFastIntFinder;
   using CIMP::SegL; using CIMP::SegR; using CIMP::ENDS; using CIMP::Q;
-  using CIMP::prepare_ends; CIMP::max_call;
+  using CIMP::prepare_ends; 
   using CFAST::L; using CFAST::R; CFAST::nTotSegm; using CFAST::len_of_Q; 
 
   ~COptimalIntFinder() { FreeMem(); };
@@ -57,6 +57,8 @@ public:
 
 private:
   static const int4 undef_loc = 0;
+
+  static const int4 max_call = 32; //max number of sequential recursive call (opt)FindR before dividing current strip
 
   static const int4 inherit_each = 16; // defines how often in optimal algorithm stairs are inherited,  one inherited per inherit_each
   static const int4 inherit_offset = inherit_each / 2; // first stair to inherit; must be in [1..inherit_each-1]

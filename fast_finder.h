@@ -33,7 +33,7 @@ class CFastIntFinder : public CommonImpl
 public:
   using CTHIS = CFastIntFinder;
   using  CIMP = CommonImpl;
-  using CIMP::max_call;using CIMP::dont_split_stripe;
+  using CIMP::dont_split_stripe;
   using CIMP::SegL; using CIMP::SegR; using CIMP::ENDS; using CIMP::Q;
   using CIMP::prepare_ends; using CIMP::FindInt; using CIMP::FindIntI;
 

@@ -109,7 +109,6 @@ class CommonImpl
 {
 public:
     bool dont_split_stripe;
-    static const int4 max_call = 16; //max number of sequential recursive call (opt)FindR before dividing current strip
 
     template <class SegmentsColl>
     void prepare_ends(SegmentsColl* segments)

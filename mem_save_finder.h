@@ -33,7 +33,7 @@ class CMemSaveIntFinder : public CommonImpl
 {
 public:
   using CIMP = CommonImpl;
-  using CIMP::max_call;using CIMP::dont_split_stripe;
+  using CIMP::dont_split_stripe;
   using CIMP::prepare_ends; using CIMP::FindInt; using CIMP::FindIntI;
   using CIMP::SegL; using CIMP::SegR; using CIMP::ENDS; using CIMP::Q;
 
