@@ -25,6 +25,8 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <vector>
 #include <thread>
+#include <cassert>
+
 
 
 class CMemSaveIntFinder : public CommonImpl 
@@ -269,14 +271,12 @@ public:
 
 
 private:
-  int4 *L = nullptr;
-  uint4 nTotSegm, len_of_Q;
   bool from_begin = true;
 
   template<class SegmentsColl>
   void AllocMem(SegmentsColl* segments)
   {
-    nTotSegm  = segments->GetSegmNumb();
+    assert(nTotSegm  == segments->GetSegmNumb());
     len_of_Q = LR_len;
     L = new int4[LR_len];
     Q = new int4[len_of_Q];

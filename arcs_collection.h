@@ -197,11 +197,9 @@ public:
   void clone(CArcSegmentCollection * c, IntersectionRegistrator *r)
   {
     clone_of = c;
-    N = c->N;
-    registrator = r;
-    collection = c->collection;
-    ends = reinterpret_cast<REAL*>(collection);
+    Init(c->N, c->collection,r);
   };
+
   void SetRegistrator(IntersectionRegistrator *r) { registrator = r; };
   //IntersectionRegistrator *GetRegistrator() { return registrator; };
 
@@ -212,7 +210,7 @@ public:
     std::sort(L, L + n, [this](int4 s1, int4 s2) {return LBelow(s1, s2); });
   };
 
-  void Init(uint4 n, void* c)
+  void Init(uint4 n, void* c, IntersectionRegistrator *r)
   {
     N = n;
     collection = reinterpret_cast<TArcSegment*>(c);
@@ -221,8 +219,14 @@ public:
     static_assert(offsetof(TArcSegment, x1) == 0, "TArcSegment.x1 should have 0 offset");
     static_assert(offsetof(TArcSegment, x2) == 3 * sizeof(REAL), "TArcSegment.x2 should have 3 reals offset");
     ends = reinterpret_cast<REAL*>(collection);
+    SetRegistrator(r);
   };
 
+  CArcSegmentCollection(uint4 n, void* c, IntersectionRegistrator *r)
+  {
+    Init(n, c, r);
+  }
+  CArcSegmentCollection() {};
 private:
   inline auto GetX(uint4 pt) { return ends[pt]; };
   //{ return is_last(pt) ? collection[get_segm(pt)].x2 :collection[get_segm(pt)].x1; };
@@ -230,14 +234,14 @@ private:
 
   IntersectionRegistrator *registrator = nullptr;
   CArcSegmentCollection *clone_of = nullptr;
-  uint4 N;
+  uint4 N=0;
   REAL B, E, X;
   TPlaneVect cur_point;
 
   uint4 cur_seg_idx = 0xFFFFFFFF;
   TArcSegment cur_seg;
-  TArcSegment *collection;
-  REAL *ends;
+  TArcSegment *collection= nullptr;
+  REAL *ends= nullptr;
 };
 
 

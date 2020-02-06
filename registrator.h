@@ -46,7 +46,11 @@ public:
   static const _RegistrationType reg_type = count;
   double counter = 0;
   inline CIntersectionBuilder* begin_registration(uint4 inters_numb) { counter += inters_numb; return nullptr; };
-
+  void combine_reg_data(uint4 n_threads, JustCountingRegistrator *additional_reg_obj[])
+  {
+    for (int i = 0; i < n_threads - 1; i++)
+      counter += additional_reg_obj[i]->counter;
+  };
 
 };
 

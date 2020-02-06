@@ -35,11 +35,11 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
         a = nullptr;            \
     }
 
-template<class SegmentsColl>
+
 class CTrivialIntFinder
 {
 public:
-
+  template<class SegmentsColl>
   void find_intersections(SegmentsColl *segments) 
   {
     uint4 N = segments->GetSegmNumb();
@@ -55,9 +55,10 @@ public:
 };
 
 
-template <class SegmentsColl>
+
 class CSimpleSweepIntFinder {
 public:
+  template <class SegmentsColl>
     void find_intersections(SegmentsColl* segments)
     {
         uint4 n = segments->GetSegmNumb();
@@ -132,6 +133,7 @@ public:
             max_segm_on_vline = nsegm_on_vline;
         }
       LR_len = max_segm_on_vline+1;
+      nTotSegm = N;
           
     };
 
@@ -186,10 +188,16 @@ static  int4 FindR(IntersectionFinder *i_f, SegmentsColl* segments, int4 ladder_
     return i_f->Merge(segments, interval_left_index, ladder_start_index, stack_rec.Q_pos, Size);
   };
 
+    uint4 LR_len = 0;
+    uint4 nTotSegm = 0;
+    uint4 len_of_Q = 0;
 
     uint4 *SegL = nullptr, *SegR = nullptr, *ENDS = nullptr;
     int4 *Q = nullptr;
-    uint4 LR_len = 0;
+    int4 *L = nullptr;
+
+    
+    
     void AllocMem(uint4 N)
     {
         SegL = new uint4[N];

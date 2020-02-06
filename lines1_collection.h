@@ -181,10 +181,8 @@ public:
   };
   void clone(CLine1SegmentCollection * c, IntersectionRegistrator *r)
   {
-    clone_of = c;
-    N = c->N;
-    registrator = r;
-    collection = c->collection;
+      clone_of = c;
+      Init(c->N, c->collection,r);
   };
   void SetRegistrator(IntersectionRegistrator *r) { registrator = r; };
   //IntersectionRegistrator *GetRegistrator() { return registrator; };
@@ -196,11 +194,19 @@ public:
     std::sort(L, L + n, [this](int4 s1, int4 s2) {return LBelow(s1, s2); });
   };
 
-  void Init(uint4 n, void * c)
+  void Init(uint4 n, void * c, IntersectionRegistrator *r)
   {
     N = n;
     collection = reinterpret_cast<TLineSegment1*>(c);
+    SetRegistrator(r);
+
   };
+
+  CLine1SegmentCollection(uint4 n, void* c, IntersectionRegistrator *r)
+  {
+    Init(n, c, r);
+  }
+  CLine1SegmentCollection() {};
 
 private:
   inline auto GetX(uint4 pt)
@@ -211,12 +217,12 @@ private:
 
   IntersectionRegistrator *registrator = nullptr;
   CLine1SegmentCollection *clone_of = nullptr;
-  uint4 N;
+  uint4 N=0;
   REAL B, E, curB, curE;
   TPlaneVect cur_point;
 
   uint4 cur_seg_idx = 0xFFFFFFFF;
   TLineSegment1 cur_seg;
-  TLineSegment1 *collection;
+  TLineSegment1 *collection = nullptr;
 };
 

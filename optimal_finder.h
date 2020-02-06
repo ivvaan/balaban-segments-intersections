@@ -25,6 +25,8 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <vector>
 #include <thread>
+#include <cassert>
+
 
 class COptimalIntFinder : public CFastIntFinder
 {
@@ -43,7 +45,8 @@ public:
     ProgramStackRec stack_rec(inherit_each, 2 * nTotSegm);  //need to be initialized this way 
     L[0] = SegmentsColl::get_segm(ENDS[0]);
     FindR(segments, inherit_each + 1, inherit_each, 0, 2 * nTotSegm - 1, &stack_rec, 1, 0);
-    //FreeMem();
+    CFAST::FreeMem();
+    FreeMem();
   }
 
   void FreeMem()
@@ -65,7 +68,7 @@ private:
   template<class SegmentsColl>
   void AllocMem(SegmentsColl *segments)
   {
-    nTotSegm =  segments->GetSegmNumb();
+    assert(nTotSegm == segments->GetSegmNumb());
     L = new int4[LR_len];
     R = new int4[LR_len];
     len_of_Q = LR_len + LR_len / (inherit_each - 1) + inherit_each + 1;

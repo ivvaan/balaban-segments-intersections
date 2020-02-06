@@ -25,6 +25,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <vector>
 #include <thread>
+#include <cassert>
 
 
 class CFastIntFinder : public CommonImpl
@@ -46,19 +47,20 @@ public:
     L[0] = SegmentsColl::get_segm(ENDS[0]);
 
     FindR(this, segments, -1, 0, 2 * nTotSegm - 1, &stack_rec, 1, 0, get_max_call(2 * nTotSegm));
-    //FreeMem();
+    FreeMem();
   }
 
-  template<class SegmentsColl, class CIntRegistrator >
-  void find_intersections(SegmentsColl* segments, uint4 n_threads, CIntRegistrator* regs[])
+/*  template<class SegmentsColl, class CIntRegistrator >
+  void find_intersections(SegmentsColl* segments, uint4 n_threads, CIntRegistrator* regs[])*/
+  template<template <class> class SegmentsColl, class CIntRegistrator >
+  void find_intersections(SegmentsColl<CIntRegistrator>* segments, uint4 n_threads, CIntRegistrator* regs[])
   {
     AllocMem(segments);
-    prepare_ends(segments);
     using namespace std;
     vector<thread> wrk_threads;
-    auto thread_func = [](CTHIS* master, SegmentsColl* segments, uint4 from, uint4 to,uint4 max_call, CIntRegistrator* add_reg) {
+    auto thread_func = [](CTHIS* master, SegmentsColl<CIntRegistrator>* segments, uint4 from, uint4 to,uint4 max_call, CIntRegistrator* add_reg) {
       CTHIS i_f;
-      SegmentsColl coll;
+      SegmentsColl<CIntRegistrator> coll;
       i_f.clone(master);
       coll.clone(segments, add_reg);
       FindR(&i_f,&coll, -1, from, to, &ProgramStackRec(-1, 2 * i_f.nTotSegm), i_f.CalcLAt(&coll, from), 0,max_call);
@@ -80,7 +82,7 @@ public:
     }
 
     ProgramStackRec stack_rec(-1, 2 * nTotSegm); //need to be initialized this way
-    L[0] = SegmentsColl::get_segm(ENDS[0]);
+    L[0] = SegmentsColl<CIntRegistrator>::get_segm(ENDS[0]);
     FindR(this,segments, -1, 0, start_from, &stack_rec, 1, 0,max_call);
     //      FindR(segments, -1, 0, 2 * nTotSegm - 1, &stack_rec, 1, 0);
     for (auto cur_thread = wrk_threads.begin(); cur_thread != wrk_threads.end(); cur_thread++)
@@ -256,10 +258,9 @@ public:
  
  
   protected:
-  int4 *L = nullptr, *R = nullptr;
+  int4 *R = nullptr;
   CTHIS* clone_of = nullptr;
 
-  uint4 nTotSegm, len_of_Q;
 
   template<class SegmentsColl>
   int4 SplitSIS(SegmentsColl* segments, int4& step_index, int4 Size)//simplified version for SearchInStrip
@@ -334,7 +335,7 @@ public:
   template<class SegmentsColl>
   void AllocMem(SegmentsColl* segments)
   {
-      nTotSegm =  segments->GetSegmNumb();
+      assert(nTotSegm == segments->GetSegmNumb());
       len_of_Q = LR_len;
       L = new int4[LR_len];
       R = new int4[LR_len];

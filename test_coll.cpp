@@ -310,28 +310,26 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
   return int_numb;
   };
 
-  using CLines1CollSimpleReg = CLine1SegmentCollection<SimpleCounter>;
+/*  using CLines1CollSimpleReg = CLine1SegmentCollection<SimpleCounter>;
   using CLines2CollSimpleReg = CLine2SegmentCollection<SimpleCounter>;
-  using CArcCollSimpleReg = CArcSegmentCollection<SimpleCounter>;
+  using CArcCollSimpleReg = CArcSegmentCollection<SimpleCounter>;*/
 
 
  //const uint4 n_threads=16;
-  template<class RegistratingSegmentsCollection>
+  template<template<class>class SegColl,class Counter>
   double find_int( int4 n, PSeg segs,int4 alg)
   {
+    using RegistratingSegmentsCollection = SegColl<Counter>;
     auto seg_type = line2;
-    SimpleCounter reg;
-    reg.counter = 0;
-    RegistratingSegmentsCollection coll;
-    coll.Init(n, segs);
-    coll.SetRegistrator(&reg);
+    Counter reg;
+    RegistratingSegmentsCollection coll(n, segs, &reg);
     switch (alg) {
         case triv: {
-            CTrivialIntFinder<RegistratingSegmentsCollection> fi;
+            CTrivialIntFinder fi;
             fi.find_intersections(&coll);
         } break;
         case simple_sweep:{
-            CSimpleSweepIntFinder<RegistratingSegmentsCollection> fi;
+            CSimpleSweepIntFinder fi;
             fi.find_intersections(&coll);
         };
             break;
@@ -353,8 +351,8 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
         }
             break;
         case fast_parallel: {
-            SimpleCounter reg_objects[reg_obj_margin * n_threads];
-            SimpleCounter* additional_reg_obj[n_threads];
+            Counter reg_objects[reg_obj_margin * n_threads];
+            Counter* additional_reg_obj[n_threads];
             for (int i = 0; i < n_threads - 1; i++) {
                 //reg_objects[i * reg_obj_margin] = 0;
                 additional_reg_obj[i] = reg_objects + i * reg_obj_margin;
@@ -362,8 +360,7 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
             CFastIntFinder fi;
             fi.prepare_ends(&coll);
             fi.find_intersections(&coll, n_threads, additional_reg_obj);
-            for (int i = 0; i < n_threads - 1; i++)
-                reg.counter +=additional_reg_obj[i]->counter;
+            reg.combine_reg_data(n_threads, additional_reg_obj);
 
         } break;
 
@@ -374,9 +371,9 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
   double new_find_int(int4 seg_type, int4 n, PSeg segs, int4 alg)
   {
     switch (seg_type) {
-    case line1:return find_int<CLines1CollSimpleReg>(n, segs, alg);
-    case line2:return find_int<CLines2CollSimpleReg>(n, segs, alg);
-    case arc:return find_int<CArcCollSimpleReg>(n, segs, alg);
+    case line1:return find_int<CLine1SegmentCollection,SimpleCounter>(n, segs, alg);
+    case line2:return find_int<CLine2SegmentCollection,SimpleCounter>(n, segs, alg);
+    case arc:return find_int<CArcSegmentCollection,SimpleCounter>(n, segs, alg);
     }
     return 0;
   };
