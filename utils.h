@@ -56,13 +56,20 @@ enum _Algorithm
 
 enum _Segment
 {
-  line1 = 0, line2, arc
+  line1 = 0, line2, arc,graph
 };
 enum _Distribution
 {
   random = 0, parallel, mixed, small, param_defined, circul
 };
 
+class CRandomValueGen
+{
+public:
+  double GetRandomDouble();
+  //BOOL RandomChoose(double prop);
+  bool RandomChoose();
+};
 
 template<class real> 
 class couple{
@@ -70,10 +77,18 @@ public:
     real x=0;
     real y=0;
     couple() :x(0), y(0) {};
-    couple(const real &xc,const real &yc):x(xc),y(yc){};
-    int operator<(couple<real>   & v2)
-      { return ((x<v2.x)||(x==v2.x) && (y<v2.y));};
-    int operator>(couple<real>   & v2)
+    couple(const real &xc, const real &yc) :x(xc), y(yc) {};
+    couple(const couple &c) :x(c.x), y(c.y) {};
+    couple(couple &c) :x(c.x), y(c.y) {};
+    bool operator<(couple<real>   & v2)
+    {
+      return ((x<v2.x) || (x == v2.x) && (y<v2.y));
+    };
+    bool operator<=(couple<real>   & v2)
+    {
+      return ((x<v2.x) || (x == v2.x) && (y<=v2.y));
+    };
+    bool operator>(couple<real>   & v2)
       { return ((x>v2.x)||(x==v2.x) && (y>v2.y));};
     couple<real> operator-()
       {return couple<real>(-x,-y);};
@@ -92,6 +107,12 @@ public:
       real l=get_length();
       return couple<real>(x/l,y/l);
       };
+    void InitRandom(CRandomValueGen &rv)
+    {
+      x = rv.GetRandomDouble();
+      y = rv.GetRandomDouble();
+    };
+    
   };
 
 
@@ -114,14 +135,13 @@ template <class real> inline couple<real> operator+(const couple<real>   &v1, co
 template <class real> inline couple<real> operator-(const couple<real>   &v1, const couple<real>   &v2)
   {return couple<real>(v1.x-v2.x,v1.y-v2.y);}
 
+template<class out,class real>
+out& operator <<(out &o, const couple<real>   &v)
+{
+  //return o << "x=" << v.x << ",y=" << v.y;
+  return o << "[" << v.x << "," << v.y<<"]";
+}
 
-class CRandomValueGen
-  {
-  public:
-    double GetRandomDouble();
-    //BOOL RandomChoose(double prop);
-    bool RandomChoose();
-  };
 
 
 typedef couple<REAL> TPlaneVect;

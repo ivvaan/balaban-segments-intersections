@@ -32,6 +32,7 @@ class TLineSegment1
 public:
   static const int4 is_line = 1;
   TLineSegment1():org(),shift() {};
+  TLineSegment1(TPlaneVect &p1, TPlaneVect &p2) :org(p1), shift(p2-p1) {};
   // int4 parnum,intpar;
   TPlaneVect org;
   TPlaneVect shift;

@@ -29,11 +29,6 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 //#include <memory>
 //#include "test_coll.h"
 
-#define MY_FREE_ARR_MACRO(a) \
-    if (a!=nullptr) {                 \
-        delete[] a;          \
-        a = nullptr;            \
-    }
 
 
 class CTrivialIntFinder

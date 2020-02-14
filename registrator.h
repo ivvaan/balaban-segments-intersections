@@ -21,6 +21,14 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 */
 // NEW IMPLEMENTATION
 
+#define MY_FREE_ARR_MACRO(a) \
+    if (a!=nullptr) {                 \
+        delete[] a;          \
+        a = nullptr;            \
+    }
+
+
+
 #include "utils.h"
 template <class ipoint>
 class JustCountingRegistrator

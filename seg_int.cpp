@@ -118,7 +118,7 @@ enum _Implementation
 
 void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr_type,REAL distr_param,bool print_less,bool rtime_printout,bool dont_need_ip,int4 n, PSeg seg_coll,PSeg *seg_ptr_coll) {
   double exec_time[33], nInt[33];
-  const char *ss = "Lla", *sd = "rlmspc";
+  const char *ss = "Llag", *sd = "rlmspc";
   char counters_string[256],*counters_mute;
   int4 alg_list[] = { triv, simple_sweep, fast, optimal, fast_parallel, bentley_ottmann,fast_no_ip,mem_save };
   const char *alg_names[] = { "trivial","simple_sweep","fast","optimal","fast_parallel","bentley_ottmann","fast no inters points","fast 'no R'" };
@@ -136,6 +136,7 @@ void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr
 
   ON_BENCH_BEG
 
+    if ((impl == impl_old)&& (seg_type == graph)) { if (!print_less)printf("old implementation can't deal with graph segments\n"); return; }
 
     for (int4 a = sizeof(alg_list) / sizeof(alg_list[0]) - 1; a>-1; a--)
       //for (int4 a = 0;a<sizeof(alg_list) / sizeof(alg_list[0]); a++)
@@ -161,7 +162,7 @@ void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr
 
     if (rtime_printout && (alg&triv) && (!print_less))
     {
-      double n_checks = n*0.5*(double)(n - 1);
+      double n_checks =  n*0.5*(double)(n - 1);
       double check_time = exec_time[0] / n_checks;
       printf("\ntrivial alg made %13.0f intersection checks\n", n_checks);
       printf("one intersection check takes %6.3f ns, let's use intersection check time (ICT) as a time unit \n\n", 1E+09*check_time);
@@ -187,7 +188,7 @@ int main(int argc, char* argv[])
   bool use_counters = false;
   char rpar[]="-r";
   int4 impl = _Implementation::impl_old + _Implementation::impl_new;
-  const char *ss = "Lla", *sd = "rlmspc";
+  const char *ss = "Llag", *sd = "rlmspc";
   const char *alg_names[] = { "trivial","simple_sweep","fast","optimal","fast_parallel","bentley_ottmann","fast no inters points","fast 'no R'" };
 
 
@@ -219,6 +220,7 @@ int main(int argc, char* argv[])
     printf(" S=l: line segments representation y=a*x+b,x1<=x<=x2; a,b,x1,x2 - reals\n");
     printf(" S=L: line segments representation r=b+a*t,0<=t<=1; b,a - vectors\n");
     printf(" S=a: arcs\n");
+    printf(" S=g: graph: test example is simple circle of N vertices and N edges\n");
     printf("-iI: implementation\n");
     printf(" I=1: 'old' function pointers segment collection interface\n");
     printf(" I=2: 'new' template based segment collection interface\n");
@@ -271,7 +273,8 @@ int main(int argc, char* argv[])
               {
               case 'L':seg_type=line1;break;
               case 'l':seg_type=line2;break;
-              case 'a':seg_type=arc;break;
+              case 'a':seg_type = arc; break;
+              case 'g':seg_type = graph; break;
               default:
                 {
                 printf("some error in -s param. l used instead.\n");

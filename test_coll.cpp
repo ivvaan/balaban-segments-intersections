@@ -26,6 +26,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include "lines1_collection.h"
 #include "lines2_collection.h"
 #include "arcs_collection.h"
+#include "graph_collection.h"
 
 #include "new_int_finder.h"
 #include "fast_finder.h"
@@ -133,7 +134,7 @@ class SegmentFunctions
 
 PSeg create_test_collection(int4 seg_type,int4 n,int4 distr,REAL par, PSeg **seg_ptr_coll_ptr)
   {
-  PSeg *colls=NULL;
+  PSeg *colls=nullptr;
   CRandomValueGen random_gen;
   int4 i;
   if(seg_ptr_coll_ptr!=nullptr)colls=new PSeg[n];
@@ -144,13 +145,13 @@ PSeg create_test_collection(int4 seg_type,int4 n,int4 distr,REAL par, PSeg **seg
     {
     case line1:
       {
-      TLineSegment1 *Colls=new TLineSegment1[n];
-      if (seg_ptr_coll_ptr != nullptr)for(i=0;i<n;i++)colls[i]=Colls+i;
-      for (i=0;i<n;i++)
-        Colls[i].InitRandom(random_gen,i,distr,par);
+      TLineSegment1 *Colls = new TLineSegment1[n];
+      if (seg_ptr_coll_ptr != nullptr)for (i = 0; i<n; i++)colls[i] = Colls + i;
+      for (i = 0; i<n; i++)
+        Colls[i].InitRandom(random_gen, i, distr, par);
       result = Colls;
       first_segment_ptr = Colls;
-      };break;    
+      }; break;
     case line2:
       {
       TLineSegment2 *Colls=new TLineSegment2[n];
@@ -168,8 +169,18 @@ PSeg create_test_collection(int4 seg_type,int4 n,int4 distr,REAL par, PSeg **seg
         Colls[i].InitRandom(random_gen,i,distr,par);
       result = Colls;
       first_segment_ptr = Colls;
-      };break;    
+      };break; 
+    case graph:
+      {
+        TPlaneVect *Colls = new TPlaneVect[n];
+        for (i = 0; i<n; i++)
+          Colls[i].InitRandom(random_gen);
+        result = Colls;
+        first_segment_ptr = Colls;
+      }; break;
+
     }
+
   if (seg_ptr_coll_ptr != nullptr)*seg_ptr_coll_ptr = colls;
   return result;  
   };
@@ -320,7 +331,6 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
   double find_int( int4 n, PSeg segs,int4 alg)
   {
     using RegistratingSegmentsCollection = SegColl<Counter>;
-    auto seg_type = line2;
     Counter reg;
     RegistratingSegmentsCollection coll(n, segs, &reg);
     switch (alg) {
@@ -373,7 +383,8 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
     switch (seg_type) {
     case line1:return find_int<CLine1SegmentCollection,SimpleCounter>(n, segs, alg);
     case line2:return find_int<CLine2SegmentCollection,SimpleCounter>(n, segs, alg);
-    case arc:return find_int<CArcSegmentCollection,SimpleCounter>(n, segs, alg);
+    case arc:return find_int<CArcSegmentCollection, SimpleCounter>(n, segs, alg);
+    case graph:return find_int<CGraphSegmentCollection, SimpleCounter>(n, segs, alg);
     }
     return 0;
   };
