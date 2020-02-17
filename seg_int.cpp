@@ -340,9 +340,10 @@ int main(int argc, char* argv[])
           }
         }
     }
-  if(!print_less)printf("actual params is: -a%i -s%c -d%c -i%i -n%i -p%f\n", alg, ss[seg_type], sd[distr_type],impl, n, distr_param);
+  if((seg_type==graph)&&(distr_type!=random)) {printf("-sg  is compartible only with -dr!/n"); if (wait) { printf("\npress 'Enter' to continue"); getchar(); } return 0;}
   if((seg_type==arc)&&(distr_type==mixed)) {printf("-sa -dm is not compartible!/n"); if (wait) { printf("\npress 'Enter' to continue"); getchar(); } return 0;}
   if((seg_type==arc)&&(distr_type==parallel)) {printf("-sa -dl is not compartible!/n"); if (wait) { printf("\npress 'Enter' to continue"); getchar(); } return 0;}
+  if (!print_less)printf("actual params is: -a%i -s%c -d%c -i%i -n%i -p%f\n", alg, ss[seg_type], sd[distr_type], impl, n, distr_param);
   PSeg *seg_ptr_coll = nullptr;
   PSeg seg_coll;
   if(impl&_Implementation::impl_old)
