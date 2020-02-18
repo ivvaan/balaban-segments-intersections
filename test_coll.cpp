@@ -321,12 +321,8 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
   return int_numb;
   };
 
-/*  using CLines1CollSimpleReg = CLine1SegmentCollection<SimpleCounter>;
-  using CLines2CollSimpleReg = CLine2SegmentCollection<SimpleCounter>;
-  using CArcCollSimpleReg = CArcSegmentCollection<SimpleCounter>;*/
+  const uint4 reg_margin = 48 * 8 / sizeof(SimpleCounter);// for reg objects to be in different CPU cash blocks
 
-
- //const uint4 n_threads=16;
   template<template<class>class SegColl,class Counter>
   double find_int( int4 n, PSeg segs,int4 alg)
   {
@@ -361,7 +357,7 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
         }
             break;
         case fast_parallel: {
-            Counter reg_objects[reg_obj_margin * n_threads];
+            Counter reg_objects[reg_margin * n_threads];
             Counter* additional_reg_obj[n_threads];
             for (int i = 0; i < n_threads - 1; i++) {
                 //reg_objects[i * reg_obj_margin] = 0;
@@ -378,6 +374,7 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
     return reg.counter;
   };
 
+  
   double new_find_int(int4 seg_type, int4 n, PSeg segs, int4 alg)
   {
     switch (seg_type) {
