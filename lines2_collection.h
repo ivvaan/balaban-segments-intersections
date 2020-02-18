@@ -229,8 +229,6 @@ public:
     Init(c->N, c->collection,r);
     
   };
-  void SetRegistrator(IntersectionRegistrator *r) { registrator = r; };
-  //IntersectionRegistrator *GetRegistrator() { return registrator; };
 
   void unclone() { if (clone_of == nullptr)return; collection = nullptr; clone_of = nullptr; };
   void SortAt(uint4 pt, uint4 n, int4 *L)
@@ -238,7 +236,12 @@ public:
     SetCurStripeLeft(pt);
     std::sort(L, L + n, [this](int4 s1, int4 s2) {return LBelow(s1, s2); });
   };
-
+  void SetRegistrator(IntersectionRegistrator *r)
+  {
+    registrator = r;
+    r->Alloc(GetSegmNumb());
+  };
+  //IntersectionRegistrator *GetRegistrator() { return registrator; };
   void Init(uint4 n, void * c, IntersectionRegistrator *r)
   {
     N = n;
