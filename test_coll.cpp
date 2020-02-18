@@ -324,7 +324,7 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
   const uint4 reg_margin = 48 * 8 / sizeof(SimpleCounter);// for reg objects to be in different CPU cash blocks
 
   template<template<class>class SegColl,class Counter>
-  double find_int( int4 n, PSeg segs,int4 alg)
+  double find_int( int4 n, PSeg segs,int4 alg,uint4 stat)
   {
     using RegistratingSegmentsCollection = SegColl<Counter>;
     Counter reg;
@@ -371,17 +371,25 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
         } break;
 
     }
-    return reg.counter;
+    return reg.get_stat(stat);
   };
 
-  
-  double new_find_int(int4 seg_type, int4 n, PSeg segs, int4 alg)
+  template<class Counter>
+  double _find_int(int4 seg_type, int4 n, PSeg segs, int4 alg,uint4 stat)
   {
     switch (seg_type) {
-    case line1:return find_int<CLine1SegmentCollection,SimpleCounter>(n, segs, alg);
-    case line2:return find_int<CLine2SegmentCollection,SimpleCounter>(n, segs, alg);
-    case arc:return find_int<CArcSegmentCollection, SimpleCounter>(n, segs, alg);
-    case graph:return find_int<CGraphSegmentCollection, SimpleCounter>(n, segs, alg);
+    case line1:return find_int<CLine1SegmentCollection,Counter>(n, segs, alg,stat);
+    case line2:return find_int<CLine2SegmentCollection,Counter>(n, segs, alg, stat);
+    case arc:return find_int<CArcSegmentCollection, Counter>(n, segs, alg, stat);
+    case graph:return find_int<CGraphSegmentCollection, Counter>(n, segs, alg, stat);
     }
     return 0;
   };
+
+  find_int_func get_find_int_func(uint4 reg_type)
+  {
+    if(reg_type==2)return _find_int<SimpleCounter>;
+    return _find_int<PerSegmCounter>;
+  };
+
+ 

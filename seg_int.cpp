@@ -86,7 +86,7 @@ double _benchmark_old(char* counters_string, int4 n, PSeg* seg_ptr_coll, int4 s_
   return mint; //tottime / n_call;
   }
 
-double _benchmark_new(int4 n, PSeg seg_coll, int4 s_type, int4 alg, double& res)
+double _benchmark_new(int4 n, PSeg seg_coll, int4 s_type, int4 alg, double& res,uint4 reg_stat)
   {
   double timeit, tottime = 0;
   int4 n_call = 0;
@@ -94,8 +94,9 @@ double _benchmark_new(int4 n, PSeg seg_coll, int4 s_type, int4 alg, double& res)
   double mint = 1.0e10;
   do
   {
+    auto find_int = get_find_int_func(reg_stat);
     auto start = high_resolution_clock::now();
-    res = new_find_int(s_type, n, seg_coll,alg);
+    res = find_int(s_type, n, seg_coll,alg,reg_stat);
     tottime += timeit = static_cast<duration<double>>(high_resolution_clock::now() - start).count();
     if (timeit < mint)
       mint = timeit;
@@ -116,12 +117,15 @@ enum _Implementation
   impl_new = 2
 };
 
-void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr_type,REAL distr_param,bool print_less,bool rtime_printout,bool dont_need_ip,int4 n, PSeg seg_coll,PSeg *seg_ptr_coll) {
+void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr_type,REAL distr_param,bool print_less,bool rtime_printout,bool dont_need_ip,int4 n, PSeg seg_coll,PSeg *seg_ptr_coll,uint4 reg_stat) {
   double exec_time[33], nInt[33];
   const char *ss = "Llag", *sd = "rlmspc";
   char counters_string[256],*counters_mute;
   int4 alg_list[] = { triv, simple_sweep, fast, optimal, fast_parallel, bentley_ottmann,fast_no_ip,mem_save };
   const char *alg_names[] = { "trivial","simple_sweep","fast","optimal","fast_parallel","bentley_ottmann","fast no inters points","fast 'no R'" };
+  const char *stat_names_new[] = { "inters. numb","max inters. per segm","inters. numb" };
+  const char *stat_names_old[] = { "inters. numb","inters. numb","inters. numb" };
+  const char **stat_names= stat_names_new;
 
   counters_string[0] = 0;
 
@@ -129,8 +133,12 @@ void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr
   if(use_counters)strcpy(counters_string, "\ncounters:");
 #endif
   counters_mute = counters_string + strlen(counters_string);
-  if (impl== _Implementation::impl_old)
+  if (impl == _Implementation::impl_old)
+  {
     printf("\nold implementation testing... ************************************************\n");
+    stat_names = stat_names_old;
+  }
+    
   else
     printf("\nnew implementation testing... ************************************************\n");
 
@@ -150,17 +158,17 @@ void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr
         if (impl == impl_old)
           exec_time[a] = _benchmark_old(use_counters?counters_mute:NULL, n, seg_ptr_coll, seg_type, alg_list[a], nInt[a], dont_need_ip);
         else
-          exec_time[a] = _benchmark_new(n, seg_coll, seg_type, alg_list[a], nInt[a]);
+          exec_time[a] = _benchmark_new(n, seg_coll, seg_type, alg_list[a], nInt[a],reg_stat);
         
         if (print_less)
           printf("a%i;s%c;distr_type%c;n%i;i%13.0f;t%6.5f;distr_param%f;%s\n", alg_list[a], ss[seg_type], sd[distr_type], n, nInt[a], exec_time[a], distr_param, counters_mute);
         else
-          printf("alg=%s; inters numb=%13.0f; exec time=%6.5f;%s\n", alg_names[a], nInt[a], exec_time[a], counters_string);
+          printf("alg=%s; %s=%13.0f; exec time=%6.5f;%s\n", alg_names[a],stat_names[reg_stat], nInt[a], exec_time[a], counters_string);
       }
     };
   ON_BENCH_END
 
-    if (rtime_printout && (alg&triv) && (!print_less))
+    if (rtime_printout && (alg&triv) && (!print_less)&&(reg_stat!=1))
     {
       double n_checks =  n*0.5*(double)(n - 1);
       double check_time = exec_time[0] / n_checks;
@@ -188,9 +196,9 @@ int main(int argc, char* argv[])
   bool use_counters = false;
   char rpar[]="-r";
   int4 impl = _Implementation::impl_old + _Implementation::impl_new;
-  const char *ss = "Llag", *sd = "rlmspc";
+  const char *ss = "Llag", *sd = "rlmspc",*sr="pPc";
   const char *alg_names[] = { "trivial","simple_sweep","fast","optimal","fast_parallel","bentley_ottmann","fast no inters points","fast 'no R'" };
-
+  uint4 reg_stat = 2;
 
 #ifdef _DEBUG
   _CrtSetDbgFlag(_CRTDBG_CHECK_ALWAYS_DF);
@@ -200,9 +208,9 @@ int main(int argc, char* argv[])
   if (argc==1)
     {
 #ifdef COUNTERS_ON
-    printf("usage: seg_int -aA -sS -dD -nN -pP -iI -r -m -w -c\n");
+    printf("usage: seg_int -aA -sS -dD -nN -pP -iI -rR -m -w -c\n");
 #else    
-    printf("usage: seg_int -aA -sS -dD -nN -pP -r -m -e -w\n");
+    printf("usage: seg_int -aA -sS -dD -nN -pP -rR -m -e -w\n");
 #endif    
     printf("example: seg_int -a14 -sa -dp -n20000 -p5.5\n");
     printf("-aA: type of algorithms tested\n");
@@ -234,6 +242,12 @@ int main(int argc, char* argv[])
     printf(" D=s: short segments: random segment with  length multiplied by distr_param/N\n");
     printf(" D=distr_param: random segment with  length multiplied by distr_param\n");
     printf(" D=c: segments ends are on the opposite sides of unit circul, each segment intesect each\n");
+
+    printf("-rR: type of registrator used in new implementation and type of result statistic\n");
+    printf(" R=c: total intersection counting registrator; total count statistic\n");
+    printf(" R=p: total intersection counting and per segment intersection counting registrator; total count statistic\n");
+    printf(" R=P: total intersection counting and per segment intersection counting registrator; max intersections pre segment statistic\n");
+
     printf("-m: if presented, means 'print less' mode - few information printed\n");
 	printf("-e: if presented, for each alg prints out relative (compared to checking two segments intersection) time to find one intersection (works only if A%2==1 and print_less off)\n");
 	printf("-w: if presented, program wait until 'Enter' pressed before closing\n");   
@@ -284,23 +298,34 @@ int main(int argc, char* argv[])
             };
             break;
           case 'd':
+          {
+            switch (argv[i][2])
             {
-            switch(argv[i][2])
-              {
-              case 'r':distr_type=random;break;
-              case 'l':distr_type=parallel;break;
-              case 'm':distr_type=mixed;break;
-              case 's':distr_type=small;break;
-              case 'p':distr_type = param_defined; break;
-              case 'c':distr_type = circul; break;
-              default:
-                {
-                printf("some error in -distr_type param. r used instead.\n");
-                distr_type=random; 
-                }
-              };
+            case 'r':distr_type = random; break;
+            case 'l':distr_type = parallel; break;
+            case 'm':distr_type = mixed; break;
+            case 's':distr_type = small; break;
+            case 'p':distr_type = param_defined; break;
+            case 'c':distr_type = circul; break;
+            default:
+            {
+              printf("some error in -distr_type param. r used instead.\n");
+              distr_type = random;
+            }
             };
-            break;
+          };
+          case 'r':
+          {
+            switch (argv[i][2])
+            {
+            case 'c':reg_stat = 2; break;
+            case 'p':reg_stat = 0; break;
+            case 'P':reg_stat = 1; break;
+            default:
+              reg_stat = 2;
+            };
+          };
+          break;
           case 'n':
             {
             n=atoi(argv[i]+2);
@@ -343,7 +368,7 @@ int main(int argc, char* argv[])
   if((seg_type==graph)&&(distr_type!=random)) {printf("-sg  is compartible only with -dr!/n"); if (wait) { printf("\npress 'Enter' to continue"); getchar(); } return 0;}
   if((seg_type==arc)&&(distr_type==mixed)) {printf("-sa -dm is not compartible!/n"); if (wait) { printf("\npress 'Enter' to continue"); getchar(); } return 0;}
   if((seg_type==arc)&&(distr_type==parallel)) {printf("-sa -dl is not compartible!/n"); if (wait) { printf("\npress 'Enter' to continue"); getchar(); } return 0;}
-  if (!print_less)printf("actual params is: -a%i -s%c -d%c -i%i -n%i -p%f\n", alg, ss[seg_type], sd[distr_type], impl, n, distr_param);
+  if (!print_less)printf("actual params is: -a%i -s%c -d%c -r%c -i%i -n%i -p%f\n", alg, ss[seg_type], sd[distr_type],sr[reg_stat], impl, n, distr_param);
   PSeg *seg_ptr_coll = nullptr;
   PSeg seg_coll;
   if(impl&_Implementation::impl_old)
@@ -354,9 +379,9 @@ int main(int argc, char* argv[])
   bool dont_need_ip = (alg & fast_no_ip) != 0;
 
   if (impl&_Implementation::impl_old)
-    perform_tests(use_counters, _Implementation::impl_old, alg, seg_type, distr_type, distr_param, print_less, rtime_printout, dont_need_ip, n, seg_coll, seg_ptr_coll);
+    perform_tests(use_counters, _Implementation::impl_old, alg, seg_type, distr_type, distr_param, print_less, rtime_printout, dont_need_ip, n, seg_coll, seg_ptr_coll,reg_stat);
   if (impl&_Implementation::impl_new)
-    perform_tests(use_counters, _Implementation::impl_new, alg, seg_type, distr_type, distr_param, print_less, rtime_printout, dont_need_ip, n, seg_coll, seg_ptr_coll);
+    perform_tests(use_counters, _Implementation::impl_new, alg, seg_type, distr_type, distr_param, print_less, rtime_printout, dont_need_ip, n, seg_coll, seg_ptr_coll,reg_stat);
 
   delete_test_collection(seg_type, seg_coll, seg_ptr_coll);
 

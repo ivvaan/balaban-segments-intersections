@@ -32,7 +32,9 @@ PSeg create_test_collection(int4 seg_type,int4 n,int4 distr,REAL par,PSeg **seg_
 void  delete_test_collection(int4 seg_type,PSeg,PSeg* );
 double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double* counters, bool dont_need_ip = false);
 
-double new_find_int(int4 seg_type, int4 n, PSeg segs,int4 alg);
+typedef double(*find_int_func)(int4, int4, PSeg, int4,uint4);
+find_int_func get_find_int_func(uint4 reg_type);
+
 enum _RegistrationType
 {
   count = 1,

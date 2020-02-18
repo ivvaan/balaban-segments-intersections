@@ -61,10 +61,13 @@ public:
   };
   inline void Alloc(uint4 _N) {};
 
+  // to return some statistics about registered intersections;
+  double get_stat(uint4 stat_type = 0) { return counter; };
+
 };
 
 template <class ipoint>
-class PerEdgeCountingRegistrator
+class PerSegmCountingRegistrator
 {
   class CIntersectionBuilder {
   public:
@@ -90,7 +93,7 @@ class PerEdgeCountingRegistrator
   };
 public:
   static const uint4 reg_type = count + segments;
-  ~JustCountingRegistrator() { if (segm_counters != nullptr) { delete[] segm_counters; segm_counters = nullptr; } };
+  ~PerSegmCountingRegistrator() { if (segm_counters != nullptr) { delete[] segm_counters; segm_counters = nullptr; } };
 
   double counter = 0;
   inline CIntersectionBuilder* begin_registration(uint4 inters_numb) { counter += inters_numb; return &builder; };
@@ -101,7 +104,7 @@ public:
     memset(segm_counters, 0, N * sizeof(*segm_counters));
     builder.set_counters(segm_counters);
   };
-  void unite_reg_info(uint4 n_threads, JustCountingRegistrator *to_add[])
+  void combine_reg_data(uint4 n_threads, PerSegmCountingRegistrator *to_add[])
   {
     for (uint4 r = 0; r < n_threads-1; ++r)
     {
@@ -112,6 +115,15 @@ public:
     }
 
   };
+
+  // to return some statistics about registered intersections;
+  double get_stat(uint4 stat_type = 0) 
+  { 
+    // if stat_type nonzero return maximal number of intersections per segment;
+    if (stat_type)return *std::max_element(segm_counters, segm_counters+N);
+    return counter; 
+  };
+
 private:
   uint4 N;
   uint4 *segm_counters = nullptr;
@@ -123,6 +135,6 @@ private:
 
 
 typedef JustCountingRegistrator<TPlaneVect> SimpleCounter;
-typedef PerEdgeCountingRegistrator<TPlaneVect> PerEdgeCounter;
+typedef PerSegmCountingRegistrator<TPlaneVect> PerSegmCounter;
 
 
