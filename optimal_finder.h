@@ -1,4 +1,5 @@
-#pragma once
+#ifndef OPTIMAL_FINDER_FOR_SEGMENT_INTERSECTION
+#define OPTIMAL_FINDER_FOR_SEGMENT_INTERSECTION
 /*
 *
 *      Copyright (c)  2011-2020  Ivan Balaban
@@ -35,7 +36,7 @@ public:
   using CFAST = CFastIntFinder;
   using CIMP::SegL; using CIMP::SegR; using CIMP::ENDS; using CIMP::Q;
   using CIMP::prepare_ends; 
-  using CFAST::L; using CFAST::R; CFAST::nTotSegm; using CFAST::len_of_Q; 
+  using CFAST::L; using CFAST::R; using CFAST::nTotSegm; using CFAST::len_of_Q;
 
   ~COptimalIntFinder() { FreeMem(); };
   template<class SegmentsColl>
@@ -379,4 +380,4 @@ private:
 
 };
 
-#pragma once
+#endif

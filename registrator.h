@@ -20,7 +20,7 @@ You should have received a copy of the GNU General Public License
 along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 */
 // NEW IMPLEMENTATION
-
+#include <algorithm>
 #define MY_FREE_ARR_MACRO(a) \
     if (a!=nullptr) {                 \
         delete[] a;          \
@@ -51,7 +51,7 @@ class JustCountingRegistrator
 
   };
 public:
-  static const _RegistrationType reg_type = count;
+  static const _RegistrationType reg_type = _RegistrationType::count;
   double counter = 0;
   inline CIntersectionBuilder* begin_registration(uint4 inters_numb) { counter += inters_numb; return nullptr; };
   void combine_reg_data(uint4 n_threads, JustCountingRegistrator *additional_reg_obj[])
@@ -101,7 +101,7 @@ public:
   {
     N = _N;
     segm_counters = new uint4[N];
-    memset(segm_counters, 0, N * sizeof(*segm_counters));
+    std::memset(segm_counters, 0, N * sizeof(*segm_counters));
     builder.set_counters(segm_counters);
   };
   void combine_reg_data(uint4 n_threads, PerSegmCountingRegistrator *to_add[])

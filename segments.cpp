@@ -74,13 +74,13 @@ bool below(REAL X, TLineSegment1* s1, TLineSegment1* s2)
   if ((dx1 == 0.0) || (s1->org.x + dx1 == X))
   {
     REAL res = (s1->org + s1->shift - s2->org) % s2->shift;
-    if (fabs(res) == 0.0) throw 1;
+    //if (fabs(res) == 0.0) throw 1;
     return (res>0);
   }
   if (s2->org.x + dx2 == X)
   {
     REAL res = (s2->org + s2->shift - s1->org) % s1->shift;
-    if (fabs(res) == 0.0) throw 1;
+    //if (fabs(res) == 0.0) throw 1;
     return (res<0);
   }
   y1 = (s1->org.y*dx1 + (X - s1->org.x)*dy1)*dx2;
@@ -306,7 +306,7 @@ void TArcSegment::InitRandom(CRandomValueGen &rv, int4 seg_n, int4 type, REAL pa
   org.y = rv.GetRandomDouble();
   tmp = max(fabs(x1 - org.x), fabs(x2 - org.x));
   par = max(1.0, par);
-  while ((r = par*rv.GetRandomDouble()) <= tmp);
+  r = par*rv.GetRandomDouble()+tmp;
   r2 = r*r;
   is_upper = rv.RandomChoose();
 }

@@ -37,6 +37,13 @@ typedef int  BOOL;
 #ifndef min
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
 #endif
+
+//#define register
+
+#if __cplusplus > 201703L
+  // C++20 code
+#endif
+
 inline REAL sq(REAL x) { return x*x; }
 
 typedef void(*PSeg);
@@ -66,9 +73,14 @@ enum _Distribution
 class CRandomValueGen
 {
 public:
+  CRandomValueGen();
+  CRandomValueGen(unsigned seed);
+  void SetSeeed(unsigned seed);
   double GetRandomDouble();
   //BOOL RandomChoose(double prop);
   bool RandomChoose();
+private:
+  double (*stduniform)();
 };
 
 template<class real> 

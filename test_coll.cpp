@@ -132,10 +132,9 @@ class SegmentFunctions
 
   };
 
-PSeg create_test_collection(int4 seg_type,int4 n,int4 distr,REAL par, PSeg **seg_ptr_coll_ptr)
+PSeg create_test_collection(int4 seg_type, int4 n, int4 distr, REAL par, CRandomValueGen &random_gen, PSeg** seg_ptr_coll_ptr)
   {
   PSeg *colls=nullptr;
-  CRandomValueGen random_gen;
   int4 i;
   if(seg_ptr_coll_ptr!=nullptr)colls=new PSeg[n];
   if(distr!=param_defined)par/=n/33.0;

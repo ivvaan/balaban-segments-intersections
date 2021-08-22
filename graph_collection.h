@@ -93,7 +93,7 @@ public:
   };
   void SetCurPointAtEnd(uint4 s)
   {
-    SetCurPoint(get_last_pt(s))
+    SetCurPoint(get_last_pt(s));
   };
   void SetCurSegCutBE(uint4 s)
   {

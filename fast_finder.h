@@ -63,7 +63,8 @@ public:
       SegmentsColl<CIntRegistrator> coll;
       i_f.clone(master);
       coll.clone(segments, add_reg);
-      FindR(&i_f,&coll, -1, from, to, &ProgramStackRec(-1, 2 * i_f.nTotSegm), i_f.CalcLAt(&coll, from), 0,max_call);
+      ProgramStackRec psr(-1, 2 * i_f.nTotSegm);
+      FindR(&i_f,&coll, -1, from, to, &psr, i_f.CalcLAt(&coll, from), 0,max_call);
       coll.unclone();
       i_f.unclone();
     };
@@ -220,7 +221,7 @@ public:
           //storing segment position in Q_tail
           *(--Q_tail) = _Q_pos;
           //storing segment number in R
-          if (SegmentsColl::is_line_segments)*(R_pos++) = cur_seg;
+          if (SegmentsColl::is_line_segments) *(R_pos++) = cur_seg;
         }
       }
       else//segment  intersects ladder stairs
@@ -242,7 +243,7 @@ public:
       R_pos = L + new_L_size;
     // important to start from stair above current segm, meanwhile _Q[loc] is stair below
     _Q++;// so we incremement _Q and _Q[loc] become stair above
-    for (auto _R = SegmentsColl::is_line_segments ? R : L; _R < R_pos; ++_R)
+    for (auto _R =  SegmentsColl::is_line_segments ? R : L; _R < R_pos; ++_R)
     {
       segments->SetCurSegCutBE(*_R);
       auto loc = *(--Q_tail);          // getting position from tail of Q

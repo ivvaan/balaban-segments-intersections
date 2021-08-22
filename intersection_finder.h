@@ -230,12 +230,12 @@ class CIntersectionFinder
 
   inline void ExchangeLR()
     {
-    register int4* tmp=L;
+    int4* tmp=L;
     L=R; R=tmp;
     };
   inline void no_ipExchangeLR()
     {
-    register no_ipSegmentInfo* tmp=no_ipL;
+    no_ipSegmentInfo* tmp=no_ipL;
     no_ipL=no_ipR; no_ipR=tmp;
     };
 

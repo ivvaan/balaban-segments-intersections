@@ -18,48 +18,61 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 */ 
+
 #include "utils.h"
 
-#define PRIME1 33461
-#define PRIME2 23833
-#define PRIME3 28657
-#define MUL1 1867
-#define MUL2 2833
-#define MUL3 7657
-
 #include <random>
-#ifdef _DEBUG
-double randm()
+
+
+#ifdef NDEBUG
+std::random_device rd_gen;
+std::default_random_engine drd_gen;
+#else
+std::default_random_engine rd_gen;
+std::default_random_engine drd_gen;
+#endif // NDEBUG
+
+
+double stduniform1()
 {
-    static int4 f1 = MUL1;
-    static int4 f2 = MUL2;
-    static int4 f3 = MUL3;
-    f1 = (f1 * MUL1) % PRIME1;
-    f2 = (f2 * MUL2) % PRIME2;
-    f3 = (f3 * MUL3) % PRIME3;
-    return ((double)f1 + (double)f2 * 200.0 + (double)f3 * 30000.0) / 100000000.0;
-};
-#else 
-double randm()
-{
-    static   std::random_device generator;
-    //static   std::default_random_engine generator;
-    static   std::uniform_real_distribution<double> distribution(0.0, 1.0);
- return distribution(generator);
+  static std::uniform_real_distribution<double> dist{ 0.0, 1.0 };
+  return dist(rd_gen);
 }
-#endif
+
+double stduniform2()
+{
+  static std::uniform_real_distribution<double> dist{ 0.0, 1.0 };
+  return dist(drd_gen);
+}
+
+CRandomValueGen::CRandomValueGen()
+{
+  stduniform = stduniform2;
+};
+
+CRandomValueGen::CRandomValueGen(unsigned seed)
+{
+  SetSeeed(seed);
+};
+
+//zero seed means use of random gen
+//nonzero - use of pseudo random setting seed
+void CRandomValueGen::SetSeeed(unsigned seed)
+{
+  stduniform = seed ? drd_gen.seed(seed), stduniform2 : stduniform1;
+};
 
  
 
 double CRandomValueGen::GetRandomDouble()
   {
-  return randm();
+  return stduniform();
   }
 
 bool CRandomValueGen::RandomChoose()
   {
-  double q,r=randm();
-  do {q = randm();} while (q == r);
+  double q,r= stduniform();
+  do {q = stduniform();} while (q == r);
   return q>r;
   }
 

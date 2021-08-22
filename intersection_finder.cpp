@@ -1441,7 +1441,8 @@ void CIntersectionFinder<is_line_seg>::fast_parallel(uint4 n, PSeg _Scoll[], int
         {
             CIntersectionFinder<is_line_seg> i_f;
             i_f.clone(master, add_reg); 
-            i_f.FindR(-1, from, to, &ProgramStackRec(-1, 2 *  i_f.nTotSegm), i_f.CalcLAt(from), 0, _max_call);
+						ProgramStackRec psr(-1, 2 * i_f.nTotSegm);
+            i_f.FindR(-1, from, to, &psr, i_f.CalcLAt(from), 0, _max_call);
             i_f.unclone();
         };
   double part = 2 * n /(double) n_threads;
@@ -1457,7 +1458,8 @@ void CIntersectionFinder<is_line_seg>::fast_parallel(uint4 n, PSeg _Scoll[], int
       wrk_threads.emplace_back(thread_func, this, from, to, _max_call, add_reg[i - 2]); // starts intersection finding in a stripe <from,to>
   }
   L[0] = ENDS[0].s();
-  FindR(-1, 0, start_from, &ProgramStackRec(-1, 2 * n), 1, 0, _max_call);
+	ProgramStackRec psr(-1, 2 * n);
+  FindR(-1, 0, start_from, &psr, 1, 0, _max_call);
   auto cur_thread = wrk_threads.begin();
   for (; cur_thread != wrk_threads.end(); cur_thread++) cur_thread->join();//waiting for calculation of all threads are finished
   FreeMem();
