@@ -96,15 +96,15 @@ double _benchmark_new(int4 n, PSeg seg_coll, int4 s_type, int4 alg, double& res,
   double mint = 1.0e10;
   do
   {
-    auto find_int = get_find_int_func(reg_stat);
+    auto find_intersections = get_find_intersections_func(reg_stat);
     auto start = high_resolution_clock::now();
-    res = find_int(s_type, n, seg_coll,alg,reg_stat);
+    res = find_intersections(s_type, n, seg_coll,alg,reg_stat);
     tottime += timeit = static_cast<duration<double>>(high_resolution_clock::now() - start).count();
     if (timeit < mint)
       mint = timeit;
     n_call++;
   } 
-#ifndef _DEBUG
+#ifdef NDEBUG
   while ((tottime < 10) || (n_call < 3));
 #else
   while (false);
@@ -208,8 +208,8 @@ int main(int argc, char* argv[])
 #endif
   
 
-  if (argc==1)
-    {
+  if (argc == 1)
+  {
 #ifdef COUNTERS_ON
     printf("usage: seg_int -aA -sS -dD -nN -pP -iI -rR -m -w -c\n");
 #else    
@@ -223,9 +223,9 @@ int main(int argc, char* argv[])
     printf(" A=8: balaban optimal\n");
     printf(" A=16: balaban fast parallel for 6 treads\n");
     printf(" A=32: bentley & ottmann\n");
-	printf(" A=64: balaban fast;  intersection points aren't reported (only intersecting pairs)\n");
-	printf(" A=128: balaban fast;  memory save algorithm 4 bytes less per segment\n");
-	printf(" if you want several algorithms to test just sum up their values\n");
+    printf(" A=64: balaban fast;  intersection points aren't reported (only intersecting pairs)\n");
+    printf(" A=128: balaban fast;  memory save algorithm 4 bytes less per segment\n");
+    printf(" if you want several algorithms to test just sum up their values\n");
     printf(" i.e. A=255 (=1+2+4+8+16+32+64+128) all algorithms\n");
     printf("-sS: type of segments\n");
     printf(" S=l: line segments representation y=a*x+b,x1<=x<=x2; a,b,x1,x2 - reals\n");
@@ -250,60 +250,62 @@ int main(int argc, char* argv[])
     printf(" R=c: total intersection counting registrator; total count statistic\n");
     printf(" R=p: total intersection counting and per segment intersection counting registrator; total count statistic\n");
     printf(" R=P: total intersection counting and per segment intersection counting registrator; max intersections pre segment statistic\n");
-    
-    printf("-SN: capital S for random seed\n");
-    printf(" N=0: no seed, randomized generation\n");
-    printf(" N!=0: N is the seed\n");
-   
+
+    printf("-SR: capital S for random seed\n");
+    printf(" R=0: no seed, randomized generation\n");
+    printf(" R!=0: R is the seed\n");
+
     printf("-m: if presented, means 'print less' mode - few information printed\n");
-	printf("-e: if presented, for each alg prints out relative (compared to checking two segments intersection) time to find one intersection (works only if A%%2==1 and print_less off)\n");
-	printf("-w: if presented, program wait until 'Enter' pressed before closing\n");   
+    printf("-e: if presented, for each alg prints out relative (compared to checking two segments intersection) time to find one intersection (works only if A%%2==1 and print_less off)\n");
+    printf("-w: if presented, program wait until 'Enter' pressed before closing\n");
 
 #ifdef COUNTERS_ON
     printf("-c: counters are printed, if presented\n");
 #endif    
     printf("Important! -sa is not compartible with -dm, -dl and -r options!\n");
     return 0;
-    }
+  }
   else
-    {
-    for(int i =1;i<argc;i++)
-      if (argv[i][0]=='-') 
+  {
+    for (int i = 1; i < argc; i++)
+      if (argv[i][0] == '-')
+      {
+        switch (argv[i][1])
         {
-        switch(argv[i][1])
-          {
           case 'a':
+          {
+            alg = atoi(argv[i] + 2);
+            if ((alg < 1) || (alg > 255))
             {
-            alg=atoi(argv[i]+2);
-            if((alg<1)||(alg>255))
-              {alg=4; printf("some error in -a param. 4 used instead.\n");}
+              alg = 4; printf("some error in -a param. 4 used instead.\n");
             }
-            break;
+          }
+          break;
           case 'i':
           {
             impl = atoi(argv[i] + 2);
-            if ((impl<1) || (impl>3))
+            if ((impl < 1) || (impl > 3))
             {
               impl = 3; printf("some error in -i param. 3 used instead.\n");
             }
           }
           break;
           case 's':
+          {
+            switch (argv[i][2])
             {
-            switch(argv[i][2])
-              {
-              case 'L':seg_type=line1;break;
-              case 'l':seg_type=line2;break;
-              case 'a':seg_type = arc; break;
-              case 'g':seg_type = graph; break;
-              default:
-                {
-                printf("some error in -s param. l used instead.\n");
-                seg_type=line2; 
-                }
-              };
+            case 'L':seg_type = line1; break;
+            case 'l':seg_type = line2; break;
+            case 'a':seg_type = arc; break;
+            case 'g':seg_type = graph; break;
+            default:
+            {
+              printf("some error in -s param. l used instead.\n");
+              seg_type = line2;
+            }
             };
-            break;
+          };
+          break;
           case 'd':
           {
             switch (argv[i][2])
@@ -335,49 +337,53 @@ int main(int argc, char* argv[])
           };
           break;
           case 'n':
+          {
+            n = atoi(argv[i] + 2);
+            if ((n < 2))
             {
-            n=atoi(argv[i]+2);
-            if((n<2))
-              {n=10000; printf("some error in -n param. 10000 used instead.\n");}
+              n = 10000; printf("some error in -n param. 10000 used instead.\n");
             }
-            break;
+          }
+          break;
           case 'S':
           {
             random_seed = atoi(argv[i] + 2);
           }
           break;
           case 'p':
+          {
+            distr_param = fabs(atof(argv[i] + 2));
+            if (distr_param <= 0)
             {
-            distr_param=fabs(atof(argv[i]+2));
-            if(distr_param<=0)
-              {distr_param=1.0; printf("some error in -distr_param param. 1.0 used instead.\n");}
+              distr_param = 1.0; printf("some error in -distr_param param. 1.0 used instead.\n");
             }
-            break;
-   		  case 'm':
-		  {
-			  print_less = TRUE;
-		  }
-		  break;
-		  case 'e':
-		  {
-			  rtime_printout = TRUE;
-		  }
-		  break;
-          case 'w':
-            {
-            wait=TRUE;
-            }
-            break;
-#ifdef COUNTERS_ON
-          case 'c':
-            {
-              use_counters=true;
-            }
-            break;
-#endif
           }
-        }
-    }
+          break;
+          case 'm':
+          {
+            print_less = TRUE;
+          }
+          break;
+          case 'e':
+          {
+            rtime_printout = TRUE;
+          }
+          break;
+          case 'w':
+          {
+            wait = TRUE;
+          }
+          break;
+  #ifdef COUNTERS_ON
+          case 'c':
+          {
+            use_counters = true;
+          }
+          break;
+  #endif
+          }
+      }
+  }
   if((seg_type==graph)&&(distr_type!=random)) {printf("-sg  is compartible only with -dr!/n"); if (wait) { printf("\npress 'Enter' to continue"); getchar(); } return 0;}
   if((seg_type==arc)&&(distr_type==mixed)) {printf("-sa -dm is not compartible!/n"); if (wait) { printf("\npress 'Enter' to continue"); getchar(); } return 0;}
   if((seg_type==arc)&&(distr_type==parallel)) {printf("-sa -dl is not compartible!/n"); if (wait) { printf("\npress 'Enter' to continue"); getchar(); } return 0;}

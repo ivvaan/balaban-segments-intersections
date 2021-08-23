@@ -385,7 +385,7 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
     return 0;
   };
 
-  find_int_func get_find_int_func(uint4 reg_type)
+  find_intersections_func get_find_intersections_func(uint4 reg_type)
   {
     if(reg_type==2)return _find_int<SimpleCounter>;
     return _find_int<PerSegmCounter>;
