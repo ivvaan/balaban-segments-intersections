@@ -92,7 +92,7 @@ class PerSegmCountingRegistrator
     uint4 *segm_counters = nullptr;
   };
 public:
-  static const uint4 reg_type = count + segments;
+  static const uint4 reg_type = count + segments + point;
   ~PerSegmCountingRegistrator() { if (segm_counters != nullptr) { delete[] segm_counters; segm_counters = nullptr; } };
 
   double counter = 0;

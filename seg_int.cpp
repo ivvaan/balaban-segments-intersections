@@ -57,6 +57,7 @@ SetPriorityClass(hProcess, dwProcessPriSave);
 #include <crtdbg.h>
 #endif
 
+double ICT = -1;
 
 
 double _benchmark_old(char* counters_string, int4 n, PSeg* seg_ptr_coll, int4 s_type, int4 alg, double& res, bool dont_need_ip = false)
@@ -170,21 +171,34 @@ void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr
     };
   ON_BENCH_END
 
-    if (rtime_printout && (alg&triv) && (!print_less)&&(reg_stat!=1))
-    {
-      double n_checks =  n*0.5*(double)(n - 1);
-      double check_time = exec_time[0] / n_checks;
-      printf("\ntrivial alg made %13.0f intersection checks\n", n_checks);
-      printf("one intersection check takes %6.3f ns, let's use intersection check time (ICT) as a time unit \n\n", 1E+09*check_time);
-      check_time *= nInt[0];
-      for (int4 a = 0; a<sizeof(alg_list) / sizeof(alg_list[0]); a++)
-      {
-        if (alg&alg_list[a])
+    if (rtime_printout && (!print_less) && (reg_stat != 1)) {
+      if ((alg & triv) ){
+        double n_checks = n * 0.5 * (double)(n - 1);
+        double check_time = exec_time[0] / n_checks;
+        printf("\ntrivial alg made %13.0f intersection checks\n", n_checks);
+        printf("one intersection check takes %6.3f ns, let's use intersection check time (ICT) as a time unit \n\n", 1E+09 * check_time);
+        for (int4 a = 0; a < sizeof(alg_list) / sizeof(alg_list[0]); a++)
         {
-          if (exec_time[a]>0)
-            printf("%s finds one intersection in %6.3f ICT \n", alg_names[a], exec_time[a] / check_time);
-        }
-      };
+          if (alg & alg_list[a])
+          {
+            if (exec_time[a] > 0)
+              printf("%s finds one intersection in %6.3f ICT \n", alg_names[a], exec_time[a] / check_time / nInt[a]);
+          }
+        };
+      }
+      else if(ICT>0){
+        printf("\none intersection check presumably takes %6.3f ns, let's use this value as a time unit (ICT) \n\n", ICT);
+        double check_time = 1E-09 * ICT ;
+        for (int4 a = 0; a < sizeof(alg_list) / sizeof(alg_list[0]); a++)
+        {
+          if (alg & alg_list[a])
+          {
+            if (exec_time[a] > 0)
+              printf("%s finds one intersection in %6.3f ICT \n", alg_names[a], exec_time[a] / check_time / nInt[a]);
+          }
+        };
+
+      }
     }
 
 };
@@ -256,7 +270,11 @@ int main(int argc, char* argv[])
     printf(" R!=0: R is the seed\n");
 
     printf("-m: if presented, means 'print less' mode - few information printed\n");
-    printf("-e: if presented, for each alg prints out relative (compared to checking two segments intersection) time to find one intersection (works only if A%%2==1 and print_less off)\n");
+
+    printf("-eE: if presented, for each alg prints out relative (compared to checking two segments' intersection ICT) \n");
+    printf(" time to find one intersection (works only  print_less off)\n");
+    printf(" E: assumed ICT (nanoseconds) - intersection of two segments check (and register if found) time\n");
+
     printf("-w: if presented, program wait until 'Enter' pressed before closing\n");
 
 #ifdef COUNTERS_ON
@@ -366,6 +384,7 @@ int main(int argc, char* argv[])
           break;
           case 'e':
           {
+            ICT = fabs(atof(argv[i] + 2));
             rtime_printout = TRUE;
           }
           break;
@@ -385,9 +404,9 @@ int main(int argc, char* argv[])
       }
   }
   if((seg_type==graph)&&(distr_type!=random)) {printf("-sg  is compartible only with -dr!/n"); if (wait) { printf("\npress 'Enter' to continue"); getchar(); } return 0;}
-  if((seg_type==arc)&&(distr_type==mixed)) {printf("-sa -dm is not compartible!/n"); if (wait) { printf("\npress 'Enter' to continue"); getchar(); } return 0;}
+  if((seg_type==arc)&&(distr_type==mixed)) {printf("-sa -dm is not compartible!/n"); if (wait) { printf("\npress 'Enter' to continue"); getchar(); } return 0;}                  
   if((seg_type==arc)&&(distr_type==parallel)) {printf("-sa -dl is not compartible!/n"); if (wait) { printf("\npress 'Enter' to continue"); getchar(); } return 0;}
-  if (!print_less)printf("actual params is: -a%i -s%c -d%c -r%c -i%i -n%i -S%i -p%f\n", alg, ss[seg_type], sd[distr_type],sr[reg_stat], impl, n, random_seed, distr_param);
+  if (!print_less)printf("actual params is: -a%i -s%c -d%c -r%c -i%i -n%i -S%i -p%f -e%f\n", alg, ss[seg_type], sd[distr_type],sr[reg_stat], impl, n, random_seed, distr_param,ICT);
   PSeg *seg_ptr_coll = nullptr;
   PSeg seg_coll;
   CRandomValueGen rv(random_seed);
