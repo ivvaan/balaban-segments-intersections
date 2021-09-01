@@ -134,6 +134,65 @@ public:
     ~CommonImpl() { FreeMem(); };
 protected:
 
+  template<class SegmentsColl>
+  void SearchInStripNonLineSeg(SegmentsColl* segments, int4* _L, int4* _Q, int4 size)//simplified version for SearchInStrip
+  {
+    auto Size = size;
+    do
+    {
+      auto Q_tail = Q + len_of_Q;
+      int4 new_L_size = 0;
+      int4 step_index = 1;
+      _Q[1] = _L[0];
+      for (int4 cur_L_pos = 1; cur_L_pos < Size; cur_L_pos++)
+      {
+        auto step = step_index;
+        auto cur_seg = _L[cur_L_pos];
+        segments->SetCurSegCutBE(cur_seg);
+        while ((step) && (segments->FindCurSegIntWith(_Q[step])))
+          --step;
+
+        if (step_index == step)
+          _Q[++step_index] = cur_seg;
+        else
+        {
+          _L[new_L_size++] = cur_seg;
+          *(--Q_tail) = step_index;
+        }
+      }
+      Q_tail = Q + len_of_Q;
+      for (int4 i = 0; i < new_L_size; ++i)
+      {
+        auto c = *(--Q_tail);
+        if (c >= step_index) break;
+        segments->SetCurSegCutBE(_L[i]);
+        while ((c < step_index) && (segments->FindCurSegIntWith(_Q[++c])));
+      }
+      _Q += step_index;
+      Size = new_L_size;
+    } while (Size);
+
+  };
+
+  template<class SegmentsColl>
+  void SearchInStripLineSeg(SegmentsColl* segments, int4* L_, int4 Size) {
+    auto _L = L_ - 1;
+    for (uint4 i = 1; i < Size; i++)
+    {
+      auto sn = L_[i];
+      segments->SetCurSegCutBE(sn);
+      if (segments->FindCurSegIntWith(_L[i])) {
+        L_[i] = _L[i];
+        uint4 j = i - 1;
+        for (; (j) && (segments->FindCurSegIntWith(_L[j])); --j)
+          L_[j] = _L[j];
+        L_[j] = sn;
+      }
+    }
+  }
+
+
+
   template <class IntersectionFinder, class SegmentsColl>
 static  int4 FindR(IntersectionFinder *i_f, SegmentsColl* segments, int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec* stack_pos, uint4 Size, uint4 call_numb, uint4 max_call = 30)
   {

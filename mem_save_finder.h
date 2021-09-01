@@ -36,6 +36,7 @@ public:
   using CIMP::dont_split_stripe;
   using CIMP::prepare_ends; using CIMP::FindInt; using CIMP::FindIntI;
   using CIMP::SegL; using CIMP::SegR; using CIMP::ENDS; using CIMP::Q;
+  using CIMP::SearchInStripNonLineSeg; using CIMP::SearchInStripLineSeg;
 
 
   template<class SegmentsColl>
@@ -52,9 +53,34 @@ public:
   template<class SegmentsColl>
   int4 SearchInStrip(SegmentsColl* segments, int4 qp, int4 Size)
   {
-    if (SegmentsColl::is_line_segments)
+    auto _L = from_begin ? L : L + (LR_len - Size);
+    if constexpr (SegmentsColl::is_line_segments)
     {
-      auto L_ = from_begin ? L : L + (LR_len - Size);
+      //For line segments we can do more efficient insertion sorting using intersection check as comparison.
+      //If s1<s2 at the left bound then s1 intersects s2 inside the stripe means s1>s2 at the right bound of the stripe.
+      //All segments are sorted at the left bound by precondition, so intesection is the same as comparison
+      // at the right bound. Byproduct of the sorting is intersections detection.
+      SearchInStripLineSeg(segments, _L , Size);
+    }
+    else {
+      //Make sequential simplified Split
+      auto _Q = Q + qp;
+      SearchInStripNonLineSeg(segments, _L, _Q, Size);
+      //at the and we have all the intersections found
+      //and all the segments moved from L to Q
+      //so we copy them back
+      auto last_L = _L + Size;
+      for (auto L_ = _L; L_ < last_L; ++L_) *L_ = *++_Q;
+      //now segments in L once again, but in icorrect order
+      //sort it
+      std::sort(_L, last_L, [segments](int4 s1, int4 s2) {return segments->RBelow(s1, s2); });
+    }
+
+    return Size;
+
+  /*  if (SegmentsColl::is_line_segments)
+    {
+      auto L_ = ;
       auto _L = L_ - 1;
       for (uint4 i = 1; i < Size; i++)
       {
@@ -77,6 +103,7 @@ public:
       std::sort(L, last, [segments](int4 s1, int4 s2) {return segments->RBelow(s1, s2); });
     }
     return Size;
+    */
   };
 
   template<class SegmentsColl>
@@ -249,12 +276,14 @@ public:
     _L = L;
     // important to start from stair above current segm, meanwhile _Q[loc] is stair below
     _Q++;// so we incremement _Q and _Q[loc] become stair above
+    auto last_Q = _Q + _Q_pos;
     for (int4 i = 0; i < new_L_size; ++i)
       if ((loc = *(--Q_tail)) != INT_MAX) {
         segments->SetCurSegCutBE(_L[i]);
-        auto c=loc;
-        for (auto cur_Q = _Q + loc; (loc < _Q_pos) && (segments->FindCurSegIntWith(*cur_Q));++cur_Q,++loc);
-        n_int+=loc-c;
+        auto cur_Q = _Q + loc;
+        auto ini_Q = cur_Q;
+        while ((cur_Q < last_Q) && (segments->FindCurSegIntWith(*cur_Q)))++cur_Q;
+        n_int+= cur_Q - ini_Q;
       }
 //    dont_split_stripe = location != _step_index;
     dont_split_stripe = n_int>new_L_size;
@@ -282,43 +311,6 @@ private:
     L = new int4[LR_len];
     Q = new int4[len_of_Q];
   };
-
-
-  //functions for fast algorithm
-  template<class SegmentsColl>
-  int4 SplitSIS(SegmentsColl* segments, int4& step_index, int4 Size)//simplified version for SearchInStrip
-  {
-    auto _L = from_begin ? L : L + (LR_len - Size);
-    int4 father_last_step = step_index, new_L_size = 0;
-    auto Q_tail = Q + len_of_Q;
-    for (int4 cur_L_pos = 0; cur_L_pos < Size; cur_L_pos++)
-    {
-      int4 cur_seg = _L[cur_L_pos];
-      int4 step = step_index;
-      segments->SetCurSegCutBE(cur_seg);
-      while ((father_last_step < step) && (segments->FindCurSegIntWith(Q[step])))
-        step--;
-
-      if (step_index == step)
-          Q[++step_index] = cur_seg;
-      else
-      {
-        L[new_L_size++] = cur_seg;
-        *(--Q_tail) = step_index + 1;
-      }
-    }
-    Q_tail = Q + len_of_Q;
-    for (int4 i = 0; i < new_L_size; ++i)
-     {
-        auto c =  *(--Q_tail);
-        segments->SetCurSegCutBE(L[i]);
-        while ((c <= step_index) && (segments->FindCurSegIntWith(Q[c++])));
-      }
-
-    from_begin = true;
-    return new_L_size;
-  };
-
 
 };
 

@@ -32,10 +32,11 @@ class CFastIntFinder : public CommonImpl
 {
 public:
   using CTHIS = CFastIntFinder;
-  using  CIMP = CommonImpl;
+  using CIMP = CommonImpl;
   using CIMP::dont_split_stripe;
   using CIMP::SegL; using CIMP::SegR; using CIMP::ENDS; using CIMP::Q;
   using CIMP::prepare_ends; using CIMP::FindInt; using CIMP::FindIntI;
+  using CIMP::SearchInStripNonLineSeg; using CIMP::SearchInStripLineSeg;
 
   ~CFastIntFinder() { unclone(); FreeMem(); };
 
@@ -100,23 +101,20 @@ public:
       //If s1<s2 at the left bound then s1 intersects s2 inside the stripe means s1>s2 at the right bound of the stripe.
       //All segments are sorted at the left bound by precondition, so intesection is the same as comparison
       // at the right bound. Byproduct of the sorting is intersections detection.
-      auto L_ = L;
-      auto _L = L_ - 1;
-      for (uint4 i = 1; i < Size; i++)
-      {
-        auto sn = L_[i];
-        segments->SetCurSegCutBE(sn);
-        if (segments->FindCurSegIntWith(_L[i])) {
-          L_[i] = _L[i];
-          uint4 j = i - 1;
-          for (; (j) && (segments->FindCurSegIntWith(_L[j])); --j)
-            L_[j] = _L[j];
-          L_[j] = sn;
-        }
-      }
+      SearchInStripLineSeg(segments, L, Size);
     }
-    else
-      SearchInStripNonLine(segments,  Size); 
+    else {
+      //We use R as temporary Q making sequential simplified Split
+      SearchInStripNonLineSeg(segments, L, R - 1, Size);
+      //at the and we have all the intersections found
+      //and all the segments moved from L to Q
+      //so we move them back
+      std::swap(L, R);
+      //now segments in L once again, but in icorrect order
+      //sort it
+      std::sort(L, L + Size, [segments](int4 s1, int4 s2) {return segments->RBelow(s1, s2); });
+    }
+
     return Size;
   };
 
@@ -214,7 +212,8 @@ public:
           //place segment in L
           L[new_L_size++] = cur_seg;
           //storing segment position in Q_tail
-          *(--Q_tail) = _Q_pos;
+          *(--Q_tail) = _Q_pos;  //it should be _Q_pos+1. We save 
+          // one addition per cicle by incrementing _Q later.
           //storing segment number in R
           if (SegmentsColl::is_line_segments) *(R_pos++) = cur_seg;
         }
@@ -241,11 +240,11 @@ public:
     auto last_Q = _Q + _Q_pos;
     for (auto _R =  SegmentsColl::is_line_segments ? R : L; _R < R_pos; ++_R)
     {
-      auto cur_Q = _Q + *(--Q_tail);          // getting position from tail of Q;
-      auto ini_Q = cur_Q;
-      segments->SetCurSegCutBE(*_R);
+      auto segment_location_Q = _Q + *(--Q_tail);          // getting position stored in tail of Q;
+      auto cur_Q = segment_location_Q;
+      segments->SetCurSegCutBE(*_R); 
       while ((cur_Q < last_Q) && (segments->FindCurSegIntWith(*cur_Q)))++cur_Q;
-      n_int+= cur_Q - ini_Q;
+      n_int+= cur_Q - segment_location_Q;
     }
     dont_split_stripe = n_int > new_L_size;
     _step_index += _Q_pos;
@@ -258,52 +257,6 @@ public:
   int4 *R = nullptr;
   CTHIS* clone_of = nullptr;
  
-  template<class SegmentsColl>
-  void SearchInStripNonLine(SegmentsColl* segments,  int4 size)//simplified version for SearchInStrip
-  {
-    auto _Q = R-1;
-    auto Size = size;
-    auto _L = L;
-    do
-    {
-      auto Q_tail = Q + len_of_Q;
-      int4 new_L_size = 0;
-      int4 step_index = 1;
-      _Q[1] = _L[0];
-      for (int4 cur_L_pos = 1; cur_L_pos < Size; cur_L_pos++)
-      {
-        auto step = step_index;
-        auto cur_seg = _L[cur_L_pos];
-        segments->SetCurSegCutBE(cur_seg);
-        while ((step) && (segments->FindCurSegIntWith(_Q[step])))
-          --step;
-
-        if (step_index == step)
-          _Q[++step_index] = cur_seg;
-        else
-        {
-          _L[new_L_size++] = cur_seg;
-          *(--Q_tail) = step_index;
-        }
-      }
-      Q_tail = Q + len_of_Q;
-      for (int4 i = 0; i < new_L_size; ++i)
-      {
-        auto c = *(--Q_tail);
-        if (c >= step_index) break;
-        segments->SetCurSegCutBE(_L[i]);
-        while ((c < step_index) && (segments->FindCurSegIntWith(_Q[++c])));
-      }
-      _Q += step_index;
-      Size = new_L_size;
-    } while (Size);
-    L = R; R = _L;
-    std::sort(L, L+size, [segments](int4 s1, int4 s2) {return segments->RBelow(s1, s2); });
-
-  };
-
-  
-
   void clone(CTHIS* master)
   {
       nTotSegm = master->nTotSegm;

@@ -39,8 +39,9 @@ typedef int  BOOL;
 #endif
 
 //#define register
-
+#ifndef NDEBUG
 //#define PRINT_SEG_AND_INT
+#endif
 
 inline REAL sq(REAL x) { return x*x; }
 
