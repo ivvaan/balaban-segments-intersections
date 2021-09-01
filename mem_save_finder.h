@@ -68,12 +68,13 @@ public:
     }
     else
     {
-      auto _L = L, q = Q + qp + 1, last = L + Size;
-      int4 n_split = 0, size = Size;
-      while (size = SplitSIS(segments, qp, size))++n_split; //it change QP must be after q = Q + QP + 1 
-                                                            // at this point we can just place Q starting from QP+1 to L and sort it
-      for (; _L < last; ++_L, ++q)  *_L = *q;
-      if (n_split)std::sort(L, L + Size, [segments](int4 s1, int4 s2) {return segments->RBelow(s1, s2); });
+      auto q = Q + qp + 1;
+      int4 size = Size;
+      while (size = SplitSIS(segments, qp, size)); //it changes qp. Must be after q = Q + qp + 1 
+                                                            // at this point we can just place Q starting from qp+1 to L and sort it
+      auto last = L + Size;
+      for (auto _L = L; _L < last; ++_L, ++q)  *_L = *q;
+      std::sort(L, last, [segments](int4 s1, int4 s2) {return segments->RBelow(s1, s2); });
     }
     return Size;
   };

@@ -193,7 +193,7 @@ public:
     x = x2; y = is_upper ? org.y + sqrt(r2 - sq(x2 - org.x)) : org.y - sqrt(r2 - sq(x2 - org.x));
   };
 
-  bool under(const TPlaneVect &v)//arc placed under point v
+  bool under(const TPlaneVect &v) const//arc placed under point v
   {
     if (is_upper)
       return (v.y>org.y) && ((v - org).get_norm()>r2);

@@ -208,7 +208,7 @@ static  int4 FindR(IntersectionFinder *i_f, SegmentsColl* segments, int4 ladder_
 
     //functions for fast algorithm
     template <class SegmentsColl>
-    void FindInt(SegmentsColl* segments, int4 qb, int4 qe, int4 l)
+    void FindInt(SegmentsColl* segments, int4 qb, int4 qe, int4 l) const
     {
         int4 c = l;
         while ((c > qb) && (segments->FindCurSegIntWith(Q[c]))) //first get intersections below
@@ -221,7 +221,7 @@ static  int4 FindR(IntersectionFinder *i_f, SegmentsColl* segments, int4 ladder_
     };
 
     template <class SegmentsColl>
-    void FindIntI(SegmentsColl* segments, uint4 r_index, ProgramStackRec* stack_pos)
+    void FindIntI(SegmentsColl* segments, uint4 r_index, ProgramStackRec* stack_pos) const
     {
         while (stack_pos->right_bound <= r_index)
             stack_pos = stack_pos->prev; // go from bottom to top and find staircase to start

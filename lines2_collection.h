@@ -26,7 +26,7 @@ template<class IntersectionRegistrator>
 class CLine2SegmentCollection
 {
 public:
-  static const bool is_line_segments = true;
+  static constexpr bool is_line_segments = true;
 
   static inline bool is_last(uint4 pt)
   {
@@ -38,7 +38,7 @@ public:
   };
 
   //TPlaneVect
-  uint4  GetSegmNumb() { return N; };
+  uint4  GetSegmNumb() const { return N; };
   inline void SetCurStripe(uint4 left, uint4 right)
   {
     B = GetX(left);
@@ -82,13 +82,13 @@ public:
     cur_seg_idx = s;
     cur_seg = collection[s];
   };
-  bool LBelow(int4 s_1, int4 s_2) //retuns if s1 below s2 at current vertical line
+  bool LBelow(int4 s_1, int4 s_2) const //retuns if s1 below s2 at current vertical line
   {
     auto s1 = collection + s_1;
     auto s2 = collection + s_2;
     return ((B * (s2->a - s1->a) + s2->b - s1->b) > 0);
   };
-  bool RBelow(int4 s_1, int4 s_2) //retuns if s1 below s2 at current vertical line
+  bool RBelow(int4 s_1, int4 s_2) const //retuns if s1 below s2 at current vertical line
   {
     auto s1 = collection + s_1;
     auto s2 = collection + s_2;
@@ -212,7 +212,7 @@ public:
     return ((x >= cur_seg.x1) && (x <= cur_seg.x2));
   };
 
-  bool UnderCurPoint(int4 s_) { auto s = collection + s_; return s->a*cur_point.x + s->b < cur_point.y; };//returns true if s is under current point 
+  bool UnderCurPoint(int4 s_) const { auto s = collection + s_; return s->a*cur_point.x + s->b < cur_point.y; };//returns true if s is under current point 
   void PrepareEndpointsSortedList(uint4 *epoints)// endpoints allocated by caller and must contain space for at least 2*GetSegmNumb() points 
   {
     auto NN = N << 1;
@@ -262,7 +262,7 @@ public:
   CLine2SegmentCollection() {};
 
 private:
-  inline auto GetX(uint4 pt) { return ends[pt]; };
+  inline auto GetX(uint4 pt) const { return ends[pt]; };
   //{ return is_last(pt) ? collection[get_segm(pt)].x2 :collection[get_segm(pt)].x1; };
 
 

@@ -51,7 +51,7 @@ class JustCountingRegistrator
 
   };
 public:
-  static const _RegistrationType reg_type = _RegistrationType::count;
+  static constexpr uint4 reg_type = _RegistrationType::count;
   double counter = 0;
   inline CIntersectionBuilder* begin_registration(uint4 inters_numb) { counter += inters_numb; return nullptr; };
   void combine_reg_data(uint4 n_threads, JustCountingRegistrator *additional_reg_obj[])
@@ -92,7 +92,7 @@ class PerSegmCountingRegistrator
     uint4 *segm_counters = nullptr;
   };
 public:
-  static const uint4 reg_type = count + segments + point;
+  static constexpr uint4 reg_type = _RegistrationType::count + _RegistrationType::segments;
   ~PerSegmCountingRegistrator() { if (segm_counters != nullptr) { delete[] segm_counters; segm_counters = nullptr; } };
 
   double counter = 0;

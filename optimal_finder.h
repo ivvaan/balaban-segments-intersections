@@ -85,7 +85,7 @@ private:
   static inline bool is_original(int4 v) { return v < 1; };
 
   template<class SegmentsColl>
-  int4 FindInt(SegmentsColl* segments, int4 qb, int4 qe, int4 l)
+  int4 FindInt(SegmentsColl* segments, int4 qb, int4 qe, int4 l) const
   {
     
     int4 c = l;
@@ -116,7 +116,7 @@ private:
   };
 
   template<class SegmentsColl>
-  void FindIntI(SegmentsColl* segments, uint4 r_index, ProgramStackRec* stack_pos)
+  void FindIntI(SegmentsColl* segments, uint4 r_index, ProgramStackRec* stack_pos) const
   {
     while (stack_pos->right_bound <= r_index)stack_pos = stack_pos->prev;// go from bottom to top and find staircase to start
     if (stack_pos->prev==nullptr)return;

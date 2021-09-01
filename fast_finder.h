@@ -92,9 +92,9 @@ public:
   }
 
   template<class SegmentsColl>
-  int4 SearchInStrip(SegmentsColl *segments, int4 qp, int4 Size)
+  int4 SearchInStrip(SegmentsColl *segments, int4 qp, const int4 Size)
   {
-    if (SegmentsColl::is_line_segments)
+    if constexpr(SegmentsColl::is_line_segments)
     {
       //For line segments we can do more efficient insertion sorting using intersection check as comparison.
       //If s1<s2 at the left bound then s1 intersects s2 inside the stripe means s1>s2 at the right bound of the stripe.
@@ -116,16 +116,10 @@ public:
       }
     }
     else
-    {
-      auto _L = L, q = Q + qp + 1, last = L + Size;
-      int4 n_split = 0, size = Size;
-      while (size = SplitSIS(segments, qp, size))++n_split; //it change QP must be after q = Q + QP + 1 
-                                                            // at this point we can just place Q starting from QP+1 to L and sort it
-      for (; _L < last; ++_L, ++q)  *_L = *q;
-      if (n_split)std::sort(L, L + Size, [segments](int4 s1, int4 s2) {return segments->RBelow(s1, s2); });
-    }
+      SearchInStripNonLine(segments,  Size); 
     return Size;
   };
+
   template<class SegmentsColl>
   int4 InsDel(SegmentsColl *segments, uint4 end_index, ProgramStackRec * stack_pos, int4 Size)
   {
@@ -193,6 +187,7 @@ public:
     L = _L; R = _R;
     return new_size;
   };
+
   template<class SegmentsColl>
   int4 Split(SegmentsColl* segments, uint4 RBoundIdx, int4& _step_index, int4 Size)
   {
@@ -243,13 +238,14 @@ public:
       R_pos = L + new_L_size;
     // important to start from stair above current segm, meanwhile _Q[loc] is stair below
     _Q++;// so we incremement _Q and _Q[loc] become stair above
+    auto last_Q = _Q + _Q_pos;
     for (auto _R =  SegmentsColl::is_line_segments ? R : L; _R < R_pos; ++_R)
     {
+      auto cur_Q = _Q + *(--Q_tail);          // getting position from tail of Q;
+      auto ini_Q = cur_Q;
       segments->SetCurSegCutBE(*_R);
-      auto loc = *(--Q_tail);          // getting position from tail of Q
-      auto c=loc;
-      for (auto cur_Q = _Q + loc; (loc < _Q_pos) && (segments->FindCurSegIntWith(*cur_Q)); ++cur_Q, ++loc);
-      n_int+=loc-c;
+      while ((cur_Q < last_Q) && (segments->FindCurSegIntWith(*cur_Q)))++cur_Q;
+      n_int+= cur_Q - ini_Q;
     }
     dont_split_stripe = n_int > new_L_size;
     _step_index += _Q_pos;
@@ -261,41 +257,52 @@ public:
   protected:
   int4 *R = nullptr;
   CTHIS* clone_of = nullptr;
-
-
+ 
   template<class SegmentsColl>
-  int4 SplitSIS(SegmentsColl* segments, int4& step_index, int4 Size)//simplified version for SearchInStrip
+  void SearchInStripNonLine(SegmentsColl* segments,  int4 size)//simplified version for SearchInStrip
   {
-    int4 father_last_step = step_index, new_L_size = 0;
-    auto Q_tail = Q + len_of_Q;
-    for (int4 cur_L_pos = 0; cur_L_pos<Size; cur_L_pos++)
+    auto _Q = R-1;
+    auto Size = size;
+    auto _L = L;
+    do
     {
-      int4 cur_seg = L[cur_L_pos];
-      int4 step = step_index;
-      segments->SetCurSegCutBE(cur_seg);
-      while ((father_last_step<step) && (segments->FindCurSegIntWith(Q[step])))
-        step--;
-
-      if (step_index==step)
-          Q[++step_index] = cur_seg;
-      else
+      auto Q_tail = Q + len_of_Q;
+      int4 new_L_size = 0;
+      int4 step_index = 1;
+      _Q[1] = _L[0];
+      for (int4 cur_L_pos = 1; cur_L_pos < Size; cur_L_pos++)
       {
-        L[new_L_size++] = cur_seg;
-        *(--Q_tail) = step_index + 1;
-      }
-    }
-    Q_tail = Q + len_of_Q;
-    for (int4 i = 0; i < new_L_size; ++i)
-    {
-      auto c = *(--Q_tail);
-      segments->SetCurSegCutBE(L[i]);
-      while ((c <= step_index) && (segments->FindCurSegIntWith(Q[c++])));
-    }
+        auto step = step_index;
+        auto cur_seg = _L[cur_L_pos];
+        segments->SetCurSegCutBE(cur_seg);
+        while ((step) && (segments->FindCurSegIntWith(_Q[step])))
+          --step;
 
-    return new_L_size;
+        if (step_index == step)
+          _Q[++step_index] = cur_seg;
+        else
+        {
+          _L[new_L_size++] = cur_seg;
+          *(--Q_tail) = step_index;
+        }
+      }
+      Q_tail = Q + len_of_Q;
+      for (int4 i = 0; i < new_L_size; ++i)
+      {
+        auto c = *(--Q_tail);
+        if (c >= step_index) break;
+        segments->SetCurSegCutBE(_L[i]);
+        while ((c < step_index) && (segments->FindCurSegIntWith(_Q[++c])));
+      }
+      _Q += step_index;
+      Size = new_L_size;
+    } while (Size);
+    L = R; R = _L;
+    std::sort(L, L+size, [segments](int4 s1, int4 s2) {return segments->RBelow(s1, s2); });
+
   };
 
-
+  
 
   void clone(CTHIS* master)
   {

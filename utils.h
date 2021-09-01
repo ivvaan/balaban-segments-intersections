@@ -40,9 +40,7 @@ typedef int  BOOL;
 
 //#define register
 
-#if __cplusplus > 201703L
-  // C++20 code
-#endif
+//#define PRINT_SEG_AND_INT
 
 inline REAL sq(REAL x) { return x*x; }
 
@@ -92,21 +90,21 @@ public:
     couple(const real &xc, const real &yc) :x(xc), y(yc) {};
     couple(const couple &c) :x(c.x), y(c.y) {};
     couple(couple &c) :x(c.x), y(c.y) {};
-    bool operator<(couple<real>   & v2)
+    bool operator<(const couple<real>   & v2) const
     {
       return ((x<v2.x) || (x == v2.x) && (y<v2.y));
     };
-    bool operator<=(couple<real>   & v2)
+    bool operator<=(const couple<real>   & v2)  const
     {
       return ((x<v2.x) || (x == v2.x) && (y<=v2.y));
     };
-    bool operator>(couple<real>   & v2)
+    bool operator>(const couple<real>   & v2)  const
       { return ((x>v2.x)||(x==v2.x) && (y>v2.y));};
-    couple<real> operator-()
+    couple<real> operator-() const
       {return couple<real>(-x,-y);};
-    real get_norm()
+    real get_norm() const
       {return x*x+y*y;}
-    real get_length()
+    real get_length() const
       {return sqrt(x*x+y*y);};
     couple<real>& normalize()
       {
@@ -114,7 +112,7 @@ public:
       x/=l;y/=l;
       return *this;
       };
-    couple<real> get_normalized()
+    couple<real> get_normalized() const
       {
       real l=get_length();
       return couple<real>(x/l,y/l);

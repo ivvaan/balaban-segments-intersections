@@ -35,7 +35,7 @@ template<class IntersectionRegistrator>
 class CGraphSegmentCollection
 {
 public:
-  static const bool is_line_segments = true;
+  static constexpr bool is_line_segments = true;
 
   static inline bool is_last(uint4 pt)
   {
@@ -57,21 +57,21 @@ public:
   {
     return pt ^ 1;
   };
- inline uint4 get_first_idx(uint4 s)
+ inline uint4 get_first_idx(uint4 s) const
   {
     return vertex_idx[get_first_pt(s)];
   };
- inline uint4 get_last_idx(uint4 s)
+ inline uint4 get_last_idx(uint4 s) const
   {
     return vertex_idx[get_last_pt(s)];
   };
- inline uint4 get_other_idx(uint4 pt)
+ inline uint4 get_other_idx(uint4 pt) const
   {
     return vertex_idx[get_other_pt(pt)];
   };
 
   //TPlaneVect
-  uint4  GetSegmNumb() { return nEdges; };
+  uint4  GetSegmNumb() const { return nEdges; };
   inline void SetCurStripe(uint4 left, uint4 right)
   {
 
@@ -121,7 +121,7 @@ public:
     curB = cur_seg.org.x;
     curE = cur_seg.org.x + cur_seg.shift.x;
   };
-  bool LBelow(int4 s_1, int4 s_2) //retuns if s1 below s2 at current vertical line
+  bool LBelow(int4 s_1, int4 s_2) const //retuns if s1 below s2 at current vertical line
   {
     auto beg1 = get_first_idx(s_1);
     auto beg2 = get_first_idx(s_2);
@@ -137,7 +137,7 @@ public:
     auto y2 = (org2.y*shift2.x + (B - org2.x)*shift2.y)*shift1.x;
     return y1<y2;
   };
-  bool RBelow(int4 s_1, int4 s_2) //retuns if s1 below s2 at current vertical line
+  bool RBelow(int4 s_1, int4 s_2) const //retuns if s1 below s2 at current vertical line
   {
     auto beg1 = get_first_idx(s_1);
     auto beg2 = get_first_idx(s_2);
@@ -216,7 +216,7 @@ public:
     return FindIntWith<false>(curB, curE, s_);
   };
 
-  bool UnderCurPoint(int4 s_) 
+  bool UnderCurPoint(int4 s_) const
   {
     auto beg= get_first_idx(s_);
     auto org = vertices[beg];
@@ -324,7 +324,7 @@ public:
   };
 
 private:
-  inline auto GetX(uint4 pt)
+  inline auto GetX(uint4 pt) const
   {
     return vertices[vertex_idx[pt]].x;
   };

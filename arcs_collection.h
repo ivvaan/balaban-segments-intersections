@@ -26,7 +26,7 @@ template<class IntersectionRegistrator>
 class CArcSegmentCollection
 {
 public:
-  static const bool is_line_segments = false;
+  static constexpr bool is_line_segments = false;
 
   static inline bool is_last(uint4 pt)
   {
@@ -38,7 +38,7 @@ public:
   };
 
   //TPlaneVect
-  uint4  GetSegmNumb() { return N; };
+  uint4  GetSegmNumb() const { return N; };
   inline void SetCurStripe(uint4 left, uint4 right)
   {
     B = GetX(left);
@@ -83,12 +83,12 @@ public:
     cur_seg = collection[s];
   };
 
-  bool LBelow(int4 s_1, int4 s_2) //retuns if s1 below s2 at current vertical line
+  bool LBelow(int4 s_1, int4 s_2) const //retuns if s1 below s2 at current vertical line
   {
     return collection[s_1].under(collection[s_2].PointAtX(B));
   };
 
-  bool RBelow(int4 s_1, int4 s_2) //retuns if s1 below s2 at current vertical line
+  bool RBelow(int4 s_1, int4 s_2) const //retuns if s1 below s2 at current vertical line
   {
     return collection[s_1].under(collection[s_2].PointAtX(E));
   };
@@ -183,7 +183,7 @@ public:
     return IntPointsInStripe<true>(cur_seg.x1, cur_seg.x2, collection + s_);
   };
 
-  bool UnderCurPoint(int4 s_) { return collection[s_].under(cur_point); };//returns true if s is under current point 
+  bool UnderCurPoint(int4 s_) const { return collection[s_].under(cur_point); };//returns true if s is under current point 
   void PrepareEndpointsSortedList(uint4 *epoints)// endpoints allocated by caller and must contain space for at least 2*GetSegmNumb() points 
   {
     auto NN = N << 1;
@@ -234,7 +234,7 @@ public:
   }
   CArcSegmentCollection() {};
 private:
-  inline auto GetX(uint4 pt) { return ends[pt]; };
+  inline auto GetX(uint4 pt) const { return ends[pt]; };
   //{ return is_last(pt) ? collection[get_segm(pt)].x2 :collection[get_segm(pt)].x1; };
 
 

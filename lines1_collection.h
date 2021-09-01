@@ -26,7 +26,7 @@ template<class IntersectionRegistrator>
 class CLine1SegmentCollection
 {
 public:
-  static const bool is_line_segments = true;
+  static constexpr bool is_line_segments = true;
 
   static inline bool is_last(uint4 pt)
   {
@@ -84,7 +84,7 @@ public:
     curB = cur_seg.org.x;
     curE = cur_seg.org.x + cur_seg.shift.x;
   };
-  bool LBelow(int4 s_1, int4 s_2) //retuns if s1 below s2 at current vertical line
+  bool LBelow(int4 s_1, int4 s_2) const //retuns if s1 below s2 at current vertical line
   {
     auto s1 = collection + s_1;
     auto s2 = collection + s_2;
@@ -94,7 +94,7 @@ public:
     auto y2 = (s2->org.y*dx2 + (B - s2->org.x)*dy2)*dx1;
     return y1<y2;
   };
-  bool RBelow(int4 s_1, int4 s_2) //retuns if s1 below s2 at current vertical line
+  bool RBelow(int4 s_1, int4 s_2) const //retuns if s1 below s2 at current vertical line
   {
     auto s1 = collection + s_1;
     auto s2 = collection + s_2;
@@ -166,7 +166,7 @@ public:
     return FindIntWith<false>(curB, curE, s_);
   };
 
-  bool UnderCurPoint(int4 s_) { return collection[s_].under(cur_point); };//returns true if s is under current point 
+  bool UnderCurPoint(int4 s_) const { return collection[s_].under(cur_point); };//returns true if s is under current point 
   void PrepareEndpointsSortedList(uint4 *epoints)// endpoints allocated by caller and must contain space for at least 2*GetSegmNumb() points 
   {
     auto NN = N << 1;
@@ -213,7 +213,7 @@ public:
   CLine1SegmentCollection() {};
 
 private:
-  inline auto GetX(uint4 pt)
+  inline auto GetX(uint4 pt) const
   {
     return is_last(pt) ? collection[get_segm(pt)].org.x + collection[get_segm(pt)].shift.x : collection[get_segm(pt)].org.x;
   };

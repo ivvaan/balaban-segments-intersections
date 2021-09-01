@@ -836,7 +836,7 @@ int4 CIntersectionFinder<is_line_seg>::SearchInStrip(int4 QP, int4 Size)
 {
     auto _L = L, q = Q + QP + 1, last = L + Size;
     int4 n_split = 0, size = Size;
-    while (size = Split(QP, size))++n_split; //it change QP must be after q = Q + QP + 1 
+    while (size = Split(QP, size))++n_split; //it changes QP. Must be after q = Q + QP + 1 
     // at this point we can just place Q starting from QP+1 to L and sort it
     for (; _L < last; ++_L, ++q)  *_L = *q;
     if(n_split)
@@ -1211,7 +1211,7 @@ template<bool is_line_seg>
 void CIntersectionFinder<is_line_seg>::prepare_ends(uint4 n)
 {
 	uint4 i, j;
-	REAL x, y;
+	REAL y;
 	for (i = 0, j = 0; i<n; i++)
 	{
 		ENDS[j].segm = 2*i;// even value means first (leftmost) end
@@ -1483,7 +1483,7 @@ void CIntersectionFinder<is_line_seg>::simple_sweep(uint4 n, PSeg Scoll[])
 {
 	uint4 i, j;
 	PSeg s;
-	uint4 pos, k;
+	uint4 pos;
 	PSeg *sgm = new PSeg[n + 1];
 	struct TSEnd :public TEnd
 	{
