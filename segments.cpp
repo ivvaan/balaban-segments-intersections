@@ -39,7 +39,7 @@ void TLineSegment1::InitRandom(CRandomValueGen &rv, int4 seg_n, int4 type, REAL 
   }
   org.x = rv.GetRandomDouble();
   org.y = rv.GetRandomDouble();
-  shift.x = rv.GetRandomDouble() - org.x;
+  shift.x = rv.GetRandomDouble() - org.x+1e-6; //to be sure the segment non vertical
   shift.y = rv.GetRandomDouble() - org.y;
   Refine();
   if (parallel == type)
@@ -309,8 +309,17 @@ void TArcSegment::InitRandom(CRandomValueGen &rv, int4 seg_n, int4 type, REAL pa
 #endif
     return;
   }
-
-  REAL tmp, r;
+  TLineSegment1 seg;
+  seg.InitRandom(rv, 0, type, par);
+  auto slope = seg.shift.y / seg.shift.x;
+  TPlaneVect norm(0.5*slope, -0.5);
+  auto coef = fabs(seg.shift.x)*(1.+rv.GetRandomDouble())+fabs(seg.shift.y)+1./1024.;
+  org = seg.org + 0.5 * seg.shift + (rv.RandomChoose() ? coef * norm : -coef * norm);
+  r2 = (org - seg.org).get_norm();
+  is_upper = seg.org.y > org.y;
+  x1 = seg.org.x;
+  x2 = x1 + seg.shift.x;
+ /* REAL tmp, r;
   x1 = rv.GetRandomDouble();
   tmp = rv.GetRandomDouble();
   if (x1<tmp)x2 = tmp;
@@ -321,11 +330,14 @@ void TArcSegment::InitRandom(CRandomValueGen &rv, int4 seg_n, int4 type, REAL pa
   x2 = x1 + par*delta;
   org.x = rv.GetRandomDouble();
   org.y = rv.GetRandomDouble();
+  //org.x = rv.GetRandomDouble()/par;
+  //org.y = rv.GetRandomDouble()/par;
   tmp = max(fabs(x1 - org.x), fabs(x2 - org.x));
-  par = max(1.0, par);
-  r = par*rv.GetRandomDouble()+tmp;
+  //par = max(1.0, par);
+  //r = par * rv.GetRandomDouble() + tmp;
+  r = rv.GetRandomDouble() + tmp;
   r2 = r*r;
-  is_upper = rv.RandomChoose();
+  is_upper = rv.RandomChoose();*/
 #ifdef PRINT_SEG_AND_INT
   printf("[%6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%i],\n", org.x, org.y, r2, x1, x2, (int)is_upper);
 #endif
