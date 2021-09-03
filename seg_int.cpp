@@ -59,6 +59,28 @@ SetPriorityClass(hProcess, dwProcessPriSave);
 
 double ICT = -1;
 
+unsigned random_seed = 317;
+
+void search_problem(uint4 n) {
+  double nfast = 0;
+  double ntriv = 0;
+  uint4 r_seed = 1;
+  CRandomValueGen rv(r_seed);
+  auto find_intersections = get_find_intersections_func(_Registrator::just_count);
+  while (nfast == ntriv) {
+    rv.SetSeeed(++r_seed);
+    auto seg_coll = create_test_collection(_Segment::arc, n, _Distribution::random, 1.0, rv, nullptr);
+    nfast = find_intersections(_Segment::arc, n, seg_coll, _Algorithm::fast, _Registrator::just_count);
+    ntriv = find_intersections(_Segment::arc, n, seg_coll, _Algorithm::simple_sweep, _Registrator::just_count);
+    if (r_seed % 1000000 == 0)printf("%i ", r_seed/1000000);
+    
+    delete_test_collection(_Segment::arc, seg_coll, nullptr);
+
+  }
+  printf("\nfound %i \n", r_seed);
+  {printf("\npress 'Enter' to continue"); getchar(); }
+};
+
 
 double _benchmark_old(char* counters_string, int4 n, PSeg* seg_ptr_coll, int4 s_type, int4 alg, double& res, bool dont_need_ip = false)
   {
@@ -77,7 +99,7 @@ double _benchmark_old(char* counters_string, int4 n, PSeg* seg_ptr_coll, int4 s_
 	  n_call++;
   }
 #ifndef _DEBUG  
-  while ((tottime < 2)||(n_call<3));
+  while ((tottime < 3)||(n_call<3));
 #else
   while (false);
 #endif
@@ -106,7 +128,7 @@ double _benchmark_new(int4 n, PSeg seg_coll, int4 s_type, int4 alg, double& res,
     n_call++;
   } 
 #ifdef NDEBUG
-  while ((tottime < 10) || (n_call < 3));
+  while ((tottime < 3) || (n_call < 3));
 #else
   while (false);
 #endif
@@ -138,12 +160,11 @@ void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr
   counters_mute = counters_string + strlen(counters_string);
   if (impl == _Implementation::impl_old)
   {
-    printf("\nold implementation testing... ************************************************\n");
+    if (!print_less)printf("\nold implementation testing... ************************************************\n");
     stat_names = stat_names_old;
   }
-    
   else
-    printf("\nnew implementation testing... ************************************************\n");
+    if (!print_less)printf("\nnew implementation testing... ************************************************\n");
 
   ON_BENCH_BEG
 
@@ -164,9 +185,9 @@ void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr
           exec_time[a] = _benchmark_new(n, seg_coll, seg_type, alg_list[a], nInt[a],reg_stat);
         
         if (print_less)
-          printf("a%i;s%c;distr_type%c;n%i;i%13.0f;t%6.5f;distr_param%f;%s\n", alg_list[a], ss[seg_type], sd[distr_type], n, nInt[a], exec_time[a], distr_param, counters_mute);
+          printf("I%i;a%i;s%c;d%c;S%i;n%i;i%13.0f;t%6.5f;p%f;%s\n", impl, alg_list[a], ss[seg_type], sd[distr_type], random_seed, n, nInt[a], exec_time[a], distr_param, counters_mute);
         else
-          printf("alg=%s; %s=%13.0f; exec time=%6.5f;%s\n", alg_names[a],stat_names[reg_stat], nInt[a], exec_time[a], counters_string);
+          printf("alg=%s; %s=%13.0f; exec time=%6.5f;%s\n", alg_names[a],stat_names[reg_stat],  nInt[a], exec_time[a], counters_string);
       }
     };
   ON_BENCH_END
@@ -215,7 +236,6 @@ int main(int argc, char* argv[])
   const char *ss = "Llag", *sd = "rlmspc",*sr="pPc";
   const char *alg_names[] = { "trivial","simple_sweep","fast","optimal","fast_parallel","bentley_ottmann","fast no inters points","fast 'no R'" };
   uint4 reg_stat = 2;
-  unsigned random_seed=317;
 
 #ifdef _DEBUG
   _CrtSetDbgFlag(_CRTDBG_CHECK_ALWAYS_DF);
@@ -346,9 +366,9 @@ int main(int argc, char* argv[])
           {
             switch (argv[i][2])
             {
-            case 'c':reg_stat = 2; break;
-            case 'p':reg_stat = 0; break;
-            case 'P':reg_stat = 1; break;
+            case 'c':reg_stat = _Registrator::just_count; break;
+            case 'p':reg_stat = _Registrator::per_segm_reg_just_count_stat; break;
+            case 'P':reg_stat = _Registrator::per_segm_reg_max_per_segm_stat; break;
             default:
               reg_stat = 2;
             };
@@ -407,6 +427,8 @@ int main(int argc, char* argv[])
   if((seg_type==arc)&&(distr_type==mixed)) {printf("-sa -dm is not compartible!/n"); if (wait) { printf("\npress 'Enter' to continue"); getchar(); } return 0;}                  
   if((seg_type==arc)&&(distr_type==parallel)) {printf("-sa -dl is not compartible!/n"); if (wait) { printf("\npress 'Enter' to continue"); getchar(); } return 0;}
   if (!print_less)printf("actual params is: -a%i -s%c -d%c -r%c -i%i -n%i -S%i -p%f -e%f\n", alg, ss[seg_type], sd[distr_type],sr[reg_stat], impl, n, random_seed, distr_param,ICT);
+  //search_problem(n);
+  //return 0;
   PSeg *seg_ptr_coll = nullptr;
   PSeg seg_coll;
   CRandomValueGen rv(random_seed);

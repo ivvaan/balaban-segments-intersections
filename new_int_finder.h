@@ -1,4 +1,5 @@
-#pragma once
+#ifndef NEW_INT_FINDER_FOR_SEGMENT_INTERSECTION
+#define NEW_INT_FINDER_FOR_SEGMENT_INTERSECTION
 /*
 *
 *      Copyright (c)  2011-2020  Ivan Balaban
@@ -134,6 +135,113 @@ public:
     ~CommonImpl() { FreeMem(); };
 protected:
 
+  uint4 LR_len = 0;
+  uint4 nTotSegm = 0;
+  uint4 len_of_Q = 0;
+
+  uint4* SegL = nullptr, * SegR = nullptr, * ENDS = nullptr;
+  int4* Q = nullptr;
+  int4* L = nullptr;
+
+  void AllocMem(uint4 N)
+  {
+    SegL = new uint4[N];
+    SegR = new uint4[N];
+    ENDS = new uint4[2 * N];
+  };
+
+  void FreeMem()
+  {
+    MY_FREE_ARR_MACRO(SegL);
+    MY_FREE_ARR_MACRO(SegR);
+    MY_FREE_ARR_MACRO(ENDS);
+  };
+
+  template <class IntersectionFinder, class SegmentsColl>
+  static  int4 FindR(IntersectionFinder* i_f, SegmentsColl* segments, int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec* stack_pos, uint4 Size, uint4 call_numb, uint4 max_call = 30)
+  {
+    segments->SetCurStripe(i_f->ENDS[interval_left_index], i_f->ENDS[interval_right_index]);
+    if (interval_right_index - interval_left_index == 1)
+      return Size > 1 ? i_f->SearchInStrip(segments, ladder_start_index, Size) : Size;
+
+    ProgramStackRec stack_rec(ladder_start_index);
+    if (Size > 0)
+    {
+      Size = i_f->Split(segments, interval_right_index, stack_rec.Q_pos, Size);
+      if (ladder_start_index < stack_rec.Q_pos)
+        stack_pos = stack_rec.Set(stack_pos, interval_right_index);
+    };
+    if (i_f->dont_split_stripe && (call_numb < max_call)) //if found a lot of intersections repeat FindR
+      Size = FindR(i_f, segments, stack_rec.Q_pos, interval_left_index, interval_right_index, stack_pos, Size, call_numb + 1, max_call);
+    else //cut stripe 
+    {
+      uint4 m = (interval_left_index + interval_right_index) >> 1;
+      if (call_numb > 1)
+      { // if L contains a lot of segments then cut on two parts
+        max_call -= 2;
+        Size = FindR(i_f, segments, stack_rec.Q_pos, interval_left_index, m, stack_pos, Size, 0, max_call);
+        Size = i_f->InsDel(segments, m, stack_pos, Size);
+        Size = FindR(i_f, segments, stack_rec.Q_pos, m, interval_right_index, stack_pos, Size, 0, max_call);
+      }
+      else
+      {// if L contains not so many segments than cut on four parts (works faster for some segment distributions)
+        max_call -= 4;
+        uint4 q = (interval_left_index + m) >> 1;
+        if (interval_left_index != q) {
+          Size = FindR(i_f, segments, stack_rec.Q_pos, interval_left_index, q, stack_pos, Size, 0, max_call);
+          Size = i_f->InsDel(segments, q, stack_pos, Size);
+        }
+        Size = FindR(i_f, segments, stack_rec.Q_pos, q, m, stack_pos, Size, 0, max_call);
+        Size = i_f->InsDel(segments, m, stack_pos, Size);
+        q = (interval_right_index + m) >> 1;
+        if (q != m) {
+          Size = FindR(i_f, segments, stack_rec.Q_pos, m, q, stack_pos, Size, 0, max_call);
+          Size = i_f->InsDel(segments, q, stack_pos, Size);
+        }
+        Size = FindR(i_f, segments, stack_rec.Q_pos, q, interval_right_index, stack_pos, Size, 0, max_call);
+      }
+    }
+    if (ladder_start_index >= stack_rec.Q_pos) return Size;
+    return i_f->Merge(segments, interval_left_index, ladder_start_index, stack_rec.Q_pos, Size);
+  };
+
+
+  //functions for fast algorithm
+  template <class SegmentsColl>
+  void FindInt(SegmentsColl* segments, int4 qb, int4 qe, int4 l) const
+  {
+    int4 c = l;
+    while ((c > qb) && (segments->FindCurSegIntWith(Q[c]))) //first get intersections below
+      --c;
+    if (SegmentsColl::is_line_segments && (c != l))
+      return; //if found and segment is line it can't be any more
+    c = l + 1;
+    while ((c <= qe) && (segments->FindCurSegIntWith(Q[c]))) // get intersections above
+      ++c;
+  };
+
+  template <class SegmentsColl>
+  void FindIntI(SegmentsColl* segments, uint4 r_index, ProgramStackRec* stack_pos) const
+  {
+    while (stack_pos->right_bound <= r_index)
+      stack_pos = stack_pos->prev; // go from bottom to top and find staircase to start
+    int4 l, r, m, QB, QE = stack_pos->Q_pos;
+    for (stack_pos = stack_pos->prev; stack_pos != nullptr; stack_pos = stack_pos->prev) {
+      l = QB = stack_pos->Q_pos;
+      r = QE + 1;
+      while ((r - l) > 1) // binary search
+      {
+        m = (r + l) >> 1; //        m=(r+l)/2;
+        if (segments->UnderCurPoint(Q[m]))
+          l = m;
+        else
+          r = m;
+      }
+      FindInt(segments, QB, QE, l);
+      QE = QB; // move staircase bound to parent staircase
+    };
+  };
+
   template<class SegmentsColl>
   void SearchInStripNonLineSeg(SegmentsColl* segments, int4* _L, int4* _Q, int4 size)//simplified version for SearchInStrip
   {
@@ -191,115 +299,6 @@ protected:
     }
   }
 
-
-
-  template <class IntersectionFinder, class SegmentsColl>
-static  int4 FindR(IntersectionFinder *i_f, SegmentsColl* segments, int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec* stack_pos, uint4 Size, uint4 call_numb, uint4 max_call = 30)
-  {
-    segments->SetCurStripe(i_f->ENDS[interval_left_index], i_f->ENDS[interval_right_index]);
-    if (interval_right_index - interval_left_index == 1)
-      return Size>1 ? i_f->SearchInStrip(segments, ladder_start_index, Size) : Size;
-
-    ProgramStackRec stack_rec(ladder_start_index);
-    if (Size>0)
-    {
-      Size = i_f->Split(segments, interval_right_index, stack_rec.Q_pos, Size);
-      if (ladder_start_index<stack_rec.Q_pos)
-        stack_pos = stack_rec.Set(stack_pos, interval_right_index);
-    };
-    if (i_f->dont_split_stripe && (call_numb < max_call)) //if found a lot of intersections repeat FindR
-      Size = FindR(i_f, segments, stack_rec.Q_pos, interval_left_index, interval_right_index, stack_pos, Size, call_numb + 1, max_call);
-    else //cut stripe 
-    {
-      uint4 m = (interval_left_index + interval_right_index) >> 1;
-      if (call_numb>1)
-      { // if L contains a lot of segments then cut on two parts
-        max_call -= 2;
-        Size = FindR(i_f, segments, stack_rec.Q_pos, interval_left_index, m, stack_pos, Size, 0, max_call);
-        Size = i_f->InsDel(segments, m, stack_pos, Size);
-        Size = FindR(i_f, segments, stack_rec.Q_pos, m, interval_right_index, stack_pos, Size, 0, max_call);
-      }
-      else
-      {// if L contains not so many segments than cut on four parts (works faster for some segment distributions)
-        max_call -= 4;
-        uint4 q = (interval_left_index + m) >> 1;
-        if (interval_left_index != q) {
-          Size = FindR(i_f, segments, stack_rec.Q_pos, interval_left_index, q, stack_pos, Size, 0, max_call);
-          Size = i_f->InsDel(segments, q, stack_pos, Size);
-        }
-        Size = FindR(i_f, segments, stack_rec.Q_pos, q, m, stack_pos, Size, 0, max_call);
-        Size = i_f->InsDel(segments, m, stack_pos, Size);
-        q = (interval_right_index + m) >> 1;
-        if (q != m) {
-          Size = FindR(i_f, segments, stack_rec.Q_pos, m, q, stack_pos, Size, 0, max_call);
-          Size = i_f->InsDel(segments, q, stack_pos, Size);
-        }
-        Size = FindR(i_f, segments, stack_rec.Q_pos, q, interval_right_index, stack_pos, Size, 0, max_call);
-      }
-    }
-    if (ladder_start_index >= stack_rec.Q_pos) return Size;
-    return i_f->Merge(segments, interval_left_index, ladder_start_index, stack_rec.Q_pos, Size);
-  };
-
-    uint4 LR_len = 0;
-    uint4 nTotSegm = 0;
-    uint4 len_of_Q = 0;
-
-    uint4 *SegL = nullptr, *SegR = nullptr, *ENDS = nullptr;
-    int4 *Q = nullptr;
-    int4 *L = nullptr;
-
-    
-    
-    void AllocMem(uint4 N)
-    {
-        SegL = new uint4[N];
-        SegR = new uint4[N];
-        ENDS = new uint4[2 * N];
-    };
-
-    void FreeMem()
-    {
-        MY_FREE_ARR_MACRO(SegL);
-        MY_FREE_ARR_MACRO(SegR);
-        MY_FREE_ARR_MACRO(ENDS);
-    };
-
-    //functions for fast algorithm
-    template <class SegmentsColl>
-    void FindInt(SegmentsColl* segments, int4 qb, int4 qe, int4 l) const
-    {
-        int4 c = l;
-        while ((c > qb) && (segments->FindCurSegIntWith(Q[c]))) //first get intersections below
-            --c;
-        if (SegmentsColl::is_line_segments && (c != l))
-            return; //if found and segment is line it can't be any more
-        c = l + 1;
-        while ((c <= qe) && (segments->FindCurSegIntWith(Q[c]))) // get intersections above
-            ++c;
-    };
-
-    template <class SegmentsColl>
-    void FindIntI(SegmentsColl* segments, uint4 r_index, ProgramStackRec* stack_pos) const
-    {
-        while (stack_pos->right_bound <= r_index)
-            stack_pos = stack_pos->prev; // go from bottom to top and find staircase to start
-        int4 l, r, m, QB, QE = stack_pos->Q_pos;
-        for (stack_pos = stack_pos->prev; stack_pos!=nullptr; stack_pos = stack_pos->prev) {
-            l = QB = stack_pos->Q_pos;
-            r = QE + 1;
-            while ((r - l) > 1) // binary search
-            {
-                m = (r + l) >> 1; //        m=(r+l)/2;
-                if (segments->UnderCurPoint(Q[m]))
-                    l = m;
-                else
-                    r = m;
-            }
-            FindInt(segments, QB, QE, l);
-            QE = QB; // move staircase bound to parent staircase
-        };
-    };
 };
 
 
@@ -310,3 +309,4 @@ uint4 get_max_call(uint4 N) {
 };
 
 //#undef MY_FREE_ARR_MACRO
+#endif

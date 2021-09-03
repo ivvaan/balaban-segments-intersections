@@ -32,6 +32,9 @@ std::default_random_engine rd_gen;
 std::default_random_engine drd_gen;
 #endif // NDEBUG
 
+#ifdef PRINT_SEG_AND_INT
+bool print_at_lineseg1_init = true;
+#endif
 
 double stduniform1()
 {

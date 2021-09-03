@@ -33,15 +33,17 @@ void TLineSegment1::InitRandom(CRandomValueGen &rv, int4 seg_n, int4 type, REAL 
     Refine();
 
 #ifdef PRINT_SEG_AND_INT
-    printf("[%6.3f,%6.3f,%6.3f,%6.3f],\n", org.x, org.y, org.x + shift.x, org.y + shift.y);
+    if(print_at_lineseg1_init)
+      printf("[%6.3f,%6.3f,%6.3f,%6.3f],\n", org.x, org.y, org.x + shift.x, org.y + shift.y);
 #endif
     return;
   }
   org.x = rv.GetRandomDouble();
   org.y = rv.GetRandomDouble();
-  shift.x = rv.GetRandomDouble() - org.x+1e-6; //to be sure the segment non vertical
+  shift.x = rv.GetRandomDouble() - org.x;
   shift.y = rv.GetRandomDouble() - org.y;
   Refine();
+  shift.x += 1e-6; //to be sure the segment non vertical
   if (parallel == type)
     shift.y *= par;
   if (mixed == type)
@@ -61,7 +63,8 @@ void TLineSegment1::InitRandom(CRandomValueGen &rv, int4 seg_n, int4 type, REAL 
     shift = par*shift;
   }
 #ifdef PRINT_SEG_AND_INT
-  printf("[%6.3f,%6.3f,%6.3f,%6.3f],\n", org.x, org.y, org.x + shift.x, org.y + shift.y);
+  if(print_at_lineseg1_init)
+    printf("[%6.3f,%6.3f,%6.3f,%6.3f],\n", org.x, org.y, org.x + shift.x, org.y + shift.y);
 #endif
 };
 
@@ -305,12 +308,19 @@ void TArcSegment::InitRandom(CRandomValueGen &rv, int4 seg_n, int4 type, REAL pa
     x2 = org.x + 1.- 1. / 1024.;
 
 #ifdef PRINT_SEG_AND_INT
-    printf("[%6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%i],\n", org.x, org.y, r2, x1, x2, (int)is_upper);
+    printf("[%6.3f,%6.3f,%6.3f,%6.3f,%6.3f,0,0,%i],\n", org.x, org.y, r2, x1, x2, (int)is_upper);
 #endif
     return;
   }
+#ifdef PRINT_SEG_AND_INT
+  print_at_lineseg1_init = false;
+#endif
+
+  
   TLineSegment1 seg;
+  do
   seg.InitRandom(rv, 0, type, par);
+  while (seg.shift.x<0.001); //excluding too vertical case they have big radius
   auto slope = seg.shift.y / seg.shift.x;
   TPlaneVect norm(0.5*slope, -0.5);
   auto coef = fabs(seg.shift.x)*(1.+rv.GetRandomDouble())+fabs(seg.shift.y)+1./1024.;
@@ -319,27 +329,8 @@ void TArcSegment::InitRandom(CRandomValueGen &rv, int4 seg_n, int4 type, REAL pa
   is_upper = seg.org.y > org.y;
   x1 = seg.org.x;
   x2 = x1 + seg.shift.x;
- /* REAL tmp, r;
-  x1 = rv.GetRandomDouble();
-  tmp = rv.GetRandomDouble();
-  if (x1<tmp)x2 = tmp;
-  else { x2 = x1; x1 = tmp; }
-  if (type<2) par = 1.0;
-  REAL delta = x2 - x1;
-  x1 = 0.5*(x1*(1.0 + par) + x2*(1.0 - par));
-  x2 = x1 + par*delta;
-  org.x = rv.GetRandomDouble();
-  org.y = rv.GetRandomDouble();
-  //org.x = rv.GetRandomDouble()/par;
-  //org.y = rv.GetRandomDouble()/par;
-  tmp = max(fabs(x1 - org.x), fabs(x2 - org.x));
-  //par = max(1.0, par);
-  //r = par * rv.GetRandomDouble() + tmp;
-  r = rv.GetRandomDouble() + tmp;
-  r2 = r*r;
-  is_upper = rv.RandomChoose();*/
 #ifdef PRINT_SEG_AND_INT
-  printf("[%6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%i],\n", org.x, org.y, r2, x1, x2, (int)is_upper);
+  printf("[%6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%6.3f,%i],\n", org.x, org.y, r2, x1, x2, seg.org.y, seg.org.y + seg.shift.y,(int)is_upper);
 #endif
 }
 

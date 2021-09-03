@@ -1,4 +1,7 @@
-#pragma once
+#ifndef REGISTRATOR_FOR_SEGMENT_INTERSECTION
+#define REGISTRATOR_FOR_SEGMENT_INTERSECTION
+
+
 /*
 *
 *      Copyright (c)  2011-2020  Ivan Balaban
@@ -120,14 +123,14 @@ public:
   double get_stat(uint4 stat_type = 0) 
   { 
     // if stat_type nonzero return maximal number of intersections per segment;
-    if (stat_type)return *std::max_element(segm_counters, segm_counters+N);
+    if (stat_type== _Registrator::per_segm_reg_max_per_segm_stat)
+      return *std::max_element(segm_counters, segm_counters+N);
     return counter; 
   };
 
 private:
   uint4 N;
   uint4 *segm_counters = nullptr;
-
 
   CIntersectionBuilder builder;
 
@@ -137,4 +140,4 @@ private:
 typedef JustCountingRegistrator<TPlaneVect> SimpleCounter;
 typedef PerSegmCountingRegistrator<TPlaneVect> PerSegmCounter;
 
-
+#endif // !REGISTRATOR_FOR_SEGMENT_INTERSECTION

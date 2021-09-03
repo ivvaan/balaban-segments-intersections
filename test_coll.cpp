@@ -387,7 +387,7 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
 
   find_intersections_func get_find_intersections_func(uint4 reg_type)
   {
-    if(reg_type==2)return _find_int<SimpleCounter>;
+    if(reg_type== _Registrator::just_count)return _find_int<SimpleCounter>;
     return _find_int<PerSegmCounter>;
   };
 

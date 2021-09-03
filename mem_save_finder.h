@@ -1,4 +1,6 @@
-#pragma once
+#ifndef MEM_SAVE_FINDER_FOR_SEGMENT_INTERSECTION
+#define MEM_SAVE_FINDER_FOR_SEGMENT_INTERSECTION
+ 
 /*
 *
 *      Copyright (c)  2011-2020  Ivan Balaban
@@ -78,32 +80,6 @@ public:
 
     return Size;
 
-  /*  if (SegmentsColl::is_line_segments)
-    {
-      auto L_ = ;
-      auto _L = L_ - 1;
-      for (uint4 i = 1; i < Size; i++)
-      {
-        auto sn = L_[i];
-        segments->SetCurSegCutBE(sn);
-        uint4 j = i;
-        for (; (j) && (segments->FindCurSegIntWith(_L[j])); --j)
-          L_[j] = _L[j];
-        L_[j] = sn;
-      }
-    }
-    else
-    {
-      auto q = Q + qp + 1;
-      int4 size = Size;
-      while (size = SplitSIS(segments, qp, size)); //it changes qp. Must be after q = Q + qp + 1 
-                                                            // at this point we can just place Q starting from qp+1 to L and sort it
-      auto last = L + Size;
-      for (auto _L = L; _L < last; ++_L, ++q)  *_L = *q;
-      std::sort(L, last, [segments](int4 s1, int4 s2) {return segments->RBelow(s1, s2); });
-    }
-    return Size;
-    */
   };
 
   template<class SegmentsColl>
@@ -314,3 +290,4 @@ private:
 
 };
 
+#endif

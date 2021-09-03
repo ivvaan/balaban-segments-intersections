@@ -41,12 +41,14 @@ typedef int  BOOL;
 //#define register
 #ifndef NDEBUG
 //#define PRINT_SEG_AND_INT
+extern bool print_at_lineseg1_init;
 #endif
 
 inline REAL sq(REAL x) { return x*x; }
 
 typedef void(*PSeg);
 typedef void(*PRegObj);
+
 
 enum _Algorithm
 {
@@ -62,12 +64,21 @@ enum _Algorithm
 
 enum _Segment
 {
-  line1 = 0, line2, arc,graph
+  line1 = 0, line2, arc, graph
 };
+
 enum _Distribution
 {
   random = 0, parallel, mixed, small, param_defined, circul
 };
+
+enum _Registrator
+{
+  per_segm_reg_just_count_stat = 0,
+  per_segm_reg_max_per_segm_stat = 1,
+  just_count=2
+};
+
 
 class CRandomValueGen
 {
@@ -82,49 +93,57 @@ private:
   double (*stduniform)();
 };
 
-template<class real> 
-class couple{
+template<class real>
+class couple {
 public:
-    real x=0;
-    real y=0;
-    couple() :x(0), y(0) {};
-    couple(const real &xc, const real &yc) :x(xc), y(yc) {};
-    couple(const couple &c) :x(c.x), y(c.y) {};
-    couple(couple &c) :x(c.x), y(c.y) {};
-    bool operator<(const couple<real>   & v2) const
-    {
-      return ((x<v2.x) || (x == v2.x) && (y<v2.y));
-    };
-    bool operator<=(const couple<real>   & v2)  const
-    {
-      return ((x<v2.x) || (x == v2.x) && (y<=v2.y));
-    };
-    bool operator>(const couple<real>   & v2)  const
-      { return ((x>v2.x)||(x==v2.x) && (y>v2.y));};
-    couple<real> operator-() const
-      {return couple<real>(-x,-y);};
-    real get_norm() const
-      {return x*x+y*y;}
-    real get_length() const
-      {return sqrt(x*x+y*y);};
-    couple<real>& normalize()
-      {
-      real l=get_length();
-      x/=l;y/=l;
-      return *this;
-      };
-    couple<real> get_normalized() const
-      {
-      real l=get_length();
-      return couple<real>(x/l,y/l);
-      };
-    void InitRandom(CRandomValueGen &rv)
-    {
-      x = rv.GetRandomDouble();
-      y = rv.GetRandomDouble();
-    };
-    
+  real x = 0;
+  real y = 0;
+  couple() :x(0), y(0) {};
+  couple(const real& xc, const real& yc) :x(xc), y(yc) {};
+  couple(const couple& c) :x(c.x), y(c.y) {};
+  couple(couple& c) :x(c.x), y(c.y) {};
+  bool operator<(const couple<real>& v2) const
+  {
+    return ((x < v2.x) || (x == v2.x) && (y < v2.y));
   };
+  bool operator<=(const couple<real>& v2)  const
+  {
+    return ((x < v2.x) || (x == v2.x) && (y <= v2.y));
+  };
+  bool operator>(const couple<real>& v2)  const
+  {
+    return ((x > v2.x) || (x == v2.x) && (y > v2.y));
+  };
+  couple<real> operator-() const
+  {
+    return couple<real>(-x, -y);
+  };
+  real get_norm() const
+  {
+    return x * x + y * y;
+  }
+  real get_length() const
+  {
+    return sqrt(x * x + y * y);
+  };
+  couple<real>& normalize()
+  {
+    real l = get_length();
+    x /= l; y /= l;
+    return *this;
+  };
+  couple<real> get_normalized() const
+  {
+    real l = get_length();
+    return couple<real>(x / l, y / l);
+  };
+  void InitRandom(CRandomValueGen& rv)
+  {
+    x = rv.GetRandomDouble();
+    y = rv.GetRandomDouble();
+  };
+
+};
 
 
 
