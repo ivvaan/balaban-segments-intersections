@@ -62,20 +62,22 @@ public:
       //If s1<s2 at the left bound then s1 intersects s2 inside the stripe means s1>s2 at the right bound of the stripe.
       //All segments are sorted at the left bound by precondition, so intesection is the same as comparison
       // at the right bound. Byproduct of the sorting is intersections detection.
-      SearchInStripLineSeg(segments, _L , Size);
+      SearchInStripLineSeg(segments, _L, Size);
     }
     else {
+
+      auto _Q = Q + qp;  //prepere Q pointer for SearchInStripNonLineSeg
       //Make sequential simplified Split
-      auto _Q = Q + qp;
-      SearchInStripNonLineSeg(segments, _L, _Q, Size);
-      //at the and we have all the intersections found
-      //and all the segments moved from L to Q
-      //so we copy them back
-      auto last_L = _L + Size;
-      for (auto L_ = _L; L_ < last_L; ++L_) *L_ = *++_Q;
-      //now segments in L once again, but in icorrect order
-      //sort it
-      std::sort(_L, last_L, [segments](int4 s1, int4 s2) {return segments->RBelow(s1, s2); });
+      SearchInStripNonLineSeg(segments, _L, _Q++, Size); //_Q pointed to element before the first new (moved from L) 
+      //segment in Q and we need to increment Q for correct copy (see below)
+
+      //as a result of SearchInStripNonLineSeg we have all the intersections 
+      //found and all the segments moved from L to Q
+      //so we need to copy them back and
+      //once segments in L again (but in icorrect order)
+      //we sort it
+      std::sort(_L, std::copy(_Q, _Q + Size, _L),
+        [segments](int4 s1, int4 s2) {return segments->RBelow(s1, s2); });
     }
 
     return Size;
