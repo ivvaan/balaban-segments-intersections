@@ -34,6 +34,15 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include "optimal_finder.h"
 #include "intersection_finder.h"
 
+chostream* SVG_stream;
+
+void set_SVG_stream(chostream* SVG) {
+  SVG_stream = SVG;
+};
+
+chostream* get_SVG_stream() {
+  return SVG_stream;
+};
 
 const int4 n_threads = 6;
 
@@ -370,6 +379,7 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
         } break;
 
     }
+    reg.write_SVG(alg, get_SVG_stream());
     return reg.get_stat(stat);
   };
 
@@ -387,8 +397,30 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
 
   find_intersections_func get_find_intersections_func(uint4 reg_type)
   {
-    if(reg_type== _Registrator::just_count)return _find_int<SimpleCounter>;
+    if (reg_type == _Registrator::just_count)return _find_int<SimpleCounter>;
+    if (reg_type == _Registrator::store_pairs_and_ints_just_count_stat)
+      return _find_int<TrueRegistrator>;
     return _find_int<PerSegmCounter>;
   };
+
+  void coll_to_SVG(PSeg coll, int4 seg_type, int4 n,chostream *SVG_stream ) {
+    int4 N = min(n, max_SVG_items);
+    switch (seg_type)
+    {
+    case line1: {
+      TLineSegment1* c = (TLineSegment1*)coll;
+      for (int4 i = 0; i < N; ++i)c[i].write_SVG(i,SVG_stream);
+    }; break;
+    case line2: {
+      TLineSegment2* c = (TLineSegment2*)coll;
+      for (int4 i = 0; i < N; ++i)c[i].write_SVG(i,SVG_stream);
+    }; break;
+    case arc: {
+    }; break;
+    default:
+      break;
+    }
+  };
+
 
  

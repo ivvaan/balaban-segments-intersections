@@ -20,6 +20,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 */ 
+#include <ostream>
 
 #include <math.h>
 typedef int int4;
@@ -44,7 +45,12 @@ typedef int  BOOL;
 extern bool print_at_lineseg1_init;
 #endif
 
+const uint4 max_SVG_items = 5000;
+
+
 inline REAL sq(REAL x) { return x*x; }
+
+using chostream = std::basic_ostream<char>;
 
 typedef void(*PSeg);
 typedef void(*PRegObj);
@@ -76,7 +82,8 @@ enum _Registrator
 {
   per_segm_reg_just_count_stat = 0,
   per_segm_reg_max_per_segm_stat = 1,
-  just_count=2
+  just_count=2,
+  store_pairs_and_ints_just_count_stat=3
 };
 
 
@@ -102,6 +109,8 @@ public:
   couple(const real& xc, const real& yc) :x(xc), y(yc) {};
   couple(const couple& c) :x(c.x), y(c.y) {};
   couple(couple& c) :x(c.x), y(c.y) {};
+  real getX() const { return x; };
+  real getY() const { return y; };
   bool operator<(const couple<real>& v2) const
   {
     return ((x < v2.x) || (x == v2.x) && (y < v2.y));
