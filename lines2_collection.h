@@ -64,18 +64,18 @@ public:
   void SetCurSegCutBE(uint4 s)
   {
     SetCurSeg(s);
-    cur_seg.x1 = max(cur_seg.x1, B);
-    cur_seg.x2 = min(cur_seg.x2, E);
+    if (B > cur_seg.x1)cur_seg.x1 = B;
+    if (E < cur_seg.x2)cur_seg.x2 = E;
   };
   void SetCurSegCutBeg(uint4 s)
   {
     SetCurSeg(s);
-    cur_seg.x1 = max(cur_seg.x1, B);
+    if (B > cur_seg.x1)cur_seg.x1 = B;
   };
   void SetCurSegCutEnd(uint4 s)
   {
     SetCurSeg(s);
-    cur_seg.x2 = min(cur_seg.x2, E);
+    if (E < cur_seg.x2)cur_seg.x2 = E;
   };
   inline void SetCurSeg(uint4 s)
   {
@@ -99,8 +99,8 @@ public:
   bool TrivCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
   {
     auto s = collection + s_;
-    auto x1 = max(cur_seg.x1, s->x1);
-    auto x2 = min(cur_seg.x2, s->x2);
+    auto x1 = MAX(cur_seg.x1, s->x1);
+    auto x2 = MIN(cur_seg.x2, s->x2);
     if (x1 >= x2)return false;
     auto da = cur_seg.a - s->a;
     if (da == 0)return false;
@@ -138,8 +138,8 @@ public:
     auto s = collection + s_;
     auto da = cur_seg.a - s->a;
     if (da == 0)return false;
-    auto x1 = max(cur_seg.x1, s->x1);
-    auto x2 = min(cur_seg.x2, s->x2);
+    auto x1 = MAX(cur_seg.x1, s->x1);
+    auto x2 = MIN(cur_seg.x2, s->x2);
     if (_RegistrationType::point&IntersectionRegistrator::reg_type)
     {
       TPlaneVect p;

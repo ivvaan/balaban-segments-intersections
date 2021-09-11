@@ -64,18 +64,18 @@ public:
   void SetCurSegCutBE(uint4 s)
   {
     SetCurSeg(s);
-    curB = max(B, curB);
-    curE = min(E, curE);
+    if (B > curB)curB = B;
+    if (E < curE)curE = E;
   };
   void SetCurSegCutBeg(uint4 s)
   {
     SetCurSeg(s);
-    curB = max(B, curB);
+    if (B > curB)curB = B;
   };
   void SetCurSegCutEnd(uint4 s)
   {
     SetCurSeg(s);
-    curE = min(E, curE);
+    if (E < curE)curE = E;
   };
   inline void SetCurSeg(uint4 s)
   {
@@ -145,8 +145,8 @@ public:
   bool TrivCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
   {
     auto s = collection + s_;
-    auto x1 = max(curB, s->org.x);
-    auto x2 = min(curE, s->org.x + s->shift.x);
+    auto x1 = std::max(curB, s->org.x);
+    auto x2 = std::min(curE, s->org.x + s->shift.x);
     if (x1 >= x2)return false;
     return FindIntWith<true>(x1, x2, s_);
   };

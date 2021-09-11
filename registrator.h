@@ -285,7 +285,7 @@ public:
 
   void write_SVG(uint4 alg, chostream* SVG_text) {
     if (SVG_text) {
-      for (uint4 i = 0; i < min(N_points, max_SVG_items); ++i) {
+      for (uint4 i = 0; i < MIN(N_points, max_SVG_points); ++i) {
         *SVG_text << "<circle id='int" << i;
         *SVG_text << "' cx='" << int_points[i].getX();
         *SVG_text << "' cy='" << int_points[i].getY();

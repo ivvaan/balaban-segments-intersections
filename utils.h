@@ -31,13 +31,15 @@ typedef int  BOOL;
 #define TRUE 1
 #define FALSE 0
 
-#ifndef max
-#define max(a,b)            (((a) > (b)) ? (a) : (b))
+
+#ifndef MAX
+#define MAX(a,b)            (((a) > (b)) ? (a) : (b))
 #endif
 
-#ifndef min
-#define min(a,b)            (((a) < (b)) ? (a) : (b))
+#ifndef MIN
+#define MIN(a,b)            (((a) < (b)) ? (a) : (b))
 #endif
+
 
 //#define register
 #ifndef NDEBUG
@@ -46,6 +48,7 @@ extern bool print_at_lineseg1_init;
 #endif
 
 const uint4 max_SVG_items = 5000;
+const uint4 max_SVG_points = 150000;
 
 
 inline REAL sq(REAL x) { return x*x; }

@@ -34,6 +34,46 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <strstream>
 namespace fs = std::filesystem;
 
+const char* STYLE_temlate = R"WYX(
+<!DOCTYPE html>
+<html>
+<style>
+line{stroke:blue;
+stroke-width:0.001;}
+.line1{stroke:cadetblue;}
+.line2{stroke:darkblue;}
+circle{r:0.003;fill: gold;}
+.triv {r:0.002;fill: purple;}
+.ssw {fill: sandybrown;}
+.fast {fill: orange;}
+.optimal {fill: khaki;}
+.parallel {fill: darkorange;}
+.mem_save {fill: salmon;}
+</style>
+<script>
+var state=1;
+var dir=1;
+var zoom=function(){
+svg=document.getElementsByTagName('svg')[0];
+mul=1.25;
+if(dir<0) {mul=0.8;} 
+var h=parseFloat(svg.getAttribute('height'));
+svg.setAttribute('height',h*mul+'%');
+var w=parseFloat(svg.getAttribute('width'));
+svg.setAttribute('width',w*mul+'%');
+state+=dir;
+if(state>=6){dir=-1;}
+if(state<=1){dir=1;}
+}
+</script>
+<body ondblclick='zoom()'>
+<!--inserthere-->
+</body>
+</html>
+)WYX";
+
+const char* to_insert_SVG = "<!--inserthere-->";
+
 
 #if defined(_WIN32) && !defined(_DEBUG)
 #include <windows.h>
@@ -466,12 +506,18 @@ int main(int argc, char* argv[])
   if (impl&_Implementation::impl_new)
     perform_tests(use_counters, _Implementation::impl_new, alg, seg_type, distr_type, distr_param, print_less, rtime_printout, dont_need_ip, n, seg_coll, seg_ptr_coll,reg_stat);
 
-  SVG_str << std::ends;
+  
   fs::path path("C:\\tmp");
   //std::ofstream svgf(fs::current_path() / "result.svg");
-  std::ofstream svgf(path / "result.svg");
+  std::ofstream svgf(path / "res.htm");
+  auto insert_pos = strstr(STYLE_temlate, to_insert_SVG);
+  {
+    std::ostream_iterator<char> it(svgf);
+    std::copy(STYLE_temlate, insert_pos,it);
+  }
+  SVG_str << std::ends;
   svgf << SVG_str.str();
-
+  svgf << "</svg>\n" << insert_pos;
   delete_test_collection(seg_type, seg_coll, seg_ptr_coll);
 
   if(wait){printf("\npress 'Enter' to continue"); getchar();}

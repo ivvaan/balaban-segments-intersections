@@ -403,18 +403,35 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
     return _find_int<PerSegmCounter>;
   };
 
+  template<class seg>
+  void _coll_to_SVG(void* coll, int4 N, chostream* SVG_stream) {
+    seg* c = (seg*)coll;
+    REAL xmin = 0, ymin = 0, xmax = 1, ymax = 1;
+    for (int4 i = 0; i < N; ++i) {
+      TPlaneVect bp = c[i].BegPoint();
+      TPlaneVect ep = c[i].EndPoint();
+      xmin = std::min({ xmin,bp.x,ep.x });
+      xmax = std::max({ xmax,bp.x,ep.x });
+      ymin = std::min({ ymin,bp.y,ep.y });
+      ymax = std::max({ ymax,bp.y,ep.y });
+    }
+    *SVG_stream << "<svg height='100%' width='100%' viewBox='";
+    *SVG_stream << xmin<<" "<<ymin<<" " << xmax << " " <<ymax<<"'>\n";
+    for (int4 i = 0; i < N; ++i)c[i].write_SVG(i, SVG_stream);
+
+  };
+
   void coll_to_SVG(PSeg coll, int4 seg_type, int4 n,chostream *SVG_stream ) {
-    int4 N = min(n, max_SVG_items);
+    if (!SVG_stream)return;
+    int4 N = MIN(n, max_SVG_items);
     switch (seg_type)
     {
-    case line1: {
-      TLineSegment1* c = (TLineSegment1*)coll;
-      for (int4 i = 0; i < N; ++i)c[i].write_SVG(i,SVG_stream);
-    }; break;
-    case line2: {
-      TLineSegment2* c = (TLineSegment2*)coll;
-      for (int4 i = 0; i < N; ++i)c[i].write_SVG(i,SVG_stream);
-    }; break;
+    case line1: 
+      _coll_to_SVG<TLineSegment1>(coll, N, SVG_stream);
+    break;
+    case line2: 
+      _coll_to_SVG<TLineSegment2>(coll, N, SVG_stream);
+    break;
     case arc: {
     }; break;
     default:
