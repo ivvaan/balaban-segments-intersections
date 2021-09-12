@@ -53,7 +53,7 @@ public:
   static constexpr uint4 reg_type = _RegistrationType::count;
   double counter = 0;
   void register_pair(uint4 s1, uint4 s2) { ++counter; };
-  void register_pair_and_point(uint4 s1, uint4 s2,ipoint &&p) { register_pair(s1, s2); };
+  void register_pair_and_point(uint4 s1, uint4 s2,ipoint &p) { register_pair(s1, s2); };
   void combine_reg_data(uint4 n_threads, JustCountingRegistrator *additional_reg_obj[])
   {
     for (int i = 0; i < n_threads - 1; i++)
@@ -82,7 +82,7 @@ public:
     ++segm_counters[s1];
     ++segm_counters[s2];
   };
-  void register_pair_and_point(uint4 s1, uint4 s2, ipoint&& p) { register_pair(s1,s2); };
+  void register_pair_and_point(uint4 s1, uint4 s2, ipoint& p) { register_pair(s1,s2); };
 
   void Alloc(uint4 _N)
   {
@@ -124,7 +124,7 @@ class PairAndPointRegistrator
   struct IntersectingPair {
     uint4 s1, s2;
     ipoint p;
-    void set(uint4 s_1, uint4 s_2, ipoint &&pp) {
+    void set(uint4 s_1, uint4 s_2, ipoint &pp) {
       p = pp;
       if (s_2 < s_1) {
         s1 = s_2; s2 = s_1;
@@ -156,7 +156,8 @@ public:
   void register_pair(uint4 s1, uint4 s2) {
     ++counter;
   };
-  void register_pair_and_point(uint4 s1, uint4 s2, ipoint&& p) {
+  void register_pair_and_point(uint4 s1, uint4 s2, ipoint& p) {
+    ++counter;
     if (N_pairs >= pairs_size)realloc_pairs();
     segm_pairs[N_pairs++].set(s1, s2, p);
   };
