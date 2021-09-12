@@ -104,17 +104,14 @@ public:
     if (x1 >= x2)return false;
     auto da = cur_seg.a - s->a;
     if (da == 0)return false;
-    if (_RegistrationType::point&IntersectionRegistrator::reg_type)
+    if constexpr(_RegistrationType::point&IntersectionRegistrator::reg_type)
     {
       TPlaneVect p;
       p.x = (s->b - cur_seg.b) / da;
       if ((p.x >= x1) && (p.x <= x2))
       {
         p.y = p.x*cur_seg.a + cur_seg.b;
-        registrator->begin_registration(1)->
-        register_segments(cur_seg_idx, s_)->
-        register_point(p)->
-        end_registration();
+        registrator->register_pair_and_point(cur_seg_idx, s_,p);
         return true;
       }
     }
@@ -123,9 +120,7 @@ public:
       auto x = (s->b - cur_seg.b) / da;
       if ((x >= x1) && (x <= x2))
       {
-        registrator->begin_registration(1)->
-        register_segments(cur_seg_idx, s_)->
-        end_registration();
+        registrator->register_pair(cur_seg_idx, s_);
         return true;
       }
     }
@@ -140,17 +135,14 @@ public:
     if (da == 0)return false;
     auto x1 = max(cur_seg.x1, s->x1);
     auto x2 = min(cur_seg.x2, s->x2);
-    if (_RegistrationType::point&IntersectionRegistrator::reg_type)
+    if constexpr(_RegistrationType::point&IntersectionRegistrator::reg_type)
     {
       TPlaneVect p;
       p.x = (s->b - cur_seg.b) / da;
       if ((p.x >= x1) && (p.x <= x2))
       {
         p.y = p.x*cur_seg.a + cur_seg.b;
-        registrator->begin_registration(1)->
-        register_segments(cur_seg_idx, s_)->
-        register_point(p)->
-        end_registration();
+        registrator->register_pair_and_point(cur_seg_idx, s_,p);
         return true;
       }
     }
@@ -159,9 +151,7 @@ public:
       auto x = (s->b - cur_seg.b) / da;
       if ((x >= x1) && (x <= x2))
       {
-        registrator->begin_registration(1)->
-        register_segments(cur_seg_idx, s_)->
-        end_registration();
+        registrator->register_pair(cur_seg_idx, s_);
         return true;
       }
     }
@@ -174,17 +164,14 @@ public:
     auto s = collection + s_;
     auto da = cur_seg.a - s->a;
     if (da == 0)return false;
-    if (_RegistrationType::point&IntersectionRegistrator::reg_type)
+    if constexpr(_RegistrationType::point&IntersectionRegistrator::reg_type)
     {
       TPlaneVect p;
       p.x = (s->b - cur_seg.b) / da;
       if ((p.x >= cur_seg.x1) && (p.x <= cur_seg.x2))
       {
         p.y = p.x*cur_seg.a + cur_seg.b;
-        registrator->begin_registration(1)->
-        register_segments(cur_seg_idx, s_)->
-        register_point(p)->
-        end_registration();
+        registrator->register_pair_and_point(cur_seg_idx, s_,p);
         return true;
       }
     }
@@ -193,9 +180,7 @@ public:
       auto x = (s->b - cur_seg.b) / da;
       if ((x >= cur_seg.x1) && (x <= cur_seg.x2))
       {
-        registrator->begin_registration(1)->
-        register_segments(cur_seg_idx, s_)->
-        end_registration();
+        registrator->register_pair(cur_seg_idx, s_);
         return true;
       }
     }
