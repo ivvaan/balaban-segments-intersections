@@ -98,18 +98,18 @@ public:
   void SetCurSegCutBE(uint4 s)
   {
     SetCurSeg(s);
-    if (B > curB)curB = B;
-    if (E < curE)curE = E;
+    curB = MAX(curB, B);
+    curE = MIN(curE, E);
   };
   void SetCurSegCutBeg(uint4 s)
   {
     SetCurSeg(s);
-    if (B > curB)curB = B;
+    curB = MAX(curB, B);
   };
   void SetCurSegCutEnd(uint4 s)
   {
     SetCurSeg(s);
-    if (E < curE)curE = E;
+    curE = MIN(curE, E);
   };
 
   void SetCurSeg(uint4 s)

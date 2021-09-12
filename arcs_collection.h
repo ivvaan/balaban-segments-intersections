@@ -64,18 +64,18 @@ public:
   void SetCurSegCutBE(uint4 s)
   {
     SetCurSeg(s);
-    if (B > cur_seg.x1)cur_seg.x1 = B;
-    if (E < cur_seg.x2)cur_seg.x2 = E;
+    cur_seg.x1 = MAX(cur_seg.x1, B);
+    cur_seg.x2 = MIN(cur_seg.x2, E);
   };
   void SetCurSegCutBeg(uint4 s)
   {
     SetCurSeg(s);
-    if (B > cur_seg.x1)cur_seg.x1 = B;
+    cur_seg.x1 = MAX(cur_seg.x1, B);
   };
   void SetCurSegCutEnd(uint4 s)
   {
     SetCurSeg(s);
-    if (E < cur_seg.x2)cur_seg.x2 = E;
+    cur_seg.x2 = MIN(cur_seg.x2, E);
   };
 
   inline void SetCurSeg(uint4 s)
