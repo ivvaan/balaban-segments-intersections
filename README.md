@@ -16,4 +16,4 @@ No any degenerate cases processing is implemented.
 So only segments in common situation are processed correctly. 
 For example all segment ends must have different x coordinates.
 
-Project was compiles under MS VisualStudio 2008-2010. Hopefully it can be compiled in any other C++ enviroment.
+Project was compiles under MS VisualStudio 2019. Hopefully it can be compiled in any other C++ enviroment.
