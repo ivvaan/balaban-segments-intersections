@@ -24,6 +24,8 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 */
 // NEW IMPLEMENTATION
 #include <algorithm>
+#include <tuple>
+#include <vector>
 #include "utils.h"
 
 
@@ -49,9 +51,9 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 template <class ipoint>
 class JustCountingRegistrator
 {
+  double counter = 0;
 public:
   static constexpr uint4 reg_type = _RegistrationType::count;
-  double counter = 0;
   void register_pair(uint4 s1, uint4 s2) { ++counter; };
   void register_pair_and_point(uint4 s1, uint4 s2,ipoint &p) { register_pair(s1, s2); };
   void combine_reg_data(uint4 n_threads, JustCountingRegistrator *additional_reg_obj[])
@@ -71,11 +73,14 @@ public:
 template <class ipoint>
 class PerSegmCountingRegistrator
 {
+  uint4 N;
+  uint4* segm_counters = nullptr;
+  double counter = 0;
+
 public:
   static constexpr uint4 reg_type = _RegistrationType::count + _RegistrationType::segments;
   ~PerSegmCountingRegistrator() { if (segm_counters != nullptr) { delete[] segm_counters; segm_counters = nullptr; } };
 
-  double counter = 0;
 
   void register_pair(uint4 s1, uint4 s2) {
     ++counter;
@@ -113,42 +118,23 @@ public:
 
   void write_SVG(uint4 alg, chostream* SVG_text) {};
 
-private:
-  uint4 N;
-  uint4 *segm_counters = nullptr;
 };
 
 template <class ipoint>
 class PairAndPointRegistrator
 {
-  struct IntersectingPair {
-    uint4 s1, s2;
-    ipoint p;
-    void set(uint4 s_1, uint4 s_2, ipoint &pp) {
-      p = pp;
-      if (s_2 < s_1) {
-        s1 = s_2; s2 = s_1;
-        return;
-      }
-      s1 = s_1; s2 = s_2;
-    }
-   
-  };
-
+  using int_rec = std::tuple<uint4, uint4, ipoint>;
+  std::vector<int_rec>  intersections;
+  double counter = 0;
 
 public:
   static constexpr uint4 reg_type = _RegistrationType::count + _RegistrationType::segments + _RegistrationType::point;
-  double counter = 0;
 
   PairAndPointRegistrator() {
-    N_pairs = N_pairs = 0;
-    pairs_size =  1024 * 1024;
-    segm_pairs = new IntersectingPair[pairs_size];
+    intersections.reserve(4 * 1024 * 1024);
   };
 
   ~PairAndPointRegistrator() {
-    if (segm_pairs != nullptr) { delete[] segm_pairs; segm_pairs = nullptr; }
-    N_pairs = pairs_size = 0;
   };
 
  
@@ -158,35 +144,25 @@ public:
   };
   void register_pair_and_point(uint4 s1, uint4 s2, ipoint& p) {
     ++counter;
-    if (N_pairs >= pairs_size)realloc_pairs();
-    segm_pairs[N_pairs++].set(s1, s2, p);
-  };
-
-  void realloc_pairs(uint4 sz=0) {
-    auto ns = sz?sz:pairs_size * 2;
-    auto sp = new IntersectingPair[ns];
-    std::move(segm_pairs, segm_pairs+ pairs_size,sp);
-    delete[] segm_pairs;
-    segm_pairs = sp;
-    pairs_size = ns;
+    intersections.emplace_back(s1, s2, p);
   };
 
   void Alloc(uint4) {};
 
   void combine_reg_data(uint4 n_threads, PairAndPointRegistrator* to_add[])
   {
-    auto tot_pairs = N_pairs;
+    auto tot = intersections.size();
 
     for (uint4 r = 0; r < n_threads - 1; ++r) {
       counter += to_add[r]->counter;
-      tot_pairs += to_add[r]->N_pairs;
+      tot += to_add[r]->intersections.size();
     }
-    if (tot_pairs >= pairs_size)realloc_pairs(tot_pairs);
+    intersections.reserve(tot);
     for (uint4 r = 0; r < n_threads - 1; ++r)
     {
-      PairAndPointRegistrator* added = to_add[r];
-      std::move(added->segm_pairs, added->segm_pairs + added->N_pairs, segm_pairs + N_pairs);
-      N_pairs += added->N_pairs;
+      auto &added = to_add[r]->intersections;
+      std::move(added.begin(), added.end(), std::back_inserter(intersections));
+//      intersections.insert(intersections.end(), added.begin(), added.end());
     }
 
   };
@@ -199,10 +175,11 @@ public:
 
   void write_SVG(uint4 alg, chostream* SVG_text) {
     if (SVG_text) {
-      for (uint4 i = 0; i < MIN(N_pairs, max_SVG_points); ++i) {
+      for (uint4 i = 0; i < MIN(intersections.size(), max_SVG_points); ++i) {
+        ipoint& p = std::get<2>(intersections[i]);
         *SVG_text << "<circle id='int" << i;
-        *SVG_text << "' cx='" << segm_pairs[i].p.getX();
-        *SVG_text << "' cy='" << segm_pairs[i].p.getY();
+        *SVG_text << "' cx='" << p.getX();
+        *SVG_text << "' cy='" << p.getY();
         switch (alg)
         {
         case _Algorithm::triv:*SVG_text << "' class='triv'/>\n"; break;
@@ -217,11 +194,8 @@ public:
         }
       }
     };
-  };
+  }
 
-private:
-  uint4 N_pairs,pairs_size;
-  IntersectingPair* segm_pairs;
 
 };
 

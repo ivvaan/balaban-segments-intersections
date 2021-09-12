@@ -32,7 +32,6 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <filesystem>
 #include <fstream>
 #include <strstream>
-namespace fs = std::filesystem;
 
 const char* STYLE_temlate = R"WYX(
 <!DOCTYPE html>
@@ -282,6 +281,7 @@ int main(int argc, char* argv[])
   const char *ss = "Llag", *sd = "rlmspc",*sr="pPcr";
   const char *alg_names[] = { "trivial","simple_sweep","fast","optimal","fast_parallel","bentley_ottmann","fast no inters points","fast 'no R'" };
   uint4 reg_stat = 2;
+  const char* fname = nullptr;
 
 #ifdef _DEBUG
   _CrtSetDbgFlag(_CRTDBG_CHECK_ALWAYS_DF);
@@ -293,7 +293,7 @@ int main(int argc, char* argv[])
 #ifdef COUNTERS_ON
     printf("usage: seg_int -aA -sS -dD -nN -pP -iI -rR -m -w -c\n");
 #else    
-    printf("usage: seg_int -aA -sS -dD -nN -pP -rR -m -e -w -SN\n");
+    printf("usage: seg_int -aA -sS -dD -nN -pP -rR -m -e -w -SN -fhtmfile\n");
 #endif    
     printf("example: seg_int -a14 -sa -dp -n20000 -p5.5\n");
     printf("-aA: type of algorithms tested\n");
@@ -303,8 +303,9 @@ int main(int argc, char* argv[])
     printf(" A=8: balaban optimal\n");
     printf(" A=16: balaban fast parallel for 6 treads\n");
     printf(" A=32: bentley & ottmann\n");
-    printf(" A=64: balaban fast;  intersection points aren't reported (only intersecting pairs)\n");
-    printf(" A=128: balaban fast;  memory save algorithm 4 bytes less per segment\n");
+    printf(" A=64: balaban fast;  intersection points aren't reported\n");
+    printf("  (only intersecting pairs)\n");
+    printf(" A=128: balaban fast; memory save algorithm 4 bytes less per segment\n");
     printf(" if you want several algorithms to test just sum up their values\n");
     printf(" i.e. A=255 (=1+2+4+8+16+32+64+128) all algorithms\n");
     printf("-sS: type of segments\n");
@@ -320,17 +321,22 @@ int main(int argc, char* argv[])
     printf("-pP: parameter value, must be positive\n");
     printf("-dD: type of distribution\n");
     printf(" D=r: random segments\n");
-    printf(" D=l: random length almost x parallel segments, the bigger distr_param/N the less parallel segments\n");
-    printf(" D=m: mixed random length almost x parallel 'long' segments (33%%) and 'small' segments (67%%), the bigger distr_param/N the less parallel 'long' and longer 'short' segments\n");
+    printf(" D=l: random length almost x parallel segments, the bigger\n");
+    printf("  distr_param/N the less parallel segments\n");
+    printf(" D=m: mixed random length almost x parallel 'long' segments\n");
+    printf("  (33%%) and 'small' segments(67%%), the bigger distr_param/N\n");
+    printf("  the less parallel 'long' and longer 'short' segments\n");
     printf(" D=s: short segments: random segment with  length multiplied by distr_param/N\n");
     printf(" D=distr_param: random segment with  length multiplied by distr_param\n");
-    printf(" D=c: segments ends are on the opposite sides of unit circul, each segment intesect each\n");
+    printf(" D=c: segments ends are on the opposite sides of unit circul, each\n");
+    printf("  segment intesect each\n");
 
     printf("-rR: type of registrator used in new implementation and type of result statistic\n");
     printf(" R=c: total intersection counting registrator; total count statistic\n");
     printf(" R=p: total intersection counting and per segment intersection counting registrator; total count statistic\n");
     printf(" R=P: total intersection counting and per segment intersection counting registrator; max intersections pre segment statistic\n");
     printf(" R=r: really storing pairs and intersections registrator (be carefull with memory!!!); total count statistic\n");
+    printf("  as we can have O(N^2) intersections this option is limited to N=20000 max\n");
 
     printf("-SR: capital S for random seed\n");
     printf(" R=0: no seed, randomized generation\n");
@@ -343,7 +349,11 @@ int main(int argc, char* argv[])
     printf(" E: assumed ICT (nanoseconds) - intersection of two segments check (and register if found) time\n");
 
     printf("-w: if presented, program wait until 'Enter' pressed before closing\n");
-
+    
+    printf("-fhtmfile: if presented, program writes SVG picture to htmfile. For examle -fC:/tmp/res.htm\n");
+    printf(" intersection points are drawn only with -rr option (otherwise they are not stored)\n");
+    printf(" to limit resulting file size only first %i intersections are drawn\n", max_SVG_points);
+    
 #ifdef COUNTERS_ON
     printf("-c: counters are printed, if presented\n");
 #endif    
@@ -461,7 +471,12 @@ int main(int argc, char* argv[])
             wait = TRUE;
           }
           break;
-  #ifdef COUNTERS_ON
+          case 'f':
+          {
+            fname = argv[i] + 2;;
+          }
+          break;
+#ifdef COUNTERS_ON
           case 'c':
           {
             use_counters = true;
@@ -474,7 +489,7 @@ int main(int argc, char* argv[])
   if((seg_type==graph)&&(distr_type!=random)) {printf("-sg  is compartible only with -dr!\n"); if (wait) { printf("\npress 'Enter' to continue"); getchar(); } return 0;}
   if((seg_type==arc)&&(distr_type==mixed)) {printf("-sa -dm is not compartible!\n"); if (wait) { printf("\npress 'Enter' to continue"); getchar(); } return 0;}                  
   if((seg_type==arc)&&(distr_type==parallel)) {printf("-sa -dl is not compartible!\n"); if (wait) { printf("\npress 'Enter' to continue"); getchar(); } return 0;}
-  if ((reg_stat == _Registrator::store_pairs_and_ints_just_count_stat) && (n > 40000)) {
+  if ((reg_stat == _Registrator::store_pairs_and_ints_just_count_stat) && (n > 20000)) {
     printf("Too many segments (and possible intersections!) for true registration! Just counting used instead.\n"); 
     reg_stat == _Registrator::just_count;
     }
@@ -492,32 +507,30 @@ int main(int argc, char* argv[])
     seg_coll = create_test_collection(seg_type, n, distr_type, distr_param,rv, nullptr);
 
   bool dont_need_ip = (alg & fast_no_ip) != 0;
-
   std::ostrstream SVG_str;
-  coll_to_SVG(seg_coll, seg_type,  n, &SVG_str);
-
- 
-
- 
-  set_SVG_stream(&SVG_str);
-
+  std::ofstream svgf;
+  bool stream_ok=fname && (svgf.open(fname), svgf.is_open());
+  if (stream_ok) {
+    coll_to_SVG(seg_coll, seg_type, n, &SVG_str);
+    set_SVG_stream(&SVG_str);
+  }
   if (impl&_Implementation::impl_old)
     perform_tests(use_counters, _Implementation::impl_old, alg, seg_type, distr_type, distr_param, print_less, rtime_printout, dont_need_ip, n, seg_coll, seg_ptr_coll,reg_stat);
   if (impl&_Implementation::impl_new)
     perform_tests(use_counters, _Implementation::impl_new, alg, seg_type, distr_type, distr_param, print_less, rtime_printout, dont_need_ip, n, seg_coll, seg_ptr_coll,reg_stat);
 
   
-  fs::path path("C:\\tmp");
-  //std::ofstream svgf(fs::current_path() / "result.svg");
-  std::ofstream svgf(path / "res.htm");
-  auto insert_pos = strstr(STYLE_temlate, to_insert_SVG);
-  {
-    std::ostream_iterator<char> it(svgf);
-    std::copy(STYLE_temlate, insert_pos,it);
+  if (stream_ok) {
+    auto insert_pos = strstr(STYLE_temlate, to_insert_SVG);
+    {
+      std::ostream_iterator<char> it(svgf);
+      std::copy(STYLE_temlate, insert_pos, it);
+    }
+    SVG_str << std::ends;
+    svgf << SVG_str.str();
+    svgf << "</svg>\n" << insert_pos;
+    svgf.close();
   }
-  SVG_str << std::ends;
-  svgf << SVG_str.str();
-  svgf << "</svg>\n" << insert_pos;
   delete_test_collection(seg_type, seg_coll, seg_ptr_coll);
 
   if(wait){printf("\npress 'Enter' to continue"); getchar();}

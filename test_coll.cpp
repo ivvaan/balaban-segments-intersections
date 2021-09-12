@@ -34,7 +34,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include "optimal_finder.h"
 #include "intersection_finder.h"
 
-chostream* SVG_stream;
+chostream* SVG_stream=nullptr;
 
 void set_SVG_stream(chostream* SVG) {
   SVG_stream = SVG;

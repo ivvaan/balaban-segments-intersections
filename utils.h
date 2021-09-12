@@ -47,7 +47,7 @@ typedef int  BOOL;
 extern bool print_at_lineseg1_init;
 #endif
 
-const uint4 max_SVG_items = 5000;
+const uint4 max_SVG_items = 20000;
 const uint4 max_SVG_points = 150000;
 
 
