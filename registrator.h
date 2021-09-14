@@ -43,9 +43,9 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 template <class ipoint>
 class JustCountingRegistrator
 {
+  double counter = 0;
 public:
   static constexpr uint4 reg_type = _RegistrationType::count;
-  double counter = 0;
   void register_pair(uint4 s1, uint4 s2) { 
 #ifdef PRINT_SEG_AND_INT
     if (s1 < s2)
@@ -179,19 +179,19 @@ public:
     if (SVG_text) {
       for (uint4 i = 0; i < MIN(intersections.size(), max_SVG_points); ++i) {
         ipoint& p = std::get<2>(intersections[i]);
-        *SVG_text << "<circle id='int" << i;
-        *SVG_text << "' cx='" << p.getX();
+        *SVG_text << "<circle cx='" << p.getX();
         *SVG_text << "' cy='" << p.getY();
+        
         switch (alg)
         {
-        case _Algorithm::triv:*SVG_text << "' class='triv'/>\n"; break;
-        case _Algorithm::simple_sweep:*SVG_text << "' class='ssw'/>\n"; break;
-        case _Algorithm::fast:*SVG_text << "' class='fast'/>\n"; break;
-        case _Algorithm::optimal:*SVG_text << "' class='optimal'/>\n"; break;
-        case _Algorithm::fast_parallel:*SVG_text << "' class='parallel'/>\n"; break;
-        case _Algorithm::mem_save:*SVG_text << "' class='mem_save'/>\n"; break;
+        case _Algorithm::triv:*SVG_text << "' class='triv' id='t" << i <<"' />\n"; break;
+        case _Algorithm::simple_sweep:*SVG_text << "' class='ssw' id='s" << i << "' />\n"; break;
+        case _Algorithm::fast:*SVG_text << "' class='fast' id='f" << i << "' />\n"; break;
+        case _Algorithm::optimal:*SVG_text << "' class='optimal' id='o" << i << "' />\n"; break;
+        case _Algorithm::fast_parallel:*SVG_text << "' class='parallel' id='p" << i << "' />\n"; break;
+        case _Algorithm::mem_save:*SVG_text << "' class='mem_save' id='m" << i << "' />\n"; break;
         default:
-          *SVG_text << "' class='algorithm'/>\n";
+          *SVG_text << "' class='algorithm' id='a" << i << "' />\n";
           break;
         }
       }

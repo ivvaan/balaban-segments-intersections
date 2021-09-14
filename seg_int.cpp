@@ -41,13 +41,13 @@ line{stroke:blue;
 stroke-width:0.001;}
 .line1{stroke:cadetblue;}
 .line2{stroke:darkblue;}
-circle{r:0.003;fill: gold;}
-.triv {r:0.002;fill: purple;}
-.ssw {fill: sandybrown;}
-.fast {fill: orange;}
-.optimal {fill: khaki;}
-.parallel {fill: darkorange;}
-.mem_save {fill: salmon;}
+circle{r:0.001;fill: gold;}
+.triv {r:0.0010;fill: purple;}
+.ssw {r:0.0016;fill: sandybrown;}
+.fast {r:0.0020;fill: orange;}
+.optimal {r:0.0024;fill: khaki;}
+.parallel {r:0.0028;fill: darkorange;}
+.mem_save {r:0.0032;fill: salmon;}
 </style>
 <script>
 var state=1;
@@ -61,7 +61,7 @@ svg.setAttribute('height',h*mul+'%');
 var w=parseFloat(svg.getAttribute('width'));
 svg.setAttribute('width',w*mul+'%');
 state+=dir;
-if(state>=6){dir=-1;}
+if(state>=8){dir=-1;}
 if(state<=1){dir=1;}
 }
 </script>

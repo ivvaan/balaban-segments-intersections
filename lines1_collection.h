@@ -72,8 +72,8 @@ public:
   void SetCurSegCutBE(uint4 s)
   {
     SetCurSeg(s);
-    curB = max(B, curB);
-    curE = min(E, curE);
+    curB = MAX(B, curB);
+    curE = MIN(E, curE);
     active_end.x = curE;
     active_end.y = cur_seg.YAtX(curE);
   };
@@ -81,14 +81,14 @@ public:
   void SetCurSegCutBeg(uint4 s)
   {
     SetCurSeg(s);
-    curB = max(B, curB);
+    curB = MAX(B, curB);
     active_end = cur_seg.EndPoint();
   };
 
   void SetCurSegCutEnd(uint4 s)
   {
     SetCurSeg(s);
-    curE = min(E, curE);
+    curE = MIN(E, curE);
     active_end = cur_seg.BegPoint();
   };
 
@@ -149,7 +149,7 @@ public:
   bool TrivCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
   {
     auto s = collection + s_;
-    auto x1 = std::max(curB, s->org.x);
+    auto x1 = MAX(curB, s->org.x);
     auto x2 = std::min(curE, s->org.x + s->shift.x);
     if (x1 >= x2)return false;
     return FindIntWith(x1, x2, s_);
@@ -158,8 +158,8 @@ public:
   bool SSCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
   {
     auto s = collection + s_;
-    auto x1 = max(curB, s->org.x);
-    auto x2 = min(curE, s->org.x + s->shift.x);
+    auto x1 = MAX(curB, s->org.x);
+    auto x2 = MIN(curE, s->org.x + s->shift.x);
     return FindIntWith(x1, x2, s_);
   };
 

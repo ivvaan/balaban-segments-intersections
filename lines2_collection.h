@@ -70,22 +70,22 @@ public:
   void SetCurSegCutBE(uint4 s)
   {
     SetCurSeg(s);
-    cur_seg.x1 = max(cur_seg.x1, B);
-    cur_seg.x2 = min(cur_seg.x2, E);
+    cur_seg.x1 = MAX(cur_seg.x1, B);
+    cur_seg.x2 = MIN(cur_seg.x2, E);
     active_end = cur_seg.EndPoint();
   };
 
   void SetCurSegCutBeg(uint4 s)
   {
     SetCurSeg(s);
-    cur_seg.x1 = max(cur_seg.x1, B);
+    cur_seg.x1 = MAX(cur_seg.x1, B);
     active_end=cur_seg.EndPoint();
   };
 
   void SetCurSegCutEnd(uint4 s)
   {
     SetCurSeg(s);
-    cur_seg.x2 = min(cur_seg.x2, E);
+    cur_seg.x2 = MIN(cur_seg.x2, E);
     active_end = cur_seg.BegPoint();
   };
 
@@ -148,8 +148,8 @@ public:
     auto s = collection + s_;
     auto da = cur_seg.a - s->a;
     if (da == 0)return false;
-    auto x1 = max(cur_seg.x1, s->x1);
-    auto x2 = min(cur_seg.x2, s->x2);
+    auto x1 = MAX(cur_seg.x1, s->x1);
+    auto x2 = MIN(cur_seg.x2, s->x2);
     if constexpr(_RegistrationType::point&IntersectionRegistrator::reg_type)
     {
       TPlaneVect p;
