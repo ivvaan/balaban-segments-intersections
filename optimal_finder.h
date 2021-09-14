@@ -89,6 +89,7 @@ private:
   {
     
     int4 c = l;
+    segments->SetSearchDirDown(true);
     while (c>qb)
     {
       if (is_original(father_loc[c]))
@@ -96,12 +97,13 @@ private:
         if (!segments->FindCurSegIntWith(Q[c])) break;
       }
       else //if inherited stair just check if intersects
-        if (!segments->IsIntersectsCurSeg(Q[c])) break;
+        if (!segments->IsIntersectsCurSegDown(Q[c])) break;
       c--;
     }
     int4 res = l - c;
     if (SegmentsColl::is_line_segments && (c != l))return res;
     c = ++l;
+    segments->SetSearchDirDown(false);
     while (c <= qe)
     {
       if (is_original(father_loc[c]))
@@ -109,7 +111,7 @@ private:
         if (!segments->FindCurSegIntWith(Q[c])) break;
       }
       else
-        if (!segments->IsIntersectsCurSeg(Q[c])) break;
+        if (!segments->IsIntersectsCurSegUp(Q[c])) break;
       c++;
     }
     return res + c-l;
@@ -181,7 +183,7 @@ private:
         L[i + 1] = L[i];
       L[i + 1] = sn;
       Size++;
-      segments->SetCurSeg(sn);
+      segments->SetCurSegAE(sn);
       FindIntI(segments, SegR[sn], stack_pos);// get internal intersections
     }
     return Size;
@@ -240,8 +242,8 @@ private:
       if (segments->LBelow( cur_seg, Q[cur_father_pos])) // current segment below candidate to inherit
       {
         if ((SegR[cur_seg] < RBoundIdx)// current segment not covering strip
-          || (step_index>father_last_step) && segments->IsIntersectsCurSeg(Q[step_index])// or intersects last stair
-          || segments->IsIntersectsCurSeg(Q[cur_father_pos])) //or intersects candidate to inherit 
+          || (step_index>father_last_step) && segments->IsIntersectsCurSegDown(Q[step_index])// or intersects last stair
+          || segments->IsIntersectsCurSegUp(Q[cur_father_pos])) //or intersects candidate to inherit 
         {
           //place segment in L
           L[new_L_size] = cur_seg;
@@ -273,7 +275,7 @@ private:
       cur_seg = L[cur_L_pos];
       segments->SetCurSegCutBE(cur_seg);
       if ((SegR[cur_seg] < RBoundIdx) ||//segment is not covering current stripe
-        (step_index>father_last_step) && segments->IsIntersectsCurSeg(Q[step_index]))// if it intesects last stair
+        (step_index>father_last_step) && segments->IsIntersectsCurSegDown(Q[step_index]))// if it intesects last stair
       {
         //place segment in L
         L[new_L_size] = cur_seg;

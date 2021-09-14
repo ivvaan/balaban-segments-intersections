@@ -35,14 +35,6 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
         a = nullptr;            \
     }
 
-/*
-#ifdef PRINT_SEG_AND_INT
-    if (s1 < s2)
-      printf("alt int %i %i\n", s1, s2);
-    else
-      printf("alt int %i %i\n", s2, s1);
-
-#endif */
 
 
 
@@ -52,7 +44,17 @@ class JustCountingRegistrator
 public:
   static constexpr uint4 reg_type = _RegistrationType::count;
   double counter = 0;
-  void register_pair(uint4 s1, uint4 s2) { ++counter; };
+  void register_pair(uint4 s1, uint4 s2) { 
+#ifdef PRINT_SEG_AND_INT
+    if (s1 < s2)
+      printf("alt int %i %i\n", s1, s2);
+    else
+      printf("alt int %i %i\n", s2, s1);
+
+#endif 
+
+    ++counter; 
+  };
   void register_pair_and_point(uint4 s1, uint4 s2, ipoint& p) { register_pair(s1, s2); };
   void combine_reg_data(uint4 n_threads, JustCountingRegistrator* additional_reg_obj[])
   {

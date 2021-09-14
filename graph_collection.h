@@ -121,6 +121,12 @@ public:
     curB = cur_seg.org.x;
     curE = cur_seg.org.x + cur_seg.shift.x;
   };
+
+  void SetCurSegAE(uint4 s)
+  {
+    SetCurSeg(s);
+  };
+
   bool LBelow(int4 s_1, int4 s_2) const //retuns if s1 below s2 at current vertical line
   {
     auto beg1 = get_first_idx(s_1);
@@ -204,7 +210,12 @@ public:
     return FindIntWith<true>(curB, curE, s_);
   };
 
-  bool IsIntersectsCurSeg(int4 s_)//check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
+  bool IsIntersectsCurSegDown(int4 s_)//check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
+  {
+    return FindIntWith<false>(curB, curE, s_);
+  };
+
+  bool IsIntersectsCurSegUp(int4 s_)//check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
   {
     return FindIntWith<false>(curB, curE, s_);
   };
@@ -315,6 +326,8 @@ public:
     MY_FREE_ARR_MACRO(vertex_idx);
 
   };
+
+  void SetSearchDirDown(bool dir) { };
 
 private:
   inline auto GetX(uint4 pt) const

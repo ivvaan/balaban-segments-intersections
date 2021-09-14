@@ -61,6 +61,13 @@ public:
   {
     collection[s].EndPoint(cur_point.x, cur_point.y);
   };
+
+  void SetCurSeg(uint4 s)
+  {
+    cur_seg_idx = s;
+    cur_seg = collection[s];
+  };
+
   void SetCurSegCutBE(uint4 s)
   {
     SetCurSeg(s);
@@ -77,10 +84,10 @@ public:
     SetCurSeg(s);
     cur_seg.x2 = min(cur_seg.x2, E);
   };
-  inline void SetCurSeg(uint4 s)
+
+  void SetCurSegAE(uint4 s)
   {
-    cur_seg_idx = s;
-    cur_seg = collection[s];
+    SetCurSeg(s);
   };
 
   bool LBelow(int4 s_1, int4 s_2) const //retuns if s1 below s2 at current vertical line
@@ -169,7 +176,11 @@ public:
     return IntPointsInStripe<false>(cur_seg.x1, cur_seg.x2, collection + s_);
   };
 
-  bool IsIntersectsCurSeg(int4 s_)//check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
+  bool IsIntersectsCurSegDown(int4 s_)//check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
+  {
+    return IntPointsInStripe<true>(cur_seg.x1, cur_seg.x2, collection + s_);
+  };
+  bool IsIntersectsCurSegUp(int4 s_)//check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
   {
     return IntPointsInStripe<true>(cur_seg.x1, cur_seg.x2, collection + s_);
   };
@@ -224,6 +235,9 @@ public:
     Init(n, c, r);
   }
   CArcSegmentCollection() {};
+
+  void SetSearchDirDown(bool dir) { };
+
 private:
   inline auto GetX(uint4 pt) const { return ends[pt]; };
   //{ return is_last(pt) ? collection[get_segm(pt)].x2 :collection[get_segm(pt)].x1; };

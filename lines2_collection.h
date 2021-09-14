@@ -48,40 +48,55 @@ public:
   inline void SetCurStripeLeft(uint4 left) { B = GetX(left); };
   void SetCurPoint(uint4 pt)
   {
-    if (is_last(pt))
-      collection[get_segm(pt)].EndPoint(cur_point.x, cur_point.y);
-    else
-      collection[get_segm(pt)].BegPoint(cur_point.x, cur_point.y);
+    cur_point = is_last(pt)?
+      collection[get_segm(pt)].EndPoint():
+      collection[get_segm(pt)].BegPoint();
   };
   void SetCurPointAtBeg(uint4 s)
   {
-    collection[s].BegPoint(cur_point.x, cur_point.y);
+    cur_point=collection[s].BegPoint();
   };
   void SetCurPointAtEnd(uint4 s)
   {
-    collection[s].EndPoint(cur_point.x, cur_point.y);
+    cur_point = collection[s].EndPoint();
   };
+
+  void SetCurSeg(uint4 s)
+  {
+    cur_seg_idx = s;
+    cur_seg = collection[s];
+  };
+
   void SetCurSegCutBE(uint4 s)
   {
     SetCurSeg(s);
     cur_seg.x1 = max(cur_seg.x1, B);
     cur_seg.x2 = min(cur_seg.x2, E);
+    active_end = cur_seg.EndPoint();
   };
+
   void SetCurSegCutBeg(uint4 s)
   {
     SetCurSeg(s);
     cur_seg.x1 = max(cur_seg.x1, B);
+    active_end=cur_seg.EndPoint();
   };
+
   void SetCurSegCutEnd(uint4 s)
   {
     SetCurSeg(s);
     cur_seg.x2 = min(cur_seg.x2, E);
+    active_end = cur_seg.BegPoint();
   };
-  inline void SetCurSeg(uint4 s)
+
+  void SetCurSegAE(uint4 s)
   {
-    cur_seg_idx = s;
-    cur_seg = collection[s];
+    SetCurSeg(s);
+    active_end = cur_seg.EndPoint();
   };
+
+
+
   bool LBelow(int4 s_1, int4 s_2) const //retuns if s1 below s2 at current vertical line
   {
     auto s1 = collection + s_1;
@@ -161,43 +176,37 @@ public:
 
   bool FindCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
   {
+    if constexpr (!(_RegistrationType::point & IntersectionRegistrator::reg_type))
+      return (search_dir_down ^ UnderActiveEnd(s_)) ?
+        registrator->register_pair(cur_seg_idx, s_), true : false;
+
     auto s = collection + s_;
     auto da = cur_seg.a - s->a;
     if (da == 0)return false;
-    if constexpr(_RegistrationType::point&IntersectionRegistrator::reg_type)
-    {
-      TPlaneVect p;
-      p.x = (s->b - cur_seg.b) / da;
-      if ((p.x >= cur_seg.x1) && (p.x <= cur_seg.x2))
+    TPlaneVect p;
+    p.x = (s->b - cur_seg.b) / da;
+    if ((p.x >= cur_seg.x1) && (p.x <= cur_seg.x2))
       {
         p.y = p.x*cur_seg.a + cur_seg.b;
         registrator->register_pair_and_point(cur_seg_idx, s_,p);
         return true;
       }
-    }
-    else
-    {
-      auto x = (s->b - cur_seg.b) / da;
-      if ((x >= cur_seg.x1) && (x <= cur_seg.x2))
-      {
-        registrator->register_pair(cur_seg_idx, s_);
-        return true;
-      }
-    }
     return false;
-
   };
 
-  bool IsIntersectsCurSeg(int4 s_)//check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
+  bool IsIntersectsCurSegDown(int4 s_) const//check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
   {
-    auto s = collection + s_;
-    auto da = cur_seg.a - s->a;
-    if (da == 0)return false;
-    auto x = (s->b - cur_seg.b) / da;
-    return ((x >= cur_seg.x1) && (x <= cur_seg.x2));
+    return !UnderActiveEnd(s_);
   };
 
-  bool UnderCurPoint(int4 s_) const { auto s = collection + s_; return s->a*cur_point.x + s->b < cur_point.y; };//returns true if s is under current point 
+  bool IsIntersectsCurSegUp(int4 s_) const//check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
+  {
+    return UnderActiveEnd(s_);
+  };
+
+  bool UnderCurPoint(int4 s_) const { return collection[s_].a * cur_point.x + collection[s_].b < cur_point.y; };//returns true if s is under current point 
+  bool UnderActiveEnd(int4 s_) const { return collection[s_].a * active_end.x + collection[s_].b < active_end.y; };//returns true if s is under current point 
+  
   void PrepareEndpointsSortedList(uint4 *epoints)// endpoints allocated by caller and must contain space for at least 2*GetSegmNumb() points 
   {
     auto NN = N << 1;
@@ -246,6 +255,8 @@ public:
 
   CLine2SegmentCollection() {};
 
+  void SetSearchDirDown(bool dir) { search_dir_down = dir; };
+
 private:
   inline auto GetX(uint4 pt) const { return ends[pt]; };
   //{ return is_last(pt) ? collection[get_segm(pt)].x2 :collection[get_segm(pt)].x1; };
@@ -255,10 +266,11 @@ private:
   CLine2SegmentCollection *clone_of = nullptr;
   uint4 N=0;
   REAL B, E;
-  TPlaneVect cur_point;
+  TPlaneVect cur_point,active_end;
 
   uint4 cur_seg_idx = 0xFFFFFFFF;
   TLineSegment2 cur_seg;
-  TLineSegment2 *collection = nullptr;;
-  REAL *ends = nullptr;;
+  TLineSegment2 *collection = nullptr;
+  REAL *ends = nullptr;
+  bool search_dir_down = true;
 };

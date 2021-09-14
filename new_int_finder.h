@@ -211,11 +211,13 @@ protected:
   void FindInt(SegmentsColl* segments, int4 qb, int4 qe, int4 l) const
   {
     int4 c = l;
+    segments->SetSearchDirDown(true);
     while ((c > qb) && (segments->FindCurSegIntWith(Q[c]))) //first get intersections below
       --c;
     if (SegmentsColl::is_line_segments && (c != l))
       return; //if found and segment is line it can't be any more
     c = l + 1;
+    segments->SetSearchDirDown(false);
     while ((c <= qe) && (segments->FindCurSegIntWith(Q[c]))) // get intersections above
       ++c;
   };
@@ -289,6 +291,7 @@ protected:
     {
       auto sn = L_[i];
       segments->SetCurSegCutBE(sn);
+      segments->SetSearchDirDown(true);
       if (segments->FindCurSegIntWith(_L[i])) {
         L_[i] = _L[i];
         uint4 j = i - 1;

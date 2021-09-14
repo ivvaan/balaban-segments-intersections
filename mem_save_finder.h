@@ -109,7 +109,7 @@ public:
           L[i + 1] = L[i];
         L[i + 1] = sn;
         Size++;
-        segments->SetCurSeg(sn);
+        segments->SetCurSegAE(sn);
         FindIntI(segments, SegR[sn], stack_pos); // get internal intersections
       }
 
@@ -136,7 +136,7 @@ public:
         L[i - 1] = sn;
         ++Size;
 
-        segments->SetCurSeg(sn);
+        segments->SetCurSegAE(sn);
         FindIntI(segments, SegR[sn], stack_pos); // get internal intersections
       }
     }
@@ -221,6 +221,7 @@ public:
       int4 cur_seg = _L[cur_L_pos];
       auto step = _Q_pos;
       segments->SetCurSegCutBE(cur_seg);
+      segments->SetSearchDirDown(true);
       for (auto cur_Q = _Q + step; (step!=0) && (segments->FindCurSegIntWith(*cur_Q)); --step, --cur_Q);
 
       if (_Q_pos == step)
@@ -258,6 +259,7 @@ public:
     for (int4 i = 0; i < new_L_size; ++i)
       if ((loc = *(--Q_tail)) != INT_MAX) {
         segments->SetCurSegCutBE(_L[i]);
+        segments->SetSearchDirDown(false);
         auto cur_Q = _Q + loc;
         auto ini_Q = cur_Q;
         while ((cur_Q < last_Q) && (segments->FindCurSegIntWith(*cur_Q)))++cur_Q;
