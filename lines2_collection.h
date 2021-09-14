@@ -114,8 +114,8 @@ public:
   bool TrivCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
   {
     auto s = collection + s_;
-    auto x1 = max(cur_seg.x1, s->x1);
-    auto x2 = min(cur_seg.x2, s->x2);
+    auto x1 = MAX(cur_seg.x1, s->x1);
+    auto x2 = MIN(cur_seg.x2, s->x2);
     if (x1 >= x2)return false;
     auto da = cur_seg.a - s->a;
     if (da == 0)return false;

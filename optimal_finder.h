@@ -142,7 +142,7 @@ private:
             // line above sometimes executed when l == undef_loc, so we must initialize father_loc[undef_loc]=undef_loc in AllocMem()
             //to keep l unchanged in this case; undef_loc was chosen to be zero so abs(undef_loc)==undef_loc
             //otherwise we need additional checks
-            l=max(QB,m);//here we use a fact that always undef_loc < QB and if m==undef_loc or m<QB l should be QB
+            l=MAX(QB,m);//here we use a fact that always undef_loc < QB and if m==undef_loc or m<QB l should be QB
             if (m) { r = l + inherit_each; if (r > QE)r = QE; }
             else r = QE;//if m==0 i.e. undef_loc we use [QB;QE] as a range
         }

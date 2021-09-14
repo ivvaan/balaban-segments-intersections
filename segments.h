@@ -79,6 +79,17 @@ public:
   {
     return org.y + shift.y*(X - org.x) / shift.x;
   };   
+  void write_SVG(int4 id,chostream *SVG_text) {
+    if (SVG_text) {
+      *SVG_text << "<line id='seg" << id;
+      *SVG_text << "' x1='"<<org.x;
+      *SVG_text << "' x2='"<<org.x+shift.x;
+      *SVG_text << "' y1='"<<org.y;
+      *SVG_text << "' y2='"<<org.y+shift.y;
+      *SVG_text << "' class='line1'/>\n";
+    }
+  
+  };
 };
   bool below(REAL X, TLineSegment1 *s1, TLineSegment1 *s2);
   template <bool _ret_ip>  int4 IntPoint(TLineSegment1 *s1, TLineSegment1 *s2, TPlaneVect *p);
@@ -132,7 +143,17 @@ public:
   {
     return a*X + b;
   };
-};
+  void write_SVG(int4 id,chostream* SVG_text) {
+    if (SVG_text) {
+      *SVG_text << "<line id='seg" << id;
+      *SVG_text << "' x1='" << x1;
+      *SVG_text << "' x2='" << x2;
+      *SVG_text << "' y1='" << a * x1 + b;
+      *SVG_text << "' y2='" << a * x2 + b;
+      *SVG_text << "' class='line2'/>\n";
+    }
+  };
+  };
   bool below(REAL X, TLineSegment2 *s1, TLineSegment2 *s2);
   template <bool _ret_ip>  int4 IntPoint(TLineSegment2 *s1, TLineSegment2 *s2, TPlaneVect *p);
   template <bool _ret_ip>  int4 StripePoint(REAL b, REAL e, TLineSegment2 *s1, TLineSegment2 *s2, TPlaneVect *p);
@@ -207,7 +228,10 @@ public:
   {
     if (is_upper)return v.y >= org.y;
     return v.y <= org.y;
-  };  
+  };
+  void write_SVG(chostream* SVG_text) {
+  }
+
 };
   bool below(REAL X, TArcSegment *s1, TArcSegment *s2);
   int4 IntPointsInStripe(REAL x1, REAL x2, TArcSegment *s1, TArcSegment *s2, TPlaneVect *p);

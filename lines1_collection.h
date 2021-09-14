@@ -149,8 +149,8 @@ public:
   bool TrivCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
   {
     auto s = collection + s_;
-    auto x1 = max(curB, s->org.x);
-    auto x2 = min(curE, s->org.x + s->shift.x);
+    auto x1 = std::max(curB, s->org.x);
+    auto x2 = std::min(curE, s->org.x + s->shift.x);
     if (x1 >= x2)return false;
     return FindIntWith(x1, x2, s_);
   };

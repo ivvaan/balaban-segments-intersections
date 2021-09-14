@@ -24,6 +24,8 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 */
 // NEW IMPLEMENTATION
 #include <algorithm>
+#include <tuple>
+#include <vector>
 #include "utils.h"
 
 
@@ -65,23 +67,29 @@ public:
 
   // to return some statistics about registered intersections;
   double get_stat(uint4 stat_type = 0) { return counter; };
+
+  void write_SVG(uint4 alg, chostream* SVG_text) {};
+
 };
 
 template <class ipoint>
 class PerSegmCountingRegistrator
 {
+  uint4 N;
+  uint4* segm_counters = nullptr;
+  double counter = 0;
+
 public:
   static constexpr uint4 reg_type = _RegistrationType::count + _RegistrationType::segments;
   ~PerSegmCountingRegistrator() { if (segm_counters != nullptr) { delete[] segm_counters; segm_counters = nullptr; } };
 
-  double counter = 0;
 
   void register_pair(uint4 s1, uint4 s2) {
     ++counter;
     ++segm_counters[s1];
     ++segm_counters[s2];
   };
-  void register_pair_and_point(uint4 s1, uint4 s2, ipoint& p) { register_pair(s1, s2); };
+  void register_pair_and_point(uint4 s1, uint4 s2, ipoint& p) { register_pair(s1,s2); };
 
   void Alloc(uint4 _N)
   {
@@ -110,12 +118,92 @@ public:
     return counter;
   };
 
-private:
-  uint4 N;
-  uint4* segm_counters = nullptr;
+  void write_SVG(uint4 alg, chostream* SVG_text) {};
+
 };
 
-using SimpleCounter = JustCountingRegistrator<TPlaneVect>;
-using PerSegmCounter = PerSegmCountingRegistrator<TPlaneVect>;
+template <class ipoint>
+class PairAndPointRegistrator
+{
+  using int_rec = std::tuple<uint4, uint4, ipoint>;
+  std::vector<int_rec>  intersections;
+  double counter = 0;
+
+public:
+  static constexpr uint4 reg_type = _RegistrationType::count + _RegistrationType::segments + _RegistrationType::point;
+
+  PairAndPointRegistrator() {
+    intersections.reserve(4 * 1024 * 1024);
+  };
+
+  ~PairAndPointRegistrator() {
+  };
+
+ 
+
+  void register_pair(uint4 s1, uint4 s2) {
+    ++counter;
+  };
+  void register_pair_and_point(uint4 s1, uint4 s2, ipoint& p) {
+    ++counter;
+    intersections.emplace_back(s1, s2, p);
+  };
+
+  void Alloc(uint4) {};
+
+  void combine_reg_data(uint4 n_threads, PairAndPointRegistrator* to_add[])
+  {
+    auto tot = intersections.size();
+
+    for (uint4 r = 0; r < n_threads - 1; ++r) {
+      counter += to_add[r]->counter;
+      tot += to_add[r]->intersections.size();
+    }
+    intersections.reserve(tot);
+    for (uint4 r = 0; r < n_threads - 1; ++r)
+    {
+      auto &added = to_add[r]->intersections;
+      std::move(added.begin(), added.end(), std::back_inserter(intersections));
+//      intersections.insert(intersections.end(), added.begin(), added.end());
+    }
+
+  };
+
+  // to return some statistics about registered intersections;
+  double get_stat(uint4 stat_type = 0)
+  {
+    return counter;
+  };
+
+  void write_SVG(uint4 alg, chostream* SVG_text) {
+    if (SVG_text) {
+      for (uint4 i = 0; i < MIN(intersections.size(), max_SVG_points); ++i) {
+        ipoint& p = std::get<2>(intersections[i]);
+        *SVG_text << "<circle id='int" << i;
+        *SVG_text << "' cx='" << p.getX();
+        *SVG_text << "' cy='" << p.getY();
+        switch (alg)
+        {
+        case _Algorithm::triv:*SVG_text << "' class='triv'/>\n"; break;
+        case _Algorithm::simple_sweep:*SVG_text << "' class='ssw'/>\n"; break;
+        case _Algorithm::fast:*SVG_text << "' class='fast'/>\n"; break;
+        case _Algorithm::optimal:*SVG_text << "' class='optimal'/>\n"; break;
+        case _Algorithm::fast_parallel:*SVG_text << "' class='parallel'/>\n"; break;
+        case _Algorithm::mem_save:*SVG_text << "' class='mem_save'/>\n"; break;
+        default:
+          *SVG_text << "' class='algorithm'/>\n";
+          break;
+        }
+      }
+    };
+  }
+
+
+};
+
+
+using SimpleCounter=JustCountingRegistrator<TPlaneVect> ;
+using PerSegmCounter=PerSegmCountingRegistrator<TPlaneVect> ;
+using TrueRegistrator = PairAndPointRegistrator<TPlaneVect> ;
 
 #endif // !REGISTRATOR_FOR_SEGMENT_INTERSECTION

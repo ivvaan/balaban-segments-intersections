@@ -34,6 +34,15 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include "optimal_finder.h"
 #include "intersection_finder.h"
 
+chostream* SVG_stream=nullptr;
+
+void set_SVG_stream(chostream* SVG) {
+  SVG_stream = SVG;
+};
+
+chostream* get_SVG_stream() {
+  return SVG_stream;
+};
 
 const int4 n_threads = 6;
 
@@ -370,6 +379,7 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
         } break;
 
     }
+    reg.write_SVG(alg, get_SVG_stream());
     return reg.get_stat(stat);
   };
 
@@ -387,8 +397,47 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
 
   find_intersections_func get_find_intersections_func(uint4 reg_type)
   {
-    if(reg_type== _Registrator::just_count)return _find_int<SimpleCounter>;
+    if (reg_type == _Registrator::just_count)return _find_int<SimpleCounter>;
+    if (reg_type == _Registrator::store_pairs_and_ints_just_count_stat)
+      return _find_int<TrueRegistrator>;
     return _find_int<PerSegmCounter>;
   };
+
+  template<class seg>
+  void _coll_to_SVG(void* coll, int4 N, chostream* SVG_stream) {
+    seg* c = (seg*)coll;
+    REAL xmin = 0, ymin = 0, xmax = 1, ymax = 1;
+    for (int4 i = 0; i < N; ++i) {
+      TPlaneVect bp = c[i].BegPoint();
+      TPlaneVect ep = c[i].EndPoint();
+      xmin = std::min({ xmin,bp.x,ep.x });
+      xmax = std::max({ xmax,bp.x,ep.x });
+      ymin = std::min({ ymin,bp.y,ep.y });
+      ymax = std::max({ ymax,bp.y,ep.y });
+    }
+    *SVG_stream << "<svg height='100%' width='100%' viewBox='";
+    *SVG_stream << xmin<<" "<<ymin<<" " << xmax << " " <<ymax<<"'>\n";
+    for (int4 i = 0; i < N; ++i)c[i].write_SVG(i, SVG_stream);
+
+  };
+
+  void coll_to_SVG(PSeg coll, int4 seg_type, int4 n,chostream *SVG_stream ) {
+    if (!SVG_stream)return;
+    int4 N = MIN(n, max_SVG_items);
+    switch (seg_type)
+    {
+    case line1: 
+      _coll_to_SVG<TLineSegment1>(coll, N, SVG_stream);
+    break;
+    case line2: 
+      _coll_to_SVG<TLineSegment2>(coll, N, SVG_stream);
+    break;
+    case arc: {
+    }; break;
+    default:
+      break;
+    }
+  };
+
 
  

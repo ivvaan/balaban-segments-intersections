@@ -71,18 +71,18 @@ public:
   void SetCurSegCutBE(uint4 s)
   {
     SetCurSeg(s);
-    cur_seg.x1 = max(cur_seg.x1, B);
-    cur_seg.x2 = min(cur_seg.x2, E);
+    cur_seg.x1 = MAX(cur_seg.x1, B);
+    cur_seg.x2 = MIN(cur_seg.x2, E);
   };
   void SetCurSegCutBeg(uint4 s)
   {
     SetCurSeg(s);
-    cur_seg.x1 = max(cur_seg.x1, B);
+    cur_seg.x1 = MAX(cur_seg.x1, B);
   };
   void SetCurSegCutEnd(uint4 s)
   {
     SetCurSeg(s);
-    cur_seg.x2 = min(cur_seg.x2, E);
+    cur_seg.x2 = MIN(cur_seg.x2, E);
   };
 
   void SetCurSegAE(uint4 s)
@@ -156,8 +156,8 @@ public:
   bool TrivCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
   {
     auto s = collection + s_;
-    auto x1 = max(cur_seg.x1, s->x1);
-    auto x2 = min(cur_seg.x2, s->x2);
+    auto x1 = MAX(cur_seg.x1, s->x1);
+    auto x2 = MIN(cur_seg.x2, s->x2);
     if (x1 >= x2)return false;
     return IntPointsInStripe<false>(x1, x2, s);
 
@@ -166,8 +166,8 @@ public:
   bool SSCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
   {
     auto s = collection + s_;
-    auto x1 = max(cur_seg.x1, s->x1);
-    auto x2 = min(cur_seg.x2, s->x2);
+    auto x1 = MAX(cur_seg.x1, s->x1);
+    auto x2 = MIN(cur_seg.x2, s->x2);
     return IntPointsInStripe<false>(x1, x2, s);
   };
 
