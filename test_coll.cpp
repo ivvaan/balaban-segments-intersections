@@ -416,7 +416,8 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
       ymax = std::max({ ymax,bp.y,ep.y });
     }
     *SVG_stream << "<svg height='100%' width='100%' viewBox='";
-    *SVG_stream << xmin<<" "<<ymin<<" " << xmax << " " <<ymax<<"'>\n";
+    *SVG_stream << xmin <<" "<< ymin <<" " 
+      <<xmax-xmin<<" "<<ymax-ymin<<"'>\n";
     for (int4 i = 0; i < N; ++i)c[i].write_SVG(i, SVG_stream);
 
   };

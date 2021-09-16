@@ -81,11 +81,13 @@ public:
   };   
   void write_SVG(int4 id,chostream *SVG_text) {
     if (SVG_text) {
+      auto bp = BegPoint();
+      auto ep = EndPoint();
       *SVG_text << "<line id='seg" << id;
-      *SVG_text << "' x1='"<<org.x;
-      *SVG_text << "' x2='"<<org.x+shift.x;
-      *SVG_text << "' y1='"<<org.y;
-      *SVG_text << "' y2='"<<org.y+shift.y;
+      *SVG_text << "' x1='" << bp.x;
+      *SVG_text << "' y1='" << bp.y;
+      *SVG_text << "' x2='" << ep.x;
+      *SVG_text << "' y2='" << ep.y;
       *SVG_text << "' class='line1'/>\n";
     }
   
@@ -145,11 +147,13 @@ public:
   };
   void write_SVG(int4 id,chostream* SVG_text) {
     if (SVG_text) {
+      auto bp = BegPoint();
+      auto ep = EndPoint();
       *SVG_text << "<line id='seg" << id;
-      *SVG_text << "' x1='" << x1;
-      *SVG_text << "' x2='" << x2;
-      *SVG_text << "' y1='" << a * x1 + b;
-      *SVG_text << "' y2='" << a * x2 + b;
+      *SVG_text << "' x1='" << bp.x;
+      *SVG_text << "' y1='" << bp.y;
+      *SVG_text << "' x2='" << ep.x;
+      *SVG_text << "' y2='" << ep.y;
       *SVG_text << "' class='line2'/>\n";
     }
   };
