@@ -203,7 +203,9 @@ public:
     auto NN = N << 1;
     for (uint4 i = 0; i < NN; ++i)  epoints[i] = i;
 
-    struct X1X2 { REAL x1, x2; } *x1x2 = new X1X2[N];
+    struct X1X2 { REAL x1, x2; };
+    std::unique_ptr<X1X2[]> buffer(new X1X2[N]);
+    X1X2 *x1x2 = buffer.get();
 
     for (uint4 i = 0; i < N; ++i) {
       x1x2[i].x1 = collection[i].org.x;
@@ -215,8 +217,6 @@ public:
         return ((x[pt1] < x[pt2]) || ((x[pt1] == x[pt2]) && (pt1 < pt2)));
       }
     );
-
-    delete[] x1x2;
   };
 
   void clone(CLine1SegmentCollection * c, IntersectionRegistrator *r)
