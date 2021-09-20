@@ -30,11 +30,11 @@ public:
 
   static inline bool is_last(uint4 pt)
   {
-    return pt & 2;
+    return pt & 1;
   };
   static inline uint4 get_segm(uint4 pt)
   {
-    return pt >> 2;
+    return pt >> 1;
   };
 
   //TPlaneVect
@@ -126,7 +126,6 @@ public:
     auto s1 = collection + s_;
     TPlaneVect delt = s2->org - s1->org;
     REAL prod = s1->shift % s2->shift;
-    if (prod == 0) return false;
     auto mul = s1->shift%delt;
     if ((mul>0) ^ (mul + prod>0))
     {
@@ -148,11 +147,25 @@ public:
 
   bool TrivCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
   {
-    auto s = collection + s_;
-    auto x1 = MAX(curB, s->org.x);
-    auto x2 = std::min(curE, s->org.x + s->shift.x);
-    if (x1 >= x2)return false;
-    return FindIntWith(x1, x2, s_);
+    auto& s1 = cur_seg;
+    auto& s2 = collection[s_];
+    if ((s1.org.x + s1.shift.x < s2.org.x)||(s2.org.x + s2.shift.x < s1.org.x))
+      return false;
+    auto delt = s2.org - s1.org;
+    REAL prod = s1.shift % s2.shift, mul;
+    if (((mul = s1.shift % delt) > 0) ^ (mul + prod > 0))
+      if (((mul = delt % s2.shift) > 0) ^ (mul - prod > 0))
+      {
+        if constexpr (_RegistrationType::point & IntersectionRegistrator::reg_type)
+        {
+          auto p = s1.org + (mul / prod) * s1.shift;
+          registrator->register_pair_and_point(cur_seg_idx, s_, p);
+        }
+        else
+          registrator->register_pair(cur_seg_idx, s_);
+        return true;
+      };
+    return false;
   };
 
   bool SSCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
@@ -182,39 +195,28 @@ public:
     return UnderActiveEnd(s_);
   };
 
-  /*bool IsIntersectsCurSeg(int4 s_)//check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
-  {
-    auto s2 = &cur_seg;
-    auto s1 = collection + s_;
-    TPlaneVect delt = s2->org - s1->org;
-    auto prod = s1->shift % s2->shift;
-    if (prod == 0) return false; 
-    auto mul= s1->shift % delt;
-    if ((mul > 0) ^ (mul + prod > 0))
-    {
-      mul = mul / prod;
-      auto xc = s2->org.x - mul * s2->shift.x;
-      if (((xc <= curB) || (xc > curE))) return false;
-      return true;
-    }
-    return false;
-  };
-  */
-
   bool UnderCurPoint(int4 s_) const { return collection[s_].under(cur_point); };//returns true if s is under current point 
   bool UnderActiveEnd(int4 s_) const { return collection[s_].under(active_end); };//returns true if s is under current point 
 
   void PrepareEndpointsSortedList(uint4 *epoints)// endpoints allocated by caller and must contain space for at least 2*GetSegmNumb() points 
   {
     auto NN = N << 1;
-    for (uint4 i = 0; i < NN; ++i)     epoints[i] = i << 1;
+    for (uint4 i = 0; i < NN; ++i)  epoints[i] = i;
+
+    struct X1X2 { REAL x1, x2; } *x1x2 = new X1X2[N];
+
+    for (uint4 i = 0; i < N; ++i) {
+      x1x2[i].x1 = collection[i].org.x;
+      x1x2[i].x2 = collection[i].org.x + collection[i].shift.x;
+    };
+
     std::sort(epoints, epoints + NN,
-      [this](uint4 pt1, uint4 pt2) {
-      auto x1 = GetX(pt1);
-      auto x2 = GetX(pt2);
-      return ((x1 < x2) || ((x1 == x2) && (pt1 < pt2)));
-    }
+      [x = reinterpret_cast<REAL*>(x1x2)](uint4 pt1, uint4 pt2) {
+        return ((x[pt1] < x[pt2]) || ((x[pt1] == x[pt2]) && (pt1 < pt2)));
+      }
     );
+
+    delete[] x1x2;
   };
 
   void clone(CLine1SegmentCollection * c, IntersectionRegistrator *r)

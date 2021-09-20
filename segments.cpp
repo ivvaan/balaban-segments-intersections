@@ -102,7 +102,6 @@ int4 IntPoint(TLineSegment1* s1, TLineSegment1* s2, TPlaneVect *p)
   if (((mul = s1->shift%delt)>0) ^ (mul + prod>0))
     if (((mul = delt%s2->shift)>0) ^ (mul - prod>0))
     {
-      if (prod == 0) return 0;
       if (_ret_ip)*p = s1->org + ((REAL)fabs(mul / prod))*s1->shift;
       return 1;
     }

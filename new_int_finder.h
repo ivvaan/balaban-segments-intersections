@@ -110,9 +110,10 @@ public:
     void prepare_ends(SegmentsColl* segments)
     {
       auto N= segments->GetSegmNumb();
-      AllocMem(N);
+      ENDS = new uint4[2 * N];
       segments->PrepareEndpointsSortedList(ENDS);
-      
+      SegL = new uint4[N];
+      SegR = new uint4[N];
       uint4 max_segm_on_vline=0,nsegm_on_vline = 0;
       for (uint4 i = 0; i < 2 * N; i++)
         if (SegmentsColl::is_last(ENDS[i]))
@@ -142,13 +143,6 @@ protected:
   uint4* SegL = nullptr, * SegR = nullptr, * ENDS = nullptr;
   int4* Q = nullptr;
   int4* L = nullptr;
-
-  void AllocMem(uint4 N)
-  {
-    SegL = new uint4[N];
-    SegR = new uint4[N];
-    ENDS = new uint4[2 * N];
-  };
 
   void FreeMem()
   {
