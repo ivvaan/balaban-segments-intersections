@@ -122,21 +122,18 @@ public:
 
   bool FindIntWith(REAL x1, REAL x2, uint4 s_)
   {
-    auto s2 = &cur_seg;
-    auto s1 = collection + s_;
-    TPlaneVect delt = s2->org - s1->org;
-    REAL prod = s1->shift % s2->shift;
-    auto mul = s1->shift%delt;
+    auto &s2 = cur_seg;
+    auto &s1 = collection[s_];
+    TPlaneVect delt = s2.org - s1.org;
+    REAL prod = s1.shift % s2.shift;
+    auto mul = s1.shift%delt;
     if ((mul>0) ^ (mul + prod>0))
     {
-      mul = mul / prod;
-      auto xc = s2->org.x - mul*s2->shift.x;
+      mul /= prod;
+      auto xc = s2.org.x - mul*s2.shift.x;
       if (((xc <= x1) || (xc>x2))) return false;
       if constexpr(_RegistrationType::point&IntersectionRegistrator::reg_type)
-      {
-        TPlaneVect p(xc, s2->org.y - mul*s2->shift.y);
-        registrator->register_pair_and_point(cur_seg_idx, s_,p);
-      }
+        registrator->register_pair_and_point(cur_seg_idx, s_, TPlaneVect(xc, s2.org.y - mul * s2.shift.y));
       else
         registrator->register_pair(cur_seg_idx, s_);
       return true;
@@ -149,18 +146,15 @@ public:
   {
     auto& s1 = cur_seg;
     auto& s2 = collection[s_];
-    if ((s1.org.x + s1.shift.x < s2.org.x)||(s2.org.x + s2.shift.x < s1.org.x))
-      return false;
     auto delt = s2.org - s1.org;
+    if ((s1.shift.x < delt.x)||(s2.shift.x < -delt.x))
+      return false;
     REAL prod = s1.shift % s2.shift, mul;
     if (((mul = s1.shift % delt) > 0) ^ (mul + prod > 0))
       if (((mul = delt % s2.shift) > 0) ^ (mul - prod > 0))
       {
         if constexpr (_RegistrationType::point & IntersectionRegistrator::reg_type)
-        {
-          auto p = s1.org + (mul / prod) * s1.shift;
-          registrator->register_pair_and_point(cur_seg_idx, s_, p);
-        }
+          registrator->register_pair_and_point(cur_seg_idx, s_, s1.org + (mul / prod) * s1.shift);
         else
           registrator->register_pair(cur_seg_idx, s_);
         return true;

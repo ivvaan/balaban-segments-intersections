@@ -57,7 +57,8 @@ public:
 
     ++counter; 
   };
-  void register_pair_and_point(uint4 s1, uint4 s2, ipoint& p) { register_pair(s1, s2); };
+  void register_pair_and_point(uint4 s1, uint4 s2, const ipoint& p) { register_pair(s1, s2); };
+ 
   void combine_reg_data(uint4 n_threads, JustCountingRegistrator* additional_reg_obj[])
   {
     for (int i = 0; i < n_threads - 1; i++)
@@ -89,7 +90,7 @@ public:
     ++segm_counters[s1];
     ++segm_counters[s2];
   };
-  void register_pair_and_point(uint4 s1, uint4 s2, ipoint& p) { register_pair(s1,s2); };
+  void register_pair_and_point(uint4 s1, uint4 s2, const ipoint& p) { register_pair(s1, s2); };
 
   void Alloc(uint4 _N)
   {
@@ -144,7 +145,7 @@ public:
   void register_pair(uint4 s1, uint4 s2) {
     ++counter;
   };
-  void register_pair_and_point(uint4 s1, uint4 s2, ipoint& p) {
+  void register_pair_and_point(uint4 s1, uint4 s2, const ipoint& p) {
     ++counter;
     intersections.emplace_back(s1, s2, p);
   };
