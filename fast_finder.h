@@ -195,12 +195,12 @@ public:
     int4 *R_pos;
     long long n_int=0;
     if (SegmentsColl::is_line_segments)R_pos = R;
+    segments->SetSearchDirDown(true);
     for (int4 cur_L_pos = 0; cur_L_pos<Size; cur_L_pos++)
     {
       int4 cur_seg = L[cur_L_pos];
       int4 step = _Q_pos;
       segments->SetCurSegCutBE(cur_seg);
-      segments->SetSearchDirDown(true);
       for (auto cur_Q = _Q + step; (step!=0) && (segments->FindCurSegIntWith(*cur_Q)); --step, --cur_Q);
         
 
@@ -239,12 +239,12 @@ public:
     // important to start from stair above current segm, meanwhile _Q[loc] is stair below
     _Q++;// so we incremement _Q and _Q[loc] become stair above
     auto last_Q = _Q + _Q_pos;
+    segments->SetSearchDirDown(false);
     for (auto _R =  SegmentsColl::is_line_segments ? R : L; _R < R_pos; ++_R)
     {
       auto segment_location_Q = _Q + *(--Q_tail);          // getting position stored in tail of Q;
       auto cur_Q = segment_location_Q;
       segments->SetCurSegCutBE(*_R);
-      segments->SetSearchDirDown(false);
       while ((cur_Q < last_Q) && (segments->FindCurSegIntWith(*cur_Q)))++cur_Q;
       n_int+= cur_Q - segment_location_Q;
     }

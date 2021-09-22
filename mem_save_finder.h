@@ -216,12 +216,12 @@ public:
     int4  new_L_size = 0,_Q_pos=0;
     auto Q_tail = Q + len_of_Q;
     long long n_int=0;
+    segments->SetSearchDirDown(true);
     for (int4 cur_L_pos = 0; cur_L_pos < Size; cur_L_pos++)
     {
       int4 cur_seg = _L[cur_L_pos];
       auto step = _Q_pos;
       segments->SetCurSegCutBE(cur_seg);
-      segments->SetSearchDirDown(true);
       for (auto cur_Q = _Q + step; (step!=0) && (segments->FindCurSegIntWith(*cur_Q)); --step, --cur_Q);
 
       if (_Q_pos == step)
@@ -256,10 +256,10 @@ public:
     // important to start from stair above current segm, meanwhile _Q[loc] is stair below
     _Q++;// so we incremement _Q and _Q[loc] become stair above
     auto last_Q = _Q + _Q_pos;
+    segments->SetSearchDirDown(false);
     for (int4 i = 0; i < new_L_size; ++i)
       if ((loc = *(--Q_tail)) != INT_MAX) {
         segments->SetCurSegCutBE(_L[i]);
-        segments->SetSearchDirDown(false);
         auto cur_Q = _Q + loc;
         auto ini_Q = cur_Q;
         while ((cur_Q < last_Q) && (segments->FindCurSegIntWith(*cur_Q)))++cur_Q;

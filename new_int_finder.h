@@ -248,6 +248,7 @@ protected:
       int4 new_L_size = 0;
       int4 step_index = 1;
       _Q[1] = _L[0];
+      segments->SetSearchDirDown(true);
       for (int4 cur_L_pos = 1; cur_L_pos < Size; cur_L_pos++)
       {
         auto step = step_index;
@@ -265,6 +266,7 @@ protected:
         }
       }
       Q_tail = Q + len_of_Q;
+      segments->SetSearchDirDown(false);
       for (int4 i = 0; i < new_L_size; ++i)
       {
         auto c = *(--Q_tail);
@@ -281,11 +283,11 @@ protected:
   template<class SegmentsColl>
   void SearchInStripLineSeg(SegmentsColl* segments, int4* L_, int4 Size) {
     auto _L = L_ - 1;
+    segments->SetSearchDirDown(true);
     for (uint4 i = 1; i < Size; i++)
     {
       auto sn = L_[i];
       segments->SetCurSegCutBE(sn);
-      segments->SetSearchDirDown(true);
       if (segments->FindCurSegIntWith(_L[i])) {
         L_[i] = _L[i];
         uint4 j = i - 1;
