@@ -39,8 +39,12 @@ const char* STYLE_temlate = R"WYX(
 <style>
 line{stroke:blue;
 stroke-width:0.001;}
+path{stroke:blue;
+stroke-width:0.001;
+fill:none;}
 .line1{stroke:cadetblue;}
 .line2{stroke:darkblue;}
+.arc{stroke:teal;}
 circle{r:0.001;fill: gold;}
 .triv {r:0.0010;fill: purple;}
 .ssw {r:0.0016;fill: sandybrown;}

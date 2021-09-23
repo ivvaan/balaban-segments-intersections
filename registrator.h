@@ -147,7 +147,10 @@ public:
   };
   void register_pair_and_point(uint4 s1, uint4 s2, const ipoint& p) {
     ++counter;
-    intersections.emplace_back(s1, s2, p);
+    if (s1<s2)
+      intersections.emplace_back(s1, s2, p);
+    else
+      intersections.emplace_back(s2, s1, p);
   };
 
   void Alloc(uint4) {};
@@ -179,20 +182,22 @@ public:
   void write_SVG(uint4 alg, chostream* SVG_text) {
     if (SVG_text) {
       for (uint4 i = 0; i < MIN(intersections.size(), max_SVG_points); ++i) {
-        ipoint& p = std::get<2>(intersections[i]);
+        uint4 s1 = std::get<0>(intersections[i]);
+        uint4 s2 = std::get<1>(intersections[i]);
+        auto& p = std::get<2>(intersections[i]);
         *SVG_text << "<circle cx='" << p.getX();
         *SVG_text << "' cy='" << p.getY();
         
         switch (alg)
         {
-        case _Algorithm::triv:*SVG_text << "' class='triv' id='t" << i <<"' />\n"; break;
-        case _Algorithm::simple_sweep:*SVG_text << "' class='ssw' id='s" << i << "' />\n"; break;
-        case _Algorithm::fast:*SVG_text << "' class='fast' id='f" << i << "' />\n"; break;
-        case _Algorithm::optimal:*SVG_text << "' class='optimal' id='o" << i << "' />\n"; break;
-        case _Algorithm::fast_parallel:*SVG_text << "' class='parallel' id='p" << i << "' />\n"; break;
-        case _Algorithm::mem_save:*SVG_text << "' class='mem_save' id='m" << i << "' />\n"; break;
+        case _Algorithm::triv:*SVG_text << "' class='triv' id='t" << s1<<"_"<<s2<<"' />\n"; break;
+        case _Algorithm::simple_sweep:*SVG_text << "' class='ssw' id='s" << s1<<"_"<<s2<<"' />\n"; break;
+        case _Algorithm::fast:*SVG_text << "' class='fast' id='f" << s1<<"_"<<s2<<"' />\n"; break;
+        case _Algorithm::optimal:*SVG_text << "' class='optimal' id='o" << s1<<"_"<<s2<<"' />\n"; break;
+        case _Algorithm::fast_parallel:*SVG_text << "' class='parallel' id='p" << s1<<"_"<<s2<<"' />\n"; break;
+        case _Algorithm::mem_save:*SVG_text << "' class='mem_save' id='m" << s1<<"_"<<s2<<"' />\n"; break;
         default:
-          *SVG_text << "' class='algorithm' id='a" << i << "' />\n";
+          *SVG_text << "' class='algorithm' id='a" << s1<<"_"<<s2<<"' />\n";
           break;
         }
       }

@@ -233,7 +233,19 @@ public:
     if (is_upper)return v.y >= org.y;
     return v.y <= org.y;
   };
-  void write_SVG(chostream* SVG_text) {
+  void write_SVG(int4 id, chostream* SVG_text) {
+    if (SVG_text) {
+      auto bp = BegPoint();
+      auto ep = EndPoint();
+      auto r = sqrt(r2);
+      *SVG_text << "<path id='arc" << id;
+      *SVG_text << "' d='M " << bp.x<<" "<<bp.y<<" ";
+      *SVG_text << "A " << r << " " << r << " 0 0 ";
+      *SVG_text << (is_upper?"0 ":"1 ");
+      *SVG_text << ep.x << " " << ep.y << "'";
+      *SVG_text << "' class='arc'/>\n";
+    }
+
   }
 
 };

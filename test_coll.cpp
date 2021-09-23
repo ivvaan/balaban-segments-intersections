@@ -434,6 +434,7 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
       _coll_to_SVG<TLineSegment2>(coll, N, SVG_stream);
     break;
     case arc: {
+      _coll_to_SVG<TArcSegment>(coll, N, SVG_stream);
     }; break;
     default:
       break;
