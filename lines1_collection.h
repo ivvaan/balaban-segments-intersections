@@ -48,18 +48,17 @@ public:
   inline void SetCurStripeLeft(uint4 left) { B = GetX(left); };
   void SetCurPoint(uint4 pt)
   {
-    if (is_last(pt))
-      collection[get_segm(pt)].EndPoint(cur_point.x, cur_point.y);
-    else
-      collection[get_segm(pt)].BegPoint(cur_point.x, cur_point.y);
+    cur_point = is_last(pt)?
+      collection[get_segm(pt)].EndPoint():
+      collection[get_segm(pt)].BegPoint();
   };
   void SetCurPointAtBeg(uint4 s)
   {
-    collection[s].BegPoint(cur_point.x, cur_point.y);
+    cur_point=collection[s].BegPoint();
   };
   void SetCurPointAtEnd(uint4 s)
   {
-    collection[s].EndPoint(cur_point.x, cur_point.y);
+    cur_point = collection[s].EndPoint();
   };
   void SetCurSeg(uint4 s)
   {
@@ -164,6 +163,21 @@ public:
 
   bool SSCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
   {
+    auto& s1 = cur_seg;
+    auto& s2 = collection[s_];
+    auto delt = s2.org - s1.org;
+    REAL prod = s1.shift % s2.shift, mul;
+    if (((mul = s1.shift % delt) > 0) ^ (mul + prod > 0))
+      if (((mul = delt % s2.shift) > 0) ^ (mul - prod > 0))
+      {
+        if constexpr (_RegistrationType::point & IntersectionRegistrator::reg_type)
+          registrator->register_pair_and_point(cur_seg_idx, s_, s1.org + (mul / prod) * s1.shift);
+        else
+          registrator->register_pair(cur_seg_idx, s_);
+        return true;
+      };
+    return false;
+
     auto s = collection + s_;
     auto x1 = MAX(curB, s->org.x);
     auto x2 = MIN(curE, s->org.x + s->shift.x);
@@ -194,8 +208,30 @@ public:
 
   void PrepareEndpointsSortedList(uint4 *epoints)// endpoints allocated by caller and must contain space for at least 2*GetSegmNumb() points 
   {
-    auto NN = N << 1;
-    for (uint4 i = 0; i < NN; ++i)  epoints[i] = i;
+    auto NN = N * 2;
+    for (uint4 i = 0; i < NN; ++i)  epoints[i] = i*2;
+
+
+    for (uint4 i = 0; i < N; ++i) {
+      collection[i].shift.x += collection[i].org.x;
+    };
+
+    static_assert(sizeof(TLineSegment1) == 4 * sizeof(REAL), "one segment should occupy 4 reals space");
+    static_assert(offsetof(TLineSegment1, org.x) == 0, "TLineSegment1.org.x should have 0 offset");
+    static_assert(offsetof(TLineSegment1, shift.x) == 2 * sizeof(REAL), "TLineSegment1.shift.x should have 2 reals offset");
+
+    std::sort(epoints, epoints + NN,
+      [x = reinterpret_cast<REAL*>(collection)](uint4 pt1, uint4 pt2) {
+        return ((x[pt1] < x[pt2]) || ((x[pt1] == x[pt2]) && (pt1 < pt2)));
+      }
+    );
+    for (uint4 i = 0; i < N; ++i) {
+      collection[i].shift.x -= collection[i].org.x;
+    };
+    for (uint4 i = 0; i < NN; ++i)  epoints[i] /= 2;
+
+    // more memory consume variant
+    /*for (uint4 i = 0; i < NN; ++i)  epoints[i] = i;
 
     struct X1X2 { REAL x1, x2; };
     std::unique_ptr<X1X2[]> buffer(new X1X2[N]);
@@ -211,6 +247,7 @@ public:
         return ((x[pt1] < x[pt2]) || ((x[pt1] == x[pt2]) && (pt1 < pt2)));
       }
     );
+    */
   };
 
   void clone(CLine1SegmentCollection * c, IntersectionRegistrator *r)
