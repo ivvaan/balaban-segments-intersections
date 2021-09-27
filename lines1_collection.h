@@ -177,11 +177,6 @@ public:
         return true;
       };
     return false;
-
-    auto s = collection + s_;
-    auto x1 = MAX(curB, s->org.x);
-    auto x2 = MIN(curE, s->org.x + s->shift.x);
-    return FindIntWith(x1, x2, s_);
   };
 
   bool FindCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them

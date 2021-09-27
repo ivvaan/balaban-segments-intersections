@@ -113,65 +113,43 @@ public:
 
   bool TrivCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
   {
-    auto s = collection + s_;
-    auto x1 = MAX(cur_seg.x1, s->x1);
-    auto x2 = MIN(cur_seg.x2, s->x2);
+    auto& s1 = collection[s_];
+    auto& s2 = cur_seg;
+    auto x1 = MAX(s1.x1, s2.x1);
+    auto x2 = MIN(s1.x2, s2.x2);
     if (x1 >= x2)return false;
-    auto da = cur_seg.a - s->a;
-    if (da == 0)return false;
+    auto da = s2.a - s1.a;
+    auto db = s1.b - s2.b;
+    if ((da * x1 - db > 0) ^ (da * x2 - db < 0)) return false;
     if constexpr(_RegistrationType::point&IntersectionRegistrator::reg_type)
     {
-      TPlaneVect p;
-      p.x = (s->b - cur_seg.b) / da;
-      if ((p.x >= x1) && (p.x <= x2))
-      {
-        p.y = p.x*cur_seg.a + cur_seg.b;
-        registrator->register_pair_and_point(cur_seg_idx, s_,p);
-        return true;
-      }
+      auto x = db / da;
+      registrator->register_pair_and_point(cur_seg_idx, s_, TPlaneVect(x,s1.YAtX(x)));
     }
     else
     {
-      auto x = (s->b - cur_seg.b) / da;
-      if ((x >= x1) && (x <= x2))
-      {
         registrator->register_pair(cur_seg_idx, s_);
-        return true;
-      }
     }
-    return false;
-
+    return true;
   };
 
   bool SSCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
   {
-    auto s = collection + s_;
-    auto da = cur_seg.a - s->a;
-    if (da == 0)return false;
-    auto x1 = MAX(cur_seg.x1, s->x1);
-    auto x2 = MIN(cur_seg.x2, s->x2);
-    if constexpr(_RegistrationType::point&IntersectionRegistrator::reg_type)
+    auto& s1 = collection[s_];
+    auto& s2 = cur_seg;
+    auto da = s2.a - s1.a;
+    auto db = s1.b - s2.b;
+    if ((da * MAX(s1.x1, s2.x1) - db > 0) ^ (da * MIN(s1.x2, s2.x2) - db < 0)) return false;
+    if constexpr (_RegistrationType::point & IntersectionRegistrator::reg_type)
     {
-      TPlaneVect p;
-      p.x = (s->b - cur_seg.b) / da;
-      if ((p.x >= x1) && (p.x <= x2))
-      {
-        p.y = p.x*cur_seg.a + cur_seg.b;
-        registrator->register_pair_and_point(cur_seg_idx, s_,p);
-        return true;
-      }
+      auto x = db / da;
+      registrator->register_pair_and_point(cur_seg_idx, s_, TPlaneVect(x, s1.YAtX(x)));
     }
     else
     {
-      auto x = (s->b - cur_seg.b) / da;
-      if ((x >= x1) && (x <= x2))
-      {
-        registrator->register_pair(cur_seg_idx, s_);
-        return true;
-      }
+      registrator->register_pair(cur_seg_idx, s_);
     }
-    return false;
-
+    return true;
   };
 
   bool FindCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
@@ -180,18 +158,14 @@ public:
       return (search_dir_down ^ UnderActiveEnd(s_)) ?
         registrator->register_pair(cur_seg_idx, s_), true : false;
 
-    auto s = collection + s_;
-    auto da = cur_seg.a - s->a;
-    if (da == 0)return false;
-    TPlaneVect p;
-    p.x = (s->b - cur_seg.b) / da;
-    if ((p.x >= cur_seg.x1) && (p.x <= cur_seg.x2))
-      {
-        p.y = p.x*cur_seg.a + cur_seg.b;
-        registrator->register_pair_and_point(cur_seg_idx, s_,p);
-        return true;
-      }
-    return false;
+    auto& s1 = collection[s_];
+    auto& s2 = cur_seg;
+    auto da = s2.a - s1.a;
+    auto db = s1.b - s2.b;
+    if ((da * MAX(s1.x1, s2.x1) - db > 0) ^ (da * MIN(s1.x2, s2.x2) - db < 0)) return false;
+    auto x = db / da;
+    registrator->register_pair_and_point(cur_seg_idx, s_, TPlaneVect(x, s1.YAtX(x)));
+    return true;
   };
 
   bool IsIntersectsCurSegDown(int4 s_) const//check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
