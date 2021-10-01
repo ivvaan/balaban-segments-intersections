@@ -137,7 +137,7 @@ public:
   {
     return v.y >= (v.x*a + b);
   };
-  bool upper(TPlaneVect &v)
+  bool upper(const TPlaneVect &v)
   {
     return v.y<(v.x*a + b);
   };
@@ -220,18 +220,20 @@ public:
 
   bool under(const TPlaneVect &v) const//arc placed under point v
   {
-    if (is_upper)
+    bool is_lower = !is_upper;
+    if (is_lower ^ (v.y < org.y))return is_lower;
+    return is_lower ^ ((v - org).get_norm() > r2);
+    /*if (is_upper)
       return (v.y>org.y) && ((v - org).get_norm()>r2);
-    return (v.y>org.y) || ((v - org).get_norm()<r2);
+    return (v.y>org.y) || ((v - org).get_norm()<r2);*/ 
   };
   bool upper(const TPlaneVect& v)
   {
     return !under(v);
   };
-  bool IsTheSamePart(TPlaneVect &v)
+  bool IsTheSamePart(const TPlaneVect &v)
   {
-    if (is_upper)return v.y >= org.y;
-    return v.y <= org.y;
+    return (!is_upper) ^ (v.y > org.y);
   };
   void write_SVG(int4 id, chostream* SVG_text) {
     if (SVG_text) {

@@ -295,73 +295,61 @@ int main(int argc, char* argv[])
   if (argc == 1)
   {
 #ifdef COUNTERS_ON
-    printf("usage: seg_int -aA -sS -dD -nN -pP -iI -rR -m -w -c\n");
+    printf("usage: seg_int -aA -sS -SR -dD -nN -pP -rR -m -eE -w -SN -fhtmfile -c\n");
 #else    
-    printf("usage: seg_int -aA -sS -dD -nN -pP -rR -m -e -w -SN -fhtmfile\n");
-#endif    
-    printf("example: seg_int -a14 -sa -dp -n20000 -p5.5\n");
-    printf("-aA: type of algorithms tested\n");
-    printf(" A=1: trivial\n");
-    printf(" A=2: simple sweep\n");
-    printf(" A=4: balaban fast\n");
-    printf(" A=8: balaban optimal\n");
-    printf(" A=16: balaban fast parallel for 6 treads\n");
-    printf(" A=32: bentley & ottmann\n");
-    printf(" A=64: balaban fast;  intersection points aren't reported\n");
-    printf("  (only intersecting pairs)\n");
-    printf(" A=128: balaban fast; memory save algorithm 4 bytes less per segment\n");
-    printf(" if you want several algorithms to test just sum up their values\n");
-    printf(" i.e. A=255 (=1+2+4+8+16+32+64+128) all algorithms\n");
-    printf("-sS: type of segments\n");
-    printf(" S=l: line segments representation y=a*x+b,x1<=x<=x2; a,b,x1,x2 - reals\n");
-    printf(" S=L: line segments representation r=b+a*t,0<=t<=1; b,a - vectors\n");
-    printf(" S=a: arcs\n");
-    printf(" S=g: graph: test example is simple circle of N vertices and N edges\n");
-    printf("-iI: implementation\n");
-    printf(" I=1: 'old' function pointers segment collection interface\n");
-    printf(" I=2: 'new' template based segment collection interface\n");
-    printf(" I=3: both\n");
-    printf("-nN: number of segments\n");
-    printf("-pP: parameter value, must be positive\n");
-    printf("-dD: type of distribution\n");
-    printf(" D=r: random segments\n");
-    printf(" D=l: random length almost x parallel segments, the bigger\n");
-    printf("  distr_param/N the less parallel segments\n");
-    printf(" D=m: mixed random length almost x parallel 'long' segments\n");
-    printf("  (33%%) and 'small' segments(67%%), the bigger distr_param/N\n");
-    printf("  the less parallel 'long' and longer 'short' segments\n");
-    printf(" D=s: short segments: random segment with  length multiplied by distr_param/N\n");
-    printf(" D=distr_param: random segment with  length multiplied by distr_param\n");
-    printf(" D=c: segments ends are on the opposite sides of unit circul, each\n");
-    printf("  segment intesect each\n");
-
-    printf("-rR: type of registrator used in new implementation and type of result statistic\n");
-    printf(" R=c: total intersection counting registrator; total count statistic\n");
-    printf(" R=p: total intersection counting and per segment intersection counting registrator; total count statistic\n");
-    printf(" R=P: total intersection counting and per segment intersection counting registrator; max intersections pre segment statistic\n");
-    printf(" R=r: really storing pairs and intersections registrator (be carefull with memory!!!); total count statistic\n");
-    printf("  as we can have O(N^2) intersections this option is limited to N=20000 max\n");
-
-    printf("-SR: capital S for random seed\n");
-    printf(" R=0: no seed, randomized generation\n");
-    printf(" R!=0: R is the seed\n");
-
-    printf("-m: if presented, means 'print less' mode - few information printed\n");
-
-    printf("-eE: if presented, for each alg prints out relative (compared to checking two segments' intersection ICT) \n");
-    printf(" time to find one intersection (works only  print_less off)\n");
-    printf(" E: assumed ICT (nanoseconds) - intersection of two segments check (and register if found) time\n");
-
-    printf("-w: if presented, program wait until 'Enter' pressed before closing\n");
-    
-    printf("-fhtmfile: if presented, program writes SVG picture to htmfile. For examle -fC:/tmp/res.htm\n");
-    printf(" intersection points are drawn only with -rr option (otherwise they are not stored)\n");
-    printf(" to limit resulting file size only first %i intersections are drawn\n", max_SVG_points);
+    printf("usage: seg_int -aA -sS -SR -dD -nN -pP -rR -m -eE -w -SN -fhtmfile\n");
+#endif
+    printf(
+R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
+-aA: type of algorithms tested
+ A=1: trivial
+ A=2: simple sweep
+ A=4: balaban fast
+ A=8: balaban optimal
+ A=16: balaban fast parallel for 6 treads
+ A=32: bentley & ottmann
+ A=64: balaban fast;  intersection points aren't reported
+  (only intersecting pairs)
+ A=128: balaban fast; memory save algorithm 4 bytes less per segment
+ if you want several algorithms to test just sum up their values
+ i.e. A=255 (=1+2+4+8+16+32+64+128) all algorithms
+-sS: type of segments
+ S=l: line segments representation y=a*x+b,x1<=x<=x2; a,b,x1,x2 - reals
+ S=L: line segments representation r=b+a*t,0<=t<=1; b,a - vectors
+ S=a: arcs
+ S=g: graph: test example is simple circle of N vertices and N edges
+-iI: implementation
+ I=1: 'old' function pointers segment collection interface
+ I=2: 'new' template based segment collection interface
+ I=3: both
+-nN: number of segments
+-pP: parameter value, must be positive
+-dD: type of distribution
+ D=r: random segments
+ D=l: random length almost x parallel segments, the bigger
+  distr_param/N the less parallel segments
+ D=m: mixed random length almost x parallel 'long' segments
+  (33%) and 'small' segments(67%), the bigger distr_param/N
+  the less parallel 'long' and longer 'short' segments
+ D=s: short segments: random segment with  length multiplied by distr_param/N
+ D=distr_param: random segment with  length multiplied by distr_param
+ D=c: segments ends are on the opposite sides of unit circul, each
+  segment intesect each
+-rR: type of registrator used in new implementation and type of result statistic
+ R=c: total intersection counting registrator; total count statistic
+ R=p: total intersection counting and per segment intersection counting registrator; 
+  total count statistic
+ R=P: total intersection counting and per segment intersection counting registrator; 
+  max intersections pre segment statistic
+ R=r: really storing pairs and intersections registrator (be carefull with memory!!!); 
+  total count statistic. As we can have O(N^2) int. the option is limited to N=20000 max
+-SR: capital S for random seed; R - random seed value; if R=0 - non pseudo random generator used
+)WYX"
+    );
     
 #ifdef COUNTERS_ON
     printf("-c: counters are printed, if presented\n");
 #endif    
-    printf("Important! -sa is not compartible with -dm, -dl and -r options!\n");
     return 0;
   }
   else
@@ -491,8 +479,6 @@ int main(int argc, char* argv[])
       }
   }
   if((seg_type==graph)&&(distr_type!=random)) {printf("-sg  is compartible only with -dr!\n"); if (wait) { printf("\npress 'Enter' to continue"); getchar(); } return 0;}
-  if((seg_type==arc)&&(distr_type==mixed)) {printf("-sa -dm is not compartible!\n"); if (wait) { printf("\npress 'Enter' to continue"); getchar(); } return 0;}                  
-  if((seg_type==arc)&&(distr_type==parallel)) {printf("-sa -dl is not compartible!\n"); if (wait) { printf("\npress 'Enter' to continue"); getchar(); } return 0;}
   if ((reg_stat == _Registrator::store_pairs_and_ints_just_count_stat) && (n > 20000)) {
     printf("Too many segments (and possible intersections!) for true registration! Just counting used instead.\n"); 
     reg_stat == _Registrator::just_count;

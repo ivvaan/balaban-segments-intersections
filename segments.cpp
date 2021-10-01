@@ -322,7 +322,8 @@ void TArcSegment::InitRandom(CRandomValueGen &rv, int4 seg_n, int4 type, REAL pa
   while (seg.shift.x<0.001); //excluding too vertical case they have big radius
   auto slope = seg.shift.y / seg.shift.x;
   TPlaneVect norm(0.5*slope, -0.5);
-  auto coef = fabs(seg.shift.x)*(1.+rv.GetRandomDouble())+fabs(seg.shift.y)+1./1024.;
+  REAL dd = 1. / 64.;
+  auto coef = seg.shift.x*(1.+rv.GetRandomDouble()) / (dd+MIN(1.0-dd,fabs(slope))) +fabs(seg.shift.y)+dd;
   org = seg.org + 0.5 * seg.shift + (rv.RandomChoose() ? coef * norm : -coef * norm);
   r2 = (org - seg.org).get_norm();
   is_upper = seg.org.y > org.y;

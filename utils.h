@@ -162,11 +162,25 @@ public:
 template <class real> inline real operator%(const couple<real>    &v1,const couple<real>  &v2)
   { return v1.x*v2.y-v2.x*v1.y;}
 
-template <class real> inline couple<real> operator*(const real   & r,const couple<real>   & t)
-  {return couple<real>(t.x*r,t.y*r);}
+template <class real> inline couple<real> operator%(real   r, const couple<real>& t)
+{
+  return couple<real>(-t.y * r, t.x * r);
+}
 
-template <class real> inline couple<real> operator*(const couple<real>   & t,const real   & r)
-  {return couple<real>(t.x*r,t.y*r);}
+template <class real> inline couple<real> operator%(const couple<real>& t, real r)
+{
+  return couple<real>(t.y * r, -t.x * r);
+}
+
+template <class real> inline couple<real> operator*(real   r, const couple<real>& t)
+{
+  return couple<real>(t.x * r, t.y * r);
+}
+
+template <class real> inline couple<real> operator*(const couple<real>& t, real r)
+{
+  return couple<real>(t.x * r, t.y * r);
+}
 
 template <class real> inline real operator*(const couple<real>   &t, const couple<real>   &   v)
   {return t.x*v.x+t.y*v.y;}

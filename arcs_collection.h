@@ -120,31 +120,20 @@ public:
     REAL l2 = s1->r2 - delta*t;
     if (l2<0)return false;
     TPlaneVect m = s1->org + t*oo;
-    if (l2 == 0)
-    {
-      if ((m.x >= x1) && (m.x <= x2) && (s1->IsTheSamePart(m)) && (s2->IsTheSamePart(m)))
-      {
-        if (not_register) return true;
-        REGISTER_INTERSECTION(cur_seg_idx, s2, m);
-        return true;
-      }
-      return false;
-    }
-    t = sqrt(l2 / org_dist2);
-    oo = TPlaneVect(oo.y*t, -oo.x*t);
-    int4 npoints = 0;
+    oo = sqrt(l2 / org_dist2)%oo;
     TPlaneVect res = m + oo;
     bool ret = false;
     if ((res.x >= x1) && (res.x <= x2) && (s1->IsTheSamePart(res)) && (s2->IsTheSamePart(res)))
     {
-      if (not_register) return true;
+      if constexpr(not_register) return true;
       ret = true;
       REGISTER_INTERSECTION(cur_seg_idx, s2, res);
     }
+    if (l2 == 0)return ret;
     res = m - oo;
     if ((res.x >= x1) && (res.x <= x2) && (s1->IsTheSamePart(res)) && (s2->IsTheSamePart(res)))
     {
-      if (not_register) return true;
+      if constexpr (not_register) return true;
       ret = true;
       REGISTER_INTERSECTION(cur_seg_idx, s2, res);
     }
