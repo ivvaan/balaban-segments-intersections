@@ -99,23 +99,21 @@ public:
 
   bool LBelow(int4 s_1, int4 s_2) const //retuns if s1 below s2 at current vertical line
   {
-    auto s1 = collection + s_1;
-    auto s2 = collection + s_2;
-    auto dx1 = s1->shift.x, dx2 = s2->shift.x;
-    auto dy1 = s1->shift.y, dy2 = s2->shift.y;
-    auto y1 = (s1->org.y*dx1 + (B - s1->org.x)*dy1)*dx2;
-    auto y2 = (s2->org.y*dx2 + (B - s2->org.x)*dy2)*dx1;
+    auto &s1 = collection[s_1];
+    auto &s2 = collection[s_2];
+    auto dx1 = s1.shift.x, dx2 = s2.shift.x;
+    auto y1 = (s1.org.y*dx1 + (B - s1.org.x)*s1.shift.y)*dx2;
+    auto y2 = (s2.org.y*dx2 + (B - s2.org.x)*s2.shift.y)*dx1;
     return y1<y2;
   };
 
   bool RBelow(int4 s_1, int4 s_2) const //retuns if s1 below s2 at current vertical line
   {
-    auto s1 = collection + s_1;
-    auto s2 = collection + s_2;
-    auto dx1 = s1->shift.x, dx2 = s2->shift.x;
-    auto dy1 = s1->shift.y, dy2 = s2->shift.y;
-    auto y1 = (s1->org.y*dx1 + (E - s1->org.x)*dy1)*dx2;
-    auto y2 = (s2->org.y*dx2 + (E - s2->org.x)*dy2)*dx1;
+    auto &s1 = collection[s_1];
+    auto &s2 = collection[s_2];
+    auto dx1 = s1.shift.x, dx2 = s2.shift.x;
+    auto y1 = (s1.org.y*dx1 + (E - s1.org.x)*s1.shift.y)*dx2;
+    auto y2 = (s2.org.y*dx2 + (E - s2.org.x)*s2.shift.y)*dx1;
     return y1<y2;
   };
 
