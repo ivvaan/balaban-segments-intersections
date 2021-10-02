@@ -113,15 +113,15 @@ public:
   bool IntPointsInStripe(REAL x1, REAL x2, TArcSegment *s2)
   {
     auto s1 = &cur_seg;
-    TPlaneVect oo = s2->org - s1->org;
+    auto oo = s2->org - s1->org;
     REAL org_dist2 = oo.get_norm();
     REAL delta = 0.5*(s1->r2 - s2->r2 + org_dist2);
-    REAL t = delta / org_dist2;
-    REAL l2 = s1->r2 - delta*t;
+    REAL l2 = s1->r2* org_dist2 - delta*delta;
     if (l2<0)return false;
-    TPlaneVect m = s1->org + t*oo;
-    oo = sqrt(l2 / org_dist2)%oo;
-    TPlaneVect res = m + oo;
+    oo = (1.0 / org_dist2) * oo;
+    auto m = s1->org + delta * oo;
+    oo = sqrt(l2) % oo;
+    auto res = m + oo;
     bool ret = false;
     if ((res.x >= x1) && (res.x <= x2) && (s1->IsTheSamePart(res)) && (s2->IsTheSamePart(res)))
     {
