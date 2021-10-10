@@ -27,6 +27,7 @@ class CLine2SegmentCollection
 {
 public:
   static constexpr bool is_line_segments = true;
+  static constexpr bool has_sentinels = true;
 
   static inline bool is_last(uint4 pt)
   {
@@ -178,8 +179,13 @@ public:
     return UnderActiveEnd(s_);
   };
 
-  bool UnderCurPoint(int4 s_) const { return collection[s_].a * cur_point.x + collection[s_].b < cur_point.y; };//returns true if s is under current point 
-  bool UnderActiveEnd(int4 s_) const { return collection[s_].a * active_end.x + collection[s_].b < active_end.y; };//returns true if s is under current point 
+  bool UnderCurPoint(int4 s_) const { 
+    return collection[s_].a * cur_point.x + collection[s_].b < cur_point.y; 
+  };//returns true if s is under current point 
+
+  bool UnderActiveEnd(int4 s_) const { 
+    return collection[s_].a * active_end.x + collection[s_].b < active_end.y; 
+  };//returns true if s is under current point 
   
   void PrepareEndpointsSortedList(uint4 *epoints)// endpoints allocated by caller and must contain space for at least 2*GetSegmNumb() points 
   {

@@ -27,6 +27,7 @@ class CLine1SegmentCollection
 {
 public:
   static constexpr bool is_line_segments = true;
+  static constexpr bool has_sentinels = true;
 
   static inline bool is_last(uint4 pt)
   {

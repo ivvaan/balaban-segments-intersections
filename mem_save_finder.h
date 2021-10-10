@@ -45,10 +45,11 @@ public:
   void find_intersections(SegmentsColl* segments)
   {
     AllocMem(segments);
-    ProgramStackRec stack_rec(-1, 2 * nTotSegm); //need to be initialized this way
+    int4 prev_ledder_top = SegmentsColl::has_sentinels ? 0 : -1;
+    ProgramStackRec stack_rec(prev_ledder_top, 2 * nTotSegm); //need to be initialized this way
     L[0] = SegmentsColl::get_segm(ENDS[0]);
     from_begin = true;
-    FindR(this, segments, -1, 0, 2 * nTotSegm - 1, &stack_rec, 1, 0, get_max_call(2 * nTotSegm));
+    FindR(this, segments, prev_ledder_top, 0, 2 * nTotSegm - 1, &stack_rec, 1, 0, get_max_call(2 * nTotSegm));
     FreeMem();
   }
 
@@ -287,7 +288,7 @@ private:
   void AllocMem(SegmentsColl* segments)
   {
     assert(nTotSegm  == segments->GetSegmNumb());
-    len_of_Q = LR_len;
+    len_of_Q = SegmentsColl::has_sentinels ? LR_len + 2 : LR_len;
     L = new int4[LR_len];
     Q = new int4[len_of_Q];
   };

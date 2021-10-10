@@ -27,7 +27,6 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <thread>
 #include <cassert>
 
-
 class CFastIntFinder : public CommonImpl
 {
 public:
@@ -44,10 +43,11 @@ public:
   void find_intersections(SegmentsColl *segments)
   {
     AllocMem(segments);
-    ProgramStackRec stack_rec(-1, 2 * nTotSegm); //need to be initialized this way
+    int4 prev_ledder_top = 0;
+    ProgramStackRec stack_rec(prev_ledder_top, 2 * nTotSegm); //need to be initialized this way
     L[0] = SegmentsColl::get_segm(ENDS[0]);
 
-    FindR(this, segments, -1, 0, 2 * nTotSegm - 1, &stack_rec, 1, 0, get_max_call(2 * nTotSegm));
+    FindR(this, segments, prev_ledder_top, 0, 2 * nTotSegm - 1, &stack_rec, 1, 0, get_max_call(2 * nTotSegm));
     FreeMem();
   }
 
@@ -195,13 +195,26 @@ public:
     int4 *R_pos;
     long long n_int=0;
     if (SegmentsColl::is_line_segments)R_pos = R;
+    int4 stored_stair;
+    if constexpr (SegmentsColl::has_sentinels) {
+      stored_stair = _Q[0];
+      _Q[0] = nTotSegm;
+    }
+      
     segments->SetSearchDirDown(true);
     for (int4 cur_L_pos = 0; cur_L_pos<Size; cur_L_pos++)
     {
       int4 cur_seg = L[cur_L_pos];
       int4 step = _Q_pos;
       segments->SetCurSegCutBE(cur_seg);
-      for (auto cur_Q = _Q + step; (step!=0) && (segments->FindCurSegIntWith(*cur_Q)); --step, --cur_Q);
+      if constexpr (SegmentsColl::has_sentinels){
+        auto cur_Q = _Q + step;
+        while (segments->FindCurSegIntWith(*cur_Q)) 
+          --cur_Q;
+        step = cur_Q -_Q;
+      }
+      else  
+        for (auto cur_Q = _Q + step; (step!=0) && (segments->FindCurSegIntWith(*cur_Q)); --step, --cur_Q);
         
 
       if (_Q_pos == step)//segment doesn't intersect ladder stairs
@@ -228,6 +241,9 @@ public:
         if (!SegmentsColl::is_line_segments) *(--Q_tail) = _Q_pos;
       }
     }
+    if constexpr (SegmentsColl::has_sentinels) {
+      _Q[0] = stored_stair;
+    }
     if(_Q_pos == 0)
     { 
       dont_split_stripe = false;
@@ -238,14 +254,19 @@ public:
       R_pos = L + new_L_size;
     // important to start from stair above current segm, meanwhile _Q[loc] is stair below
     _Q++;// so we incremement _Q and _Q[loc] become stair above
-    auto last_Q = _Q + _Q_pos;
     segments->SetSearchDirDown(false);
+    auto last_Q = _Q + _Q_pos;
+    if constexpr (SegmentsColl::has_sentinels)
+      last_Q[0] = nTotSegm + 1;
     for (auto _R =  SegmentsColl::is_line_segments ? R : L; _R < R_pos; ++_R)
     {
       auto segment_location_Q = _Q + *(--Q_tail);          // getting position stored in tail of Q;
       auto cur_Q = segment_location_Q;
       segments->SetCurSegCutBE(*_R);
-      while ((cur_Q < last_Q) && (segments->FindCurSegIntWith(*cur_Q)))++cur_Q;
+      if constexpr (SegmentsColl::has_sentinels)
+        while (segments->FindCurSegIntWith(*cur_Q))++cur_Q;
+      else 
+        while ((cur_Q < last_Q) && (segments->FindCurSegIntWith(*cur_Q)))++cur_Q;
       n_int+= cur_Q - segment_location_Q;
     }
     dont_split_stripe = n_int > new_L_size;
@@ -299,7 +320,8 @@ public:
   void AllocMem(SegmentsColl* segments)
   {
       assert(nTotSegm == segments->GetSegmNumb());
-      len_of_Q = LR_len;
+      len_of_Q = SegmentsColl::has_sentinels?LR_len+2:LR_len;
+
       L = new int4[LR_len];
       R = new int4[LR_len];
       Q = new int4[len_of_Q];

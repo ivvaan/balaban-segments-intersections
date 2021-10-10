@@ -27,6 +27,7 @@ class CArcSegmentCollection
 {
 public:
   static constexpr bool is_line_segments = false;
+  static constexpr bool has_sentinels = false;
 
   static inline bool is_last(uint4 pt)
   {
