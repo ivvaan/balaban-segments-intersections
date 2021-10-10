@@ -2,7 +2,7 @@
 #define UTILS_FOR_SEGMENT_INTERSECTION
 /*
 *
-*      Copyright (c)  2011-2020  Ivan Balaban 
+*      Copyright (c)  2011-2020  Ivan Balaban
 *      ivvaan@gmail.com
 *
 This file is part of Seg_int library.
@@ -19,7 +19,7 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
-*/ 
+*/
 #include <ostream>
 
 #include <math.h>
@@ -51,7 +51,7 @@ const uint4 max_SVG_items = 20000;
 const uint4 max_SVG_points = 150000;
 
 
-inline REAL sq(REAL x) { return x*x; }
+inline REAL sq(REAL x) { return x * x; }
 
 using chostream = std::basic_ostream<char>;
 
@@ -85,8 +85,8 @@ enum _Registrator
 {
   per_segm_reg_just_count_stat = 0,
   per_segm_reg_max_per_segm_stat = 1,
-  just_count=2,
-  store_pairs_and_ints_just_count_stat=3
+  just_count = 2,
+  store_pairs_and_ints_just_count_stat = 3
 };
 
 
@@ -108,10 +108,9 @@ class couple {
 public:
   real x = 0;
   real y = 0;
-  couple() :x(0), y(0) {};
-  couple(const real& xc, const real& yc) :x(xc), y(yc) {};
-  couple(const couple& c) :x(c.x), y(c.y) {};
-  couple(couple& c) :x(c.x), y(c.y) {};
+  couple() {};
+  couple(real xc, real yc) :x(xc), y(yc) {};
+  couple(const couple& c) = default;
   real getX() const { return x; };
   real getY() const { return y; };
   bool operator<(const couple<real>& v2) const
@@ -128,7 +127,7 @@ public:
   };
   couple<real> operator-() const
   {
-    return couple<real>(-x, -y);
+    return { -x, -y };
   };
   real get_norm() const
   {
@@ -140,14 +139,14 @@ public:
   };
   couple<real>& normalize()
   {
-    real l = get_length();
-    x /= l; y /= l;
+    real revl = 1.0 / get_length();
+    x *= revl; y *= revl;
     return *this;
   };
   couple<real> get_normalized() const
   {
-    real l = get_length();
-    return couple<real>(x / l, y / l);
+    real revl = 1.0 / get_length();
+    return { x * revl, y * revl };
   };
   void InitRandom(CRandomValueGen& rv)
   {
@@ -159,43 +158,51 @@ public:
 
 
 
-template <class real> inline real operator%(const couple<real>    &v1,const couple<real>  &v2)
-  { return v1.x*v2.y-v2.x*v1.y;}
+template <class real> inline real operator%(const couple<real>& v1, const couple<real>& v2)
+{
+  return v1.x * v2.y - v2.x * v1.y;
+}
 
 template <class real> inline couple<real> operator%(real   r, const couple<real>& t)
 {
-  return couple<real>(-t.y * r, t.x * r);
+  return { -t.y * r, t.x * r };
 }
 
 template <class real> inline couple<real> operator%(const couple<real>& t, real r)
 {
-  return couple<real>(t.y * r, -t.x * r);
+  return { t.y * r, -t.x * r };
 }
 
 template <class real> inline couple<real> operator*(real   r, const couple<real>& t)
 {
-  return couple<real>(t.x * r, t.y * r);
+  return { t.x * r, t.y * r };
 }
 
 template <class real> inline couple<real> operator*(const couple<real>& t, real r)
 {
-  return couple<real>(t.x * r, t.y * r);
+  return { t.x * r, t.y * r };
 }
 
-template <class real> inline real operator*(const couple<real>   &t, const couple<real>   &   v)
-  {return t.x*v.x+t.y*v.y;}
+template <class real> inline real operator*(const couple<real>& t, const couple<real>& v)
+{
+  return t.x * v.x + t.y * v.y;
+}
 
-template <class real> inline couple<real> operator+(const couple<real>   &v1, const couple<real>   &v2)
-  {return couple<real>(v1.x+v2.x,v1.y+v2.y);}
+template <class real> inline couple<real> operator+(const couple<real>& v1, const couple<real>& v2)
+{
+  return { v1.x + v2.x,v1.y + v2.y };
+}
 
-template <class real> inline couple<real> operator-(const couple<real>   &v1, const couple<real>   &v2)
-  {return couple<real>(v1.x-v2.x,v1.y-v2.y);}
+template <class real> inline couple<real> operator-(const couple<real>& v1, const couple<real>& v2)
+{
+  return { v1.x - v2.x,v1.y - v2.y };
+}
 
-template<class out,class real>
-out& operator <<(out &o, const couple<real>   &v)
+template<class out, class real>
+out& operator <<(out& o, const couple<real>& v)
 {
   //return o << "x=" << v.x << ",y=" << v.y;
-  return o << "[" << v.x << "," << v.y<<"]";
+  return o << "[" << v.x << "," << v.y << "]";
 }
 
 

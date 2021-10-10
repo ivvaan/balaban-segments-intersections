@@ -24,29 +24,33 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <random>
 
 
-#ifdef NDEBUG
-std::random_device rd_gen;
-std::default_random_engine drd_gen;
-#else
-std::default_random_engine rd_gen;
-std::default_random_engine drd_gen;
-#endif // NDEBUG
-
 #ifdef PRINT_SEG_AND_INT
 bool print_at_lineseg1_init = true;
 #endif
 
-double stduniform1()
-{
-  static std::uniform_real_distribution<double> dist{ 0.0, 1.0 };
-  return dist(rd_gen);
+namespace {
+#ifdef NDEBUG
+  std::random_device rd_gen;
+  std::default_random_engine drd_gen;
+#else
+  std::default_random_engine rd_gen;
+  std::default_random_engine drd_gen;
+#endif // NDEBUG
+
+  double stduniform1()
+  {
+    static std::uniform_real_distribution<double> dist{ 0.0, 1.0 };
+    return dist(rd_gen);
+  }
+
+  double stduniform2()
+  {
+    static std::uniform_real_distribution<double> dist{ 0.0, 1.0 };
+    return dist(drd_gen);
+  }
+
 }
 
-double stduniform2()
-{
-  static std::uniform_real_distribution<double> dist{ 0.0, 1.0 };
-  return dist(drd_gen);
-}
 
 CRandomValueGen::CRandomValueGen()
 {

@@ -299,12 +299,12 @@ void TArcSegment::InitRandom(CRandomValueGen &rv, int4 seg_n, int4 type, REAL pa
   {
     //Segments ends are on the opposite sides of unit circul, each segment intesect each
     double angle = 1.0 / 16.0 + 3. * M_PI * rv.GetRandomDouble() / 8.0;
-    org.x = cos(angle);
-    org.y = sin(angle);
+    org.x = 0.5*(cos(angle)+1);
+    org.y = 0.5 * (sin(angle)+1);
     is_upper = false;
-    r2 = 1.0;
-    x1 = org.x - 1.+ 1. / 1024.;
-    x2 = org.x + 1.- 1. / 1024.;
+    r2 = 0.25;
+    x1 = org.x - .5+ 1. / 1024.;
+    x2 = org.x + .5- 1. / 1024.;
 
 #ifdef PRINT_SEG_AND_INT
     printf("[%6.3f,%6.3f,%6.3f,%6.3f,%6.3f,0,0,%i],\n", org.x, org.y, r2, x1, x2, (int)is_upper);

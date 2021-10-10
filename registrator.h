@@ -46,7 +46,7 @@ class JustCountingRegistrator
   double counter = 0;
 public:
   static constexpr uint4 reg_type = _RegistrationType::count;
-  void register_pair(uint4 s1, uint4 s2) { 
+  void register_pair(uint4 s1, uint4 s2) noexcept {
 #ifdef PRINT_SEG_AND_INT
     if (s1 < s2)
       printf("alt int %i %i\n", s1, s2);
@@ -85,7 +85,7 @@ public:
   ~PerSegmCountingRegistrator() { if (segm_counters != nullptr) { delete[] segm_counters; segm_counters = nullptr; } };
 
 
-  void register_pair(uint4 s1, uint4 s2) {
+  void register_pair(uint4 s1, uint4 s2) noexcept {
     ++counter;
     ++segm_counters[s1];
     ++segm_counters[s2];
@@ -142,7 +142,7 @@ public:
 
  
 
-  void register_pair(uint4 s1, uint4 s2) {
+  void register_pair(uint4 s1, uint4 s2) noexcept {
     ++counter;
   };
   void register_pair_and_point(uint4 s1, uint4 s2, const ipoint& p) {
