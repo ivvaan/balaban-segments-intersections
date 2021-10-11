@@ -169,7 +169,8 @@ public:
       while (cur_R_pos > _Size) {
         if (SegL[cur_seg] > LBoundIdx) {
           segments->SetCurSegCutEnd(cur_seg);
-          FindInt(segments, QB, QE, QB);
+          segments->SetSearchDirDown(false);
+          for (auto c = QB + 1; (c <= QE) && segments->FindCurSegIntWith(Q[c]); ++c); // get intersections above
         }
         _L[new_size--] = cur_seg;
         cur_seg = _R[--cur_R_pos];
@@ -198,7 +199,7 @@ public:
       if (SegL[cur_seg] > LBoundIdx) {
         segments->SetCurSegCutEnd(cur_seg);
         segments->SetSearchDirDown(true);
-        for (int4 c = QE; (c > QB) && segments->FindCurSegIntWith(Q[c]); --c); //get intersections below
+        for (auto c = QE; (c > QB) && segments->FindCurSegIntWith(Q[c]); --c); //get intersections below
       }
       L[new_size++] = cur_seg;
       cur_seg = _R[++cur_R_pos];
