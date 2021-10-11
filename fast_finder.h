@@ -175,7 +175,8 @@ public:
       if (SegL[cur_seg]>LBoundIdx)
       {
         segments->SetCurSegCutEnd(cur_seg);
-        FindInt(segments, QB, QE, QE);
+        segments->SetSearchDirDown(true);
+        for (int4 c = QE; (c > QB) && segments->FindCurSegIntWith(Q[c]); --c); //get intersections below
       }
       _L[new_size++] = cur_seg;
       cur_seg = _R[++cur_R_pos];
