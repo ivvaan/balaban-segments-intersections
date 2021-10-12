@@ -149,11 +149,95 @@ public:
   }
 
   template<class SegmentsColl>
+  int4 SentinelMerge(SegmentsColl* segments, uint4 LBoundIdx, int4 QB, int4 QE, int4 Size)
+  {
+    int4 cur_R_pos = 0, new_size = 0;
+    auto cur_stair = QB + 1;
+    auto _R = L, _L = R;
+    auto cur_seg = _R[cur_R_pos];
+    int4 saved_stair = Q[QB];
+    Q[QB] = nTotSegm;   Q[QE + 1] = nTotSegm + 1;
+    while (cur_R_pos < Size)
+    {
+      if (segments->RBelow(cur_seg, Q[cur_stair]))
+      {
+        if (SegL[cur_seg] > LBoundIdx)
+        {
+          auto c = cur_stair;
+          segments->SetCurSegCutEnd(cur_seg);
+          segments->SetSearchDirDown(true);
+          auto Q_ = Q;
+            while (segments->FindCurSegIntWith(Q_[--c])); //first get intersections below
+          if (!SegmentsColl::is_line_segments || (++c == cur_stair)) {
+            segments->SetSearchDirDown(false);
+            while (segments->FindCurSegIntWith(Q_[c++])); // get intersections above
+          }
+        }
+        _L[new_size++] = cur_seg;
+        cur_seg = _R[++cur_R_pos];
+      }
+      else
+        _L[new_size++] = Q[cur_stair++];
+    }
+    Q[QB] = saved_stair;
+    while (cur_stair <= QE)
+      _L[new_size++] = Q[cur_stair++];
+    L = _L; R = _R;
+    return new_size;
+  };
+
+  template<class SegmentsColl>
+  int4 Merge(SegmentsColl* segments, uint4 LBoundIdx, int4 QB, int4 QE, int4 Size)
+  {
+    if constexpr (SegmentsColl::has_sentinels)
+      return SentinelMerge(segments, LBoundIdx, QB, QE, Size);
+    int4 cur_R_pos = 0, new_size = 0, cur_stair = QB;
+    auto _R = L, _L = R;
+    int4 cur_seg = _R[cur_R_pos];
+    while ((cur_stair < QE) && (cur_R_pos < Size))
+    {
+      if (segments->RBelow(cur_seg, Q[cur_stair + 1]))
+      {
+        if (SegL[cur_seg] > LBoundIdx){
+          segments->SetCurSegCutEnd(cur_seg);
+          FindInt(segments, QB, QE, cur_stair);
+        }
+        _L[new_size++] = cur_seg;
+        cur_seg = _R[++cur_R_pos];
+      }
+      else
+        _L[new_size++] = Q[++cur_stair];
+    }
+    while (cur_R_pos < Size)
+    {
+      if (SegL[cur_seg] > LBoundIdx)
+      {
+        segments->SetCurSegCutEnd(cur_seg);
+        segments->SetSearchDirDown(true);
+        for (auto c = QE; (c > QB) && segments->FindCurSegIntWith(Q[c]); --c); //first get intersections below
+      }
+      _L[new_size++] = cur_seg;
+      cur_seg = _R[++cur_R_pos];
+    }
+    while (cur_stair < QE)
+      _L[new_size++] = Q[++cur_stair];
+    L = _L; R = _R;
+    return new_size;
+  };
+
+  /*
+  template<class SegmentsColl>
   int4 Merge(SegmentsColl *segments, uint4 LBoundIdx, int4 QB, int4 QE, int4 Size)
   {
     int4 cur_R_pos = 0, new_size = 0, cur_stair = QB;
     auto _R = L, _L = R;
     int4 cur_seg = _R[cur_R_pos];
+    int4 saved_stair;
+    if constexpr (SegmentsColl::has_sentinels) {
+      saved_stair = Q[QB];
+      Q[QB] = nTotSegm;
+      Q[QE+1] = nTotSegm + 1;
+    }
     while ((cur_stair<QE) && (cur_R_pos<Size))
     {
 
@@ -161,8 +245,20 @@ public:
       {
         if (SegL[cur_seg]>LBoundIdx)
         {
+          auto c = cur_stair;
           segments->SetCurSegCutEnd(cur_seg);
-          FindInt(segments, QB, QE, cur_stair);
+          segments->SetSearchDirDown(true);
+          if constexpr (SegmentsColl::has_sentinels)
+            while (segments->FindCurSegIntWith(Q[c]))--c; //first get intersections below
+          else 
+            while ((c > QB) && segments->FindCurSegIntWith(Q[c]))--c;
+          if (!SegmentsColl::is_line_segments || (c == cur_stair)) {
+            segments->SetSearchDirDown(false);
+            if constexpr (SegmentsColl::has_sentinels)
+              for (c = cur_stair + 1; segments->FindCurSegIntWith(Q[c]); ++c); // get intersections above
+            else
+              for (c = cur_stair + 1; (c <= QE) && segments->FindCurSegIntWith(Q[c]); ++c); // get intersections above
+          }
         }
         _L[new_size++] = cur_seg;
         cur_seg = _R[++cur_R_pos];
@@ -175,17 +271,26 @@ public:
       if (SegL[cur_seg]>LBoundIdx)
       {
         segments->SetCurSegCutEnd(cur_seg);
-        FindInt(segments, QB, QE, QE);
+        segments->SetSearchDirDown(true);
+        if constexpr (SegmentsColl::has_sentinels)
+          for (auto c = QE; segments->FindCurSegIntWith(Q[c]); --c); //first get intersections below
+        else  
+          for (auto c = QE; (c > QB) && segments->FindCurSegIntWith(Q[c]); --c); //first get intersections below
       }
       _L[new_size++] = cur_seg;
       cur_seg = _R[++cur_R_pos];
     }
     while (cur_stair<QE)
       _L[new_size++] = Q[++cur_stair];
+    if constexpr (SegmentsColl::has_sentinels) {
+      Q[QB]=saved_stair;
+    }
+
     L = _L; R = _R;
     return new_size;
   };
-
+*/
+ 
   template<class SegmentsColl>
   int4 Split(SegmentsColl* segments, uint4 RBoundIdx, int4& _step_index, int4 Size)
   {
@@ -207,15 +312,14 @@ public:
       int4 cur_seg = L[cur_L_pos];
       int4 step = _Q_pos;
       segments->SetCurSegCutBE(cur_seg);
-      if constexpr (SegmentsColl::has_sentinels){
+      if constexpr (SegmentsColl::has_sentinels) {
         auto cur_Q = _Q + step;
-        while (segments->FindCurSegIntWith(*cur_Q)) 
-          --cur_Q;
-        step = cur_Q -_Q;
+        while (segments->FindCurSegIntWith(*cur_Q)) --cur_Q;
+        step = cur_Q - _Q;
       }
-      else  
-        for (auto cur_Q = _Q + step; (step!=0) && (segments->FindCurSegIntWith(*cur_Q)); --step, --cur_Q);
-        
+      else
+        while (step && (segments->FindCurSegIntWith(_Q[step]))) --step;
+  
 
       if (_Q_pos == step)//segment doesn't intersect ladder stairs
       {
