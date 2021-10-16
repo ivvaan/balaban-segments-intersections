@@ -185,10 +185,10 @@ public:
     }
     );
   };
-  void clone(CArcSegmentCollection * c, IntersectionRegistrator *r)
+  void clone(CArcSegmentCollection &c, IntersectionRegistrator *r)
   {
-    clone_of = c;
-    Init(c->N, c->collection,r);
+    clone_of = &c;
+    Init(c.N, c.collection,r);
   };
 
 

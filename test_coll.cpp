@@ -355,28 +355,28 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
     switch (alg) {
         case triv: {
             CTrivialIntFinder fi;
-            fi.find_intersections(&coll);
+            fi.find_intersections(coll);
         } break;
         case simple_sweep:{
             CSimpleSweepIntFinder fi;
-            fi.find_intersections(&coll);
+            fi.find_intersections(coll);
         };
             break;
         case fast: {
             CFastIntFinder fi;
-            fi.prepare_ends(&coll);
-            fi.find_intersections(&coll);
+            fi.prepare_ends(coll);
+            fi.find_intersections(coll);
         } break;
         case mem_save:{
             CMemSaveIntFinder fi;
-            fi.prepare_ends(&coll);
-            fi.find_intersections(&coll);
+            fi.prepare_ends(coll);
+            fi.find_intersections(coll);
         }
             break;
         case optimal: {
           COptimalIntFinder fi;
-          fi.prepare_ends(&coll);
-          fi.find_intersections(&coll);
+          fi.prepare_ends(coll);
+          fi.find_intersections(coll);
         }
             break;
         case fast_parallel: {
@@ -387,8 +387,8 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
                 additional_reg_obj[i] = reg_objects + i * reg_obj_margin;
             }
             CFastIntFinder fi;
-            fi.prepare_ends(&coll);
-            fi.find_intersections(&coll, n_threads, additional_reg_obj);
+            fi.prepare_ends(coll);
+            fi.find_intersections(coll, n_threads, additional_reg_obj);
             coll.GetRegistrator()->combine_reg_data(n_threads, additional_reg_obj);
 
         } break;

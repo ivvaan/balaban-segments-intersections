@@ -40,7 +40,7 @@ public:
 
   ~COptimalIntFinder() { FreeMem(); };
   template<class SegmentsColl>
-  void find_intersections(SegmentsColl *segments)
+  void find_intersections(SegmentsColl &segments)
   {
     AllocMem(segments);
     ProgramStackRec stack_rec(inherit_each, 2 * nTotSegm);  //need to be initialized this way 
@@ -69,9 +69,9 @@ private:
   int4 *father_loc = nullptr;
 
   template<class SegmentsColl>
-  void AllocMem(SegmentsColl *segments)
+  void AllocMem(SegmentsColl &segments)
   {
-    assert(nTotSegm == segments->GetSegmNumb());
+    assert(nTotSegm == segments.GetSegmNumb());
     L = new int4[LR_len];
     R = new int4[LR_len];
     len_of_Q = LR_len + LR_len / (inherit_each - 1) + inherit_each + 1;
@@ -85,40 +85,40 @@ private:
   static inline bool is_original(int4 v) { return v < 1; };
 
   template<class SegmentsColl>
-  int4 FindInt(SegmentsColl* segments, int4 qb, int4 qe, int4 l) const
+  int4 FindInt(SegmentsColl& segments, int4 qb, int4 qe, int4 l) const
   {
     
     int4 c = l;
-    segments->SetSearchDirDown(true);
+    segments.SetSearchDirDown(true);
     while (c>qb)
     {
       if (is_original(father_loc[c]))
       { //if original stair try to find and register intersection
-        if (!segments->FindCurSegIntWith(Q[c])) break;
+        if (!segments.FindCurSegIntWith(Q[c])) break;
       }
       else //if inherited stair just check if intersects
-        if (!segments->IsIntersectsCurSegDown(Q[c])) break;
+        if (!segments.IsIntersectsCurSegDown(Q[c])) break;
       c--;
     }
     int4 res = l - c;
     if (SegmentsColl::is_line_segments && (c != l))return res;
     c = ++l;
-    segments->SetSearchDirDown(false);
+    segments.SetSearchDirDown(false);
     while (c <= qe)
     {
       if (is_original(father_loc[c]))
       {
-        if (!segments->FindCurSegIntWith(Q[c])) break;
+        if (!segments.FindCurSegIntWith(Q[c])) break;
       }
       else
-        if (!segments->IsIntersectsCurSegUp(Q[c])) break;
+        if (!segments.IsIntersectsCurSegUp(Q[c])) break;
       c++;
     }
     return res + c-l;
   };
 
   template<class SegmentsColl>
-  void FindIntI(SegmentsColl* segments, uint4 r_index, ProgramStackRec* stack_pos) const
+  void FindIntI(SegmentsColl& segments, uint4 r_index, ProgramStackRec* stack_pos) const
   {
     while (stack_pos->right_bound <= r_index)stack_pos = stack_pos->prev;// go from bottom to top and find staircase to start
     if (stack_pos->prev==nullptr)return;
@@ -149,7 +149,7 @@ private:
       while ((r - l) > 1) // binary search
       {
         m = (r + l) >> 1; //        m=(r+l)/2;
-        if (segments->UnderCurPoint(Q[m]))
+        if (segments.UnderCurPoint(Q[m]))
           l = m;
         else
           r = m;
@@ -160,7 +160,7 @@ private:
   };
 
   template<class SegmentsColl>
-  int4 InsDel(SegmentsColl *segments, uint4 end_index, ProgramStackRec * stack_pos, int4 Size)
+  int4 InsDel(SegmentsColl &segments, uint4 end_index, ProgramStackRec * stack_pos, int4 Size)
   {
     int4 i;
     auto sn = SegmentsColl::get_segm(ENDS[end_index]);
@@ -178,30 +178,30 @@ private:
     }
     else// if startpoint - insert
     {
-      segments->SetCurPointAtBeg(sn);
-      for (i = Size - 1; (i > -1) && (!segments->UnderCurPoint(L[i])); --i)
+      segments.SetCurPointAtBeg(sn);
+      for (i = Size - 1; (i > -1) && (!segments.UnderCurPoint(L[i])); --i)
         L[i + 1] = L[i];
       L[i + 1] = sn;
       Size++;
-      segments->SetCurSegAE(sn);
+      segments.SetCurSegAE(sn);
       FindIntI(segments, SegR[sn], stack_pos);// get internal intersections
     }
     return Size;
   }
 
   template<class SegmentsColl>
-  int4 Merge(SegmentsColl *segments, uint4 LBoundIdx, int4 QB, int4 QE, int4 Size)
+  int4 Merge(SegmentsColl &segments, uint4 LBoundIdx, int4 QB, int4 QE, int4 Size)
   {
     int4 cur_R_pos = 0, new_size = 0, cur_stair = QB;
     auto _R = L, _L = R;
     int4 cur_seg = _R[cur_R_pos];
     while ((cur_stair<QE) && (cur_R_pos<Size))
     {
-      if (segments->RBelow(cur_seg, Q[cur_stair + 1]))
+      if (segments.RBelow(cur_seg, Q[cur_stair + 1]))
       {
         if (SegL[cur_seg]>LBoundIdx)
         {
-          segments->SetCurSegCutEnd(cur_seg);
+          segments.SetCurSegCutEnd(cur_seg);
           FindInt(segments, QB, QE, cur_stair);
         }
         _L[new_size++] = cur_seg;
@@ -215,7 +215,7 @@ private:
     {
       if (SegL[cur_seg]>LBoundIdx)
       {
-        segments->SetCurSegCutEnd(cur_seg);
+        segments.SetCurSegCutEnd(cur_seg);
         FindInt(segments, QB, QE, QE);
       }
       _L[new_size++] = cur_seg;
@@ -229,7 +229,7 @@ private:
   };
 
   template<class SegmentsColl>
-  int4 Split(SegmentsColl* segments, uint4 RBoundIdx, int4 cur_father_pos, int4& _step_index, int4 Size)
+  int4 Split(SegmentsColl& segments, uint4 RBoundIdx, int4 cur_father_pos, int4& _step_index, int4 Size)
   {
     auto step_index = _step_index;
     int4 father_last_step = step_index, new_L_size = 0, cur_L_pos = 0;
@@ -238,12 +238,12 @@ private:
     while ((cur_L_pos<Size) && (cur_father_pos <= father_last_step))
     {
       cur_seg = L[cur_L_pos];
-      segments->SetCurSegCutBE(cur_seg);
-      if (segments->LBelow( cur_seg, Q[cur_father_pos])) // current segment below candidate to inherit
+      segments.SetCurSegCutBE(cur_seg);
+      if (segments.LBelow( cur_seg, Q[cur_father_pos])) // current segment below candidate to inherit
       {
         if ((SegR[cur_seg] < RBoundIdx)// current segment not covering strip
-          || (step_index>father_last_step) && segments->IsIntersectsCurSegDown(Q[step_index])// or intersects last stair
-          || segments->IsIntersectsCurSegUp(Q[cur_father_pos])) //or intersects candidate to inherit 
+          || (step_index>father_last_step) && segments.IsIntersectsCurSegDown(Q[step_index])// or intersects last stair
+          || segments.IsIntersectsCurSegUp(Q[cur_father_pos])) //or intersects candidate to inherit 
         {
           //place segment in L
           L[new_L_size] = cur_seg;
@@ -273,9 +273,9 @@ private:
     for (; cur_L_pos<Size; cur_L_pos++)  // father staircase is over. we are adding rest segments the same manner as in suboptimal case
     {
       cur_seg = L[cur_L_pos];
-      segments->SetCurSegCutBE(cur_seg);
+      segments.SetCurSegCutBE(cur_seg);
       if ((SegR[cur_seg] < RBoundIdx) ||//segment is not covering current stripe
-        (step_index>father_last_step) && segments->IsIntersectsCurSegDown(Q[step_index]))// if it intesects last stair
+        (step_index>father_last_step) && segments.IsIntersectsCurSegDown(Q[step_index]))// if it intesects last stair
       {
         //place segment in L
         L[new_L_size] = cur_seg;
@@ -300,7 +300,7 @@ private:
     long long n_int = 0;
     for (int4 i = 0; i < new_L_size; i++)
     {
-      segments->SetCurSegCutBE(L[i]);
+      segments.SetCurSegCutBE(L[i]);
       n_int +=FindInt(segments,father_last_step, step_index, location[i]);//location[i] should contain the location of the segment L[i]
     }
     dont_split_stripe = n_int > new_L_size;
@@ -310,9 +310,9 @@ private:
   };
 
   template<class SegmentsColl>
-  int4 FindR(SegmentsColl *segments, int4 father_first_step, int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec *stack_pos, int4 Size, uint4 call_numb,uint4 _max_call=max_call)
+  int4 FindR(SegmentsColl &segments, int4 father_first_step, int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec *stack_pos, int4 Size, uint4 call_numb,uint4 _max_call=max_call)
   {
-    segments->SetCurStripe(ENDS[interval_left_index], ENDS[interval_right_index]);
+    segments.SetCurStripe(ENDS[interval_left_index], ENDS[interval_right_index]);
     if (interval_right_index - interval_left_index == 1)
         return Size>1 ? CFAST::SearchInStrip(segments, ladder_start_index, Size) : Size;
      
@@ -320,7 +320,7 @@ private:
     bool use_opt =  (ladder_start_index - father_first_step > big_staircase_threshold);
     if (use_opt)
     {// use optimal variant if father staircase is big
-//      segments->SetCurVLine(ENDS[interval_left_index]);
+//      segments.SetCurVLine(ENDS[interval_left_index]);
       Size = Split(segments, interval_right_index, father_first_step, stack_rec.Q_pos, Size);
       stack_pos = stack_rec.Set(stack_pos, interval_right_index);
       father_first_step = ladder_start_index + inherit_offset;
@@ -372,7 +372,7 @@ private:
 
     }
     if (ladder_start_index >= stack_rec.Q_pos) return Size;
-//    segments->SetCurVLine(ENDS[interval_right_index]);
+//    segments.SetCurVLine(ENDS[interval_right_index]);
     if (use_opt)
       return Merge(segments, interval_left_index, ladder_start_index, stack_rec.Q_pos, Size);
     return CFAST::Merge(segments, interval_left_index, ladder_start_index, stack_rec.Q_pos, Size);

@@ -243,10 +243,10 @@ public:
     */
   };
 
-  void clone(CLine1SegmentCollection * c, IntersectionRegistrator *r)
+  void clone(CLine1SegmentCollection &c, IntersectionRegistrator *r)
   {
-      clone_of = c;
-      Init(c->N, c->collection,r);
+      clone_of = &c;
+      Init(c.N, c.collection,r);
   };
 
   void unclone() { if (clone_of == nullptr)return; collection = nullptr; clone_of = nullptr; };

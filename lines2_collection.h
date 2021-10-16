@@ -191,10 +191,10 @@ public:
     }
     );
   };
-  void clone(CLine2SegmentCollection * c, IntersectionRegistrator *r)
+  void clone(CLine2SegmentCollection &c, IntersectionRegistrator *r)
   {
-    clone_of = c;
-    Init(c->N, c->collection,r);
+    clone_of = &c;
+    Init(c.N, c.collection,r);
     
   };
 

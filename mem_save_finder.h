@@ -42,18 +42,18 @@ public:
 
 
   template<class SegmentsColl>
-  void find_intersections(SegmentsColl* segments)
+  void find_intersections(SegmentsColl& segments)
   {
     AllocMem(segments);
     ProgramStackRec stack_rec(-1, 2 * nTotSegm); //need to be initialized this way
     L[0] = SegmentsColl::get_segm(ENDS[0]);
     from_begin = true;
-    FindR(this, segments, -1, 0, 2 * nTotSegm - 1, &stack_rec, 1, 0, get_max_call(2 * nTotSegm));
+    FindR(*this, segments, -1, 0, 2 * nTotSegm - 1, &stack_rec, 1, 0, get_max_call(2 * nTotSegm));
     FreeMem();
   }
 
   template<class SegmentsColl>
-  int4 SearchInStrip(SegmentsColl* segments, int4 qp, int4 Size)
+  int4 SearchInStrip(SegmentsColl& segments, int4 qp, int4 Size)
   {
     auto _L = from_begin ? L : L + (LR_len - Size);
     if constexpr (SegmentsColl::is_line_segments)
@@ -77,7 +77,7 @@ public:
       //once segments in L again (but in icorrect order)
       //we sort it
       std::sort(_L, std::copy(_Q, _Q + Size, _L),
-        [segments](int4 s1, int4 s2) {return segments->RBelow(s1, s2); });
+        [segments](int4 s1, int4 s2) {return segments.RBelow(s1, s2); });
     }
 
     return Size;
@@ -85,7 +85,7 @@ public:
   };
 
   template<class SegmentsColl>
-  int4 InsDel(SegmentsColl* segments, uint4 end_index, ProgramStackRec* stack_pos, int4 Size)
+  int4 InsDel(SegmentsColl& segments, uint4 end_index, ProgramStackRec* stack_pos, int4 Size)
   {
     int4 i;
     auto sn = SegmentsColl::get_segm(ENDS[end_index]);
@@ -104,12 +104,12 @@ public:
       }
       else // if startpoint - insert
       {
-        segments->SetCurPointAtBeg(sn);
-        for (i = Size - 1; (i > -1) && (!segments->UnderCurPoint(L[i])); --i)
+        segments.SetCurPointAtBeg(sn);
+        for (i = Size - 1; (i > -1) && (!segments.UnderCurPoint(L[i])); --i)
           L[i + 1] = L[i];
         L[i + 1] = sn;
         Size++;
-        segments->SetCurSegAE(sn);
+        segments.SetCurSegAE(sn);
         FindIntI(segments, SegR[sn], stack_pos); // get internal intersections
       }
 
@@ -130,13 +130,13 @@ public:
       }
       else // if startpoint - insert
       {
-        segments->SetCurPointAtBeg(sn);
-        for (i = LR_len - Size; (i < LR_len) && (segments->UnderCurPoint(L[i])); ++i)
+        segments.SetCurPointAtBeg(sn);
+        for (i = LR_len - Size; (i < LR_len) && (segments.UnderCurPoint(L[i])); ++i)
           L[i - 1] = L[i];
         L[i - 1] = sn;
         ++Size;
 
-        segments->SetCurSegAE(sn);
+        segments.SetCurSegAE(sn);
         FindIntI(segments, SegR[sn], stack_pos); // get internal intersections
       }
     }
@@ -144,7 +144,7 @@ public:
   };
 
   template<class SegmentsColl>
-  int4 Merge(SegmentsColl* segments, uint4 LBoundIdx, int4 QB, int4 QE, int4 Size)
+  int4 Merge(SegmentsColl& segments, uint4 LBoundIdx, int4 QB, int4 QE, int4 Size)
   {
     int4 cur_R_pos = 0, new_size = 0;
     int4 cur_seg;
@@ -155,9 +155,9 @@ public:
       auto cur_stair = QE, _Size = -Size;
       cur_seg = _R[cur_R_pos];
       while ((cur_stair > QB) && (cur_R_pos > _Size)) {
-        if (segments->RBelow(Q[cur_stair], cur_seg)) {
+        if (segments.RBelow(Q[cur_stair], cur_seg)) {
           if (SegL[cur_seg] > LBoundIdx) {
-            segments->SetCurSegCutEnd(cur_seg);
+            segments.SetCurSegCutEnd(cur_seg);
             FindInt(segments, QB, QE, cur_stair);
           }
           _L[new_size--] = cur_seg;
@@ -168,9 +168,9 @@ public:
       }
       while (cur_R_pos > _Size) {
         if (SegL[cur_seg] > LBoundIdx) {
-          segments->SetCurSegCutEnd(cur_seg);
-          segments->SetSearchDirDown(false);
-          for (auto c = QB + 1; (c <= QE) && segments->FindCurSegIntWith(Q[c]); ++c); // get intersections above
+          segments.SetCurSegCutEnd(cur_seg);
+          segments.SetSearchDirDown(false);
+          for (auto c = QB + 1; (c <= QE) && segments.FindCurSegIntWith(Q[c]); ++c); // get intersections above
         }
         _L[new_size--] = cur_seg;
         cur_seg = _R[--cur_R_pos];
@@ -184,9 +184,9 @@ public:
     int4 cur_stair = QB;
     cur_seg = _R[cur_R_pos];
     while ((cur_stair < QE) && (cur_R_pos < Size)) {
-      if (segments->RBelow(cur_seg, Q[cur_stair + 1])) {
+      if (segments.RBelow(cur_seg, Q[cur_stair + 1])) {
         if (SegL[cur_seg] > LBoundIdx) {
-          segments->SetCurSegCutEnd(cur_seg);
+          segments.SetCurSegCutEnd(cur_seg);
           FindInt(segments, QB, QE, cur_stair);
         }
         L[new_size++] = cur_seg;
@@ -197,9 +197,9 @@ public:
     }
     while (cur_R_pos < Size) {
       if (SegL[cur_seg] > LBoundIdx) {
-        segments->SetCurSegCutEnd(cur_seg);
-        segments->SetSearchDirDown(true);
-        for (auto c = QE; (c > QB) && segments->FindCurSegIntWith(Q[c]); --c); //get intersections below
+        segments.SetCurSegCutEnd(cur_seg);
+        segments.SetSearchDirDown(true);
+        for (auto c = QE; (c > QB) && segments.FindCurSegIntWith(Q[c]); --c); //get intersections below
       }
       L[new_size++] = cur_seg;
       cur_seg = _R[++cur_R_pos];
@@ -211,20 +211,20 @@ public:
   };
 
   template<class SegmentsColl>
-  int4 Split(SegmentsColl* segments, uint4 RBoundIdx, int4& _step_index, int4 Size)
+  int4 Split(SegmentsColl& segments, uint4 RBoundIdx, int4& _step_index, int4 Size)
   {
     auto _Q = Q + _step_index;
     auto _L = from_begin ? L : L + (LR_len - Size);
     int4  new_L_size = 0,_Q_pos=0;
     auto Q_tail = Q + len_of_Q;
     long long n_int=0;
-    segments->SetSearchDirDown(true);
+    segments.SetSearchDirDown(true);
     for (int4 cur_L_pos = 0; cur_L_pos < Size; cur_L_pos++)
     {
       int4 cur_seg = _L[cur_L_pos];
       auto step = _Q_pos;
-      segments->SetCurSegCutBE(cur_seg);
-      for (auto cur_Q = _Q + step; (step!=0) && (segments->FindCurSegIntWith(*cur_Q)); --step, --cur_Q);
+      segments.SetCurSegCutBE(cur_seg);
+      for (auto cur_Q = _Q + step; (step!=0) && (segments.FindCurSegIntWith(*cur_Q)); --step, --cur_Q);
 
       if (_Q_pos == step)
       {
@@ -258,13 +258,13 @@ public:
     // important to start from stair above current segm, meanwhile _Q[loc] is stair below
     _Q++;// so we incremement _Q and _Q[loc] become stair above
     auto last_Q = _Q + _Q_pos;
-    segments->SetSearchDirDown(false);
+    segments.SetSearchDirDown(false);
     for (int4 i = 0; i < new_L_size; ++i)
       if ((loc = *(--Q_tail)) != INT_MAX) {
-        segments->SetCurSegCutBE(_L[i]);
+        segments.SetCurSegCutBE(_L[i]);
         auto cur_Q = _Q + loc;
         auto ini_Q = cur_Q;
-        while ((cur_Q < last_Q) && (segments->FindCurSegIntWith(*cur_Q)))++cur_Q;
+        while ((cur_Q < last_Q) && (segments.FindCurSegIntWith(*cur_Q)))++cur_Q;
         n_int+= cur_Q - ini_Q;
       }
 //    dont_split_stripe = location != _step_index;
@@ -286,9 +286,9 @@ private:
   bool from_begin = true;
 
   template<class SegmentsColl>
-  void AllocMem(SegmentsColl* segments)
+  void AllocMem(SegmentsColl& segments)
   {
-    assert(nTotSegm  == segments->GetSegmNumb());
+    assert(nTotSegm  == segments.GetSegmNumb());
     len_of_Q = LR_len;
     L = new int4[LR_len];
     Q = new int4[len_of_Q];

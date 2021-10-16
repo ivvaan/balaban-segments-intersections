@@ -249,13 +249,13 @@ public:
     }
     );
   };
-  void clone(CGraphSegmentCollection * c, IntersectionRegistrator *r)
+  void clone(CGraphSegmentCollection &c, IntersectionRegistrator *r)
   {
-    clone_of = c;
-    nVertices = c->nVertices;
-    nEdges= c->nEdges;
-    vertices = c->vertices;
-    vertex_idx = c->vertex_idx;
+    clone_of = &c;
+    nVertices = c.nVertices;
+    nEdges= c.nEdges;
+    vertices = c.vertices;
+    vertex_idx = c.vertex_idx;
     SetRegistrator(r);
   };
   
