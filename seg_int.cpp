@@ -44,6 +44,7 @@ stroke-width:0.001;
 fill:none;}
 .line1{stroke:cadetblue;}
 .line2{stroke:darkblue;}
+.edge{stroke:black;}
 .arc{stroke:teal;}
 circle{r:0.001;fill: gold;}
 .triv {r:0.0010;fill: purple;}
@@ -170,7 +171,9 @@ double _benchmark_new(int4 n, PSeg seg_coll, int4 s_type, int4 alg, double& res,
     auto start = high_resolution_clock::now();
     res = find_intersections(s_type, n, seg_coll,alg,reg_stat);
     tottime += timeit = static_cast<duration<double>>(high_resolution_clock::now() - start).count();
-    set_SVG_stream(nullptr);
+    set_SVG_intersections_stream(nullptr);
+    set_SVG_segments_stream(nullptr);
+
     if (timeit < mint)
       mint = timeit;
     n_call++;
@@ -218,12 +221,13 @@ void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr
 
     if ((impl == impl_old)&& (seg_type == graph)) { if (!print_less)printf("old implementation can't deal with graph segments\n"); return; }
     auto SVG_str = get_SVG_stream();
+    set_SVG_segments_stream(SVG_str);
     for (int4 a = sizeof(alg_list) / sizeof(alg_list[0]) - 1; a>-1; a--)
       //for (int4 a = 0;a<sizeof(alg_list) / sizeof(alg_list[0]); a++)
     {
       if (alg&alg_list[a])
       {
-        set_SVG_stream(SVG_str);
+        set_SVG_intersections_stream(SVG_str);
         exec_time[a]=-1;
         if ((alg_list[a] == fast_no_ip) && (seg_type == arc)) { if (!print_less)printf("fast no inters. points algorithm can handle only line segments\n"); continue; }
         if ((alg_list[a] == bentley_ottmann) && (impl == impl_new)) { if (!print_less)printf("new implementation does't support segments functions for Bentley & Ottman algorithm\n"); continue; }
@@ -501,7 +505,7 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
   std::ofstream svgf;
   bool stream_ok=fname && (svgf.open(fname), svgf.is_open());
   if (stream_ok) {
-    coll_to_SVG(seg_coll, seg_type, n, &SVG_str);
+    //coll_to_SVG(seg_coll, seg_type, n, &SVG_str);
     set_SVG_stream(&SVG_str);
   }
   if (impl&_Implementation::impl_old)

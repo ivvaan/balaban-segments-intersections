@@ -209,4 +209,20 @@ out& operator <<(out& o, const couple<real>& v)
 
 typedef couple<REAL> TPlaneVect;
 
+struct minmaxrect { TPlaneVect ld, rt; };
+template<class SegArr>
+minmaxrect get_mmrect01(SegArr c[], int4 N) {
+  REAL xmin = 0, ymin = 0, xmax = 1, ymax = 1;
+  for (int4 i = 0; i < N; ++i) {
+    TPlaneVect bp = c[i].BegPoint();
+    TPlaneVect ep = c[i].EndPoint();
+    xmin = MIN(xmin, bp.x);
+    xmax = MAX(xmax, ep.x);
+    ymin = MIN(ymin, MIN(bp.y, ep.y));
+    ymax = MAX(ymax, MAX(bp.y, ep.y));
+  }
+  return { {xmin,ymin},{xmax,ymax} };
+};
+
+
 #endif

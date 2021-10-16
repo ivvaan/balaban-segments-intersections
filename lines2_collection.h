@@ -231,6 +231,16 @@ public:
 
   void SetSearchDirDown(bool dir) { search_dir_down = dir; };
 
+  void coll_to_SVG(chostream* SVG_stream) {
+    if (!SVG_stream)return;
+    int4 n = MIN(max_SVG_items, N);
+    auto mmr = get_mmrect01(collection, n);
+    *SVG_stream << "<svg height='100%' width='100%' viewBox='";
+    *SVG_stream << mmr.ld.x << " " << mmr.ld.y << " "
+      << mmr.rt.x - mmr.ld.x << " " << mmr.rt.y - mmr.ld.y << "'>\n";
+    for (int4 i = 0; i < n; ++i)collection[i].write_SVG(i, SVG_stream);
+  };
+
 private:
   inline auto GetX(uint4 pt) const { return ends[pt]; };
   //{ return is_last(pt) ? collection[get_segm(pt)].x2 :collection[get_segm(pt)].x1; };

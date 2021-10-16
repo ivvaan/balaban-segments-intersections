@@ -293,7 +293,7 @@ public:
       auto ii = i << 1;
       auto j = (i + 1) % n;
       // adding edge connecting current and next points
-      if (vertices[i] < vertices[j])//first point of the edge sould be "on the left" from second
+      if (vertices[i] < vertices[j])//first point of the edge should be "on the left" from second
         {
           vertex_idx[ii] = i;
           vertex_idx[ii + 1] = j;
@@ -329,6 +329,35 @@ public:
   };
 
   void SetSearchDirDown(bool dir) { };
+
+  void coll_to_SVG(chostream* SVG_text) {
+    if (!SVG_text)return;
+    int4 n = MIN(max_SVG_items, GetSegmNumb());
+    REAL xmin = 0, ymin = 0, xmax = 1, ymax = 1;
+    for (int4 i = 0; i < nVertices; ++i) {
+      xmin = MIN(xmin, vertices[i].x);
+      xmax = MAX(xmax, vertices[i].x);
+      ymin = MIN(ymin, vertices[i].y);
+      ymax = MAX(ymax, vertices[i].y);
+    }
+    *SVG_text << "<svg height='100%' width='100%' viewBox='";
+    *SVG_text << xmin << " " << ymin << " "
+      << xmax - xmin << " " << ymax - ymin << "'>\n";
+    for (uint4 s = 0; s < n; ++s)
+    {
+      auto& bp = vertices[get_first_idx(s)];
+      auto& ep = vertices[get_last_idx(s)];
+      *SVG_text << "<line id='seg" << s;
+      *SVG_text << "' x1='" << bp.x;
+      *SVG_text << "' y1='" << bp.y;
+      *SVG_text << "' x2='" << ep.x;
+      *SVG_text << "' y2='" << ep.y;
+      *SVG_text << "' class='edge'/>\n";
+
+    }
+
+  };
+
 
 private:
   inline auto GetX(uint4 pt) const

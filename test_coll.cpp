@@ -34,7 +34,9 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include "optimal_finder.h"
 #include "intersection_finder.h"
 
-chostream* SVG_stream=nullptr;
+chostream* SVG_stream = nullptr;
+chostream* SVG_segments_stream = nullptr;
+chostream* SVG_intersections_stream = nullptr;
 
 void set_SVG_stream(chostream* SVG) {
   SVG_stream = SVG;
@@ -42,6 +44,22 @@ void set_SVG_stream(chostream* SVG) {
 
 chostream* get_SVG_stream() {
   return SVG_stream;
+};
+
+void set_SVG_segments_stream(chostream* SVG) {
+  SVG_segments_stream = SVG;
+};
+
+chostream* get_SVG_segments_stream() {
+  return SVG_segments_stream;
+};
+
+void set_SVG_intersections_stream(chostream* SVG) {
+  SVG_intersections_stream = SVG;
+};
+
+chostream* get_SVG_intersections_stream() {
+  return SVG_intersections_stream;
 };
 
 const int4 n_threads = 6;
@@ -379,7 +397,8 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
         } break;
 
     }
-    reg.write_SVG(alg, get_SVG_stream());
+    coll.coll_to_SVG(get_SVG_segments_stream());
+    reg.write_SVG(alg, get_SVG_intersections_stream());
     return reg.get_stat(stat);
   };
 
