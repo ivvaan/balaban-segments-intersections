@@ -350,11 +350,8 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
   const uint4 reg_margin = 48 * 8 / sizeof(SimpleCounter);// for reg objects to be in different CPU cash blocks
 
   template<template<class>class SegColl,class Counter>
-  double find_int( int4 n, PSeg segs,int4 alg,uint4 stat)
+  double find_int( int4 n, SegColl<Counter> &coll,int4 alg,uint4 stat)
   {
-    using RegistratingSegmentsCollection = SegColl<Counter>;
-    Counter reg;
-    RegistratingSegmentsCollection coll(n, segs, &reg);
     switch (alg) {
         case triv: {
             CTrivialIntFinder fi;
@@ -392,24 +389,40 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
             CFastIntFinder fi;
             fi.prepare_ends(&coll);
             fi.find_intersections(&coll, n_threads, additional_reg_obj);
-            reg.combine_reg_data(n_threads, additional_reg_obj);
+            coll.GetRegistrator()->combine_reg_data(n_threads, additional_reg_obj);
 
         } break;
 
     }
     coll.coll_to_SVG(get_SVG_segments_stream());
-    reg.write_SVG(alg, get_SVG_intersections_stream());
-    return reg.get_stat(stat);
+    coll.GetRegistrator()->write_SVG(alg, get_SVG_intersections_stream());
+    return coll.GetRegistrator()->get_stat(stat);
   };
 
   template<class Counter>
   double _find_int(int4 seg_type, int4 n, PSeg segs, int4 alg,uint4 stat)
   {
+    Counter reg;
     switch (seg_type) {
-    case line1:return find_int<CLine1SegmentCollection,Counter>(n, segs, alg,stat);
-    case line2:return find_int<CLine2SegmentCollection,Counter>(n, segs, alg, stat);
-    case arc:return find_int<CArcSegmentCollection, Counter>(n, segs, alg, stat);
-    case graph:return find_int<CGraphSegmentCollection, Counter>(n, segs, alg, stat);
+      case line1: {
+        CLine1SegmentCollection<Counter> coll(n, segs, &reg);
+        return find_int(n, coll, alg, stat);
+      };
+
+      case line2: {
+        CLine2SegmentCollection<Counter> coll(n, segs, &reg);
+        return find_int(n, coll, alg, stat); 
+      };
+              
+      case arc:{
+        CArcSegmentCollection<Counter>  coll(n, segs, &reg);
+        return find_int(n, coll, alg, stat);
+      };
+
+      case graph: {
+        CGraphSegmentCollection<Counter> coll(n, segs, &reg);
+        return find_int(n, coll, alg, stat);
+      };
     }
     return 0;
   };
@@ -420,44 +433,6 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
     if (reg_type == _Registrator::store_pairs_and_ints_just_count_stat)
       return _find_int<TrueRegistrator>;
     return _find_int<PerSegmCounter>;
-  };
-
-  template<class seg>
-  void _coll_to_SVG(void* coll, int4 N, chostream* SVG_stream) {
-    seg* c = (seg*)coll;
-    REAL xmin = 0, ymin = 0, xmax = 1, ymax = 1;
-    for (int4 i = 0; i < N; ++i) {
-      TPlaneVect bp = c[i].BegPoint();
-      TPlaneVect ep = c[i].EndPoint();
-      xmin = std::min({ xmin,bp.x,ep.x });
-      xmax = std::max({ xmax,bp.x,ep.x });
-      ymin = std::min({ ymin,bp.y,ep.y });
-      ymax = std::max({ ymax,bp.y,ep.y });
-    }
-    *SVG_stream << "<svg height='100%' width='100%' viewBox='";
-    *SVG_stream << xmin <<" "<< ymin <<" " 
-      <<xmax-xmin<<" "<<ymax-ymin<<"'>\n";
-    for (int4 i = 0; i < N; ++i)c[i].write_SVG(i, SVG_stream);
-
-  };
-
-  void coll_to_SVG(PSeg coll, int4 seg_type, int4 n,chostream *SVG_stream ) {
-    if (!SVG_stream)return;
-    int4 N = MIN(n, max_SVG_items);
-    switch (seg_type)
-    {
-    case line1: 
-      _coll_to_SVG<TLineSegment1>(coll, N, SVG_stream);
-    break;
-    case line2: 
-      _coll_to_SVG<TLineSegment2>(coll, N, SVG_stream);
-    break;
-    case arc: {
-      _coll_to_SVG<TArcSegment>(coll, N, SVG_stream);
-    }; break;
-    default:
-      break;
-    }
   };
 
 

@@ -280,7 +280,7 @@ public:
     registrator = r;
     r->Alloc(GetSegmNumb());
   };
-  //IntersectionRegistrator *GetRegistrator() { return registrator; };
+  IntersectionRegistrator *GetRegistrator() { return registrator; };
 
   void Init(uint4 n, void * c, IntersectionRegistrator *r)
   {
