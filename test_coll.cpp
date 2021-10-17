@@ -34,43 +34,78 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include "optimal_finder.h"
 #include "intersection_finder.h"
 
-chostream* SVG_stream = nullptr;
-chostream* SVG_segments_stream = nullptr;
-chostream* SVG_intersections_stream = nullptr;
 
-void set_SVG_stream(chostream* SVG) {
-  SVG_stream = SVG;
+constexpr int4 n_threads = 6;
+
+
+// creating and deleting collections
+PSeg first_segment_ptr = NULL;
+PSeg create_test_collection(int4 seg_type, int4 n, int4 distr, REAL par, CRandomValueGen& random_gen, PSeg** seg_ptr_coll_ptr)
+{
+  PSeg* colls = nullptr;
+  int4 i;
+  if (seg_ptr_coll_ptr != nullptr)colls = new PSeg[n];
+  if (distr != param_defined)par /= n / 33.0;
+  if (distr == parallel)par /= 2.4;
+  PSeg result = nullptr;
+  switch (seg_type)
+  {
+  case line1:
+  {
+    TLineSegment1* Colls = new TLineSegment1[n];
+    if (seg_ptr_coll_ptr != nullptr)for (i = 0; i < n; i++)colls[i] = Colls + i;
+    for (i = 0; i < n; i++)
+      Colls[i].InitRandom(random_gen, i, distr, par);
+    result = Colls;
+    first_segment_ptr = Colls;
+  }; break;
+  case line2:
+  {
+    TLineSegment2* Colls = new TLineSegment2[n];
+    if (seg_ptr_coll_ptr != nullptr)for (i = 0; i < n; i++)colls[i] = Colls + i;
+    for (i = 0; i < n; i++)
+      Colls[i].InitRandom(random_gen, i, distr, par);
+    result = Colls;
+    first_segment_ptr = Colls;
+  }; break;
+  case arc:
+  {
+    TArcSegment* Colls = new TArcSegment[n];
+    if (seg_ptr_coll_ptr != nullptr)for (i = 0; i < n; i++)colls[i] = Colls + i;
+    for (i = 0; i < n; i++)
+      Colls[i].InitRandom(random_gen, i, distr, par);
+    result = Colls;
+    first_segment_ptr = Colls;
+  }; break;
+  case graph:
+  {
+    TPlaneVect* Colls = new TPlaneVect[n];
+    for (i = 0; i < n; i++)
+      Colls[i].InitRandom(random_gen);
+    result = Colls;
+    first_segment_ptr = Colls;
+  }; break;
+
+  }
+
+  if (seg_ptr_coll_ptr != nullptr)*seg_ptr_coll_ptr = colls;
+  return result;
 };
 
-chostream* get_SVG_stream() {
-  return SVG_stream;
+void  delete_test_collection(int4 seg_type, PSeg seg_coll, PSeg* seg_ptr_coll)
+{
+  switch (seg_type)
+  {
+  case line1:delete[](TLineSegment1*)seg_coll; break;
+  case line2:delete[](TLineSegment2*)seg_coll; break;
+  case arc:delete[](TArcSegment*)seg_coll; break;
+  }
+  if (seg_ptr_coll)delete[]  seg_ptr_coll;
 };
 
-void set_SVG_segments_stream(chostream* SVG) {
-  SVG_segments_stream = SVG;
-};
 
-chostream* get_SVG_segments_stream() {
-  return SVG_segments_stream;
-};
+//for old implementation
 
-void set_SVG_intersections_stream(chostream* SVG) {
-  SVG_intersections_stream = SVG;
-};
-
-chostream* get_SVG_intersections_stream() {
-  return SVG_intersections_stream;
-};
-
-const int4 n_threads = 6;
-
-
-//PSeg first_segment_ptr=NULL;
-
-
-
-
-PSeg first_segment_ptr=NULL;
 template <class SEGMENT>
 class SegmentFunctions
   {
@@ -159,83 +194,13 @@ class SegmentFunctions
 
   };
 
-PSeg create_test_collection(int4 seg_type, int4 n, int4 distr, REAL par, CRandomValueGen &random_gen, PSeg** seg_ptr_coll_ptr)
-  {
-  PSeg *colls=nullptr;
-  int4 i;
-  if(seg_ptr_coll_ptr!=nullptr)colls=new PSeg[n];
-  if(distr!=param_defined)par/=n/33.0;
-  if(distr==parallel)par/=2.4;
-  PSeg result;
-  switch (seg_type)
-    {
-    case line1:
-      {
-      TLineSegment1 *Colls = new TLineSegment1[n];
-      if (seg_ptr_coll_ptr != nullptr)for (i = 0; i<n; i++)colls[i] = Colls + i;
-      for (i = 0; i<n; i++)
-        Colls[i].InitRandom(random_gen, i, distr, par);
-      result = Colls;
-      first_segment_ptr = Colls;
-      }; break;
-    case line2:
-      {
-      TLineSegment2 *Colls=new TLineSegment2[n];
-      if (seg_ptr_coll_ptr != nullptr)for(i=0;i<n;i++)colls[i]=Colls+i;
-      for (i=0;i<n;i++)
-        Colls[i].InitRandom(random_gen,i,distr,par);
-      result = Colls;
-      first_segment_ptr = Colls;
-      };break;    
-    case arc:
-      {
-      TArcSegment *Colls=new TArcSegment[n];
-      if (seg_ptr_coll_ptr != nullptr)for(i=0;i<n;i++)colls[i]=Colls+i;
-      for (i=0;i<n;i++)
-        Colls[i].InitRandom(random_gen,i,distr,par);
-      result = Colls;
-      first_segment_ptr = Colls;
-      };break; 
-    case graph:
-      {
-        TPlaneVect *Colls = new TPlaneVect[n];
-        for (i = 0; i<n; i++)
-          Colls[i].InitRandom(random_gen);
-        result = Colls;
-        first_segment_ptr = Colls;
-      }; break;
-
-    }
-
-  if (seg_ptr_coll_ptr != nullptr)*seg_ptr_coll_ptr = colls;
-  return result;  
-  };
-
-void  delete_test_collection(int4 seg_type, PSeg seg_coll,PSeg *seg_ptr_coll)
-  {
-  switch (seg_type)
-    {
-    case line1:delete[]  (TLineSegment1 *)seg_coll;break;
-    case line2:delete[]  (TLineSegment2 *)seg_coll;break;
-    case arc:delete[]  (TArcSegment *)seg_coll;break;
-    }
-  if(seg_ptr_coll)delete[]  seg_ptr_coll;
-  };
-
 const int4 reg_obj_margin = 32;// for reg objects to be in different CPU cash blocks
 double reg_objects[reg_obj_margin*n_threads];
-
-
-
 
 double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double* counters, bool dont_need_ip )
   {
   if(colls==NULL) return 0;
   double int_numb=0;
-  
-//  bool dont_need_ip = (alg == fast_no_ip);
- 
-  
   BOOL is_line;
   if ((seg_type == line1) || (seg_type == line2))
 	  {
@@ -343,10 +308,10 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
 	  memcpy(counters, intersection_finder.my_counter, sizeof(intersection_finder.my_counter));
   }
 
-  
   return int_numb;
   };
 
+  //for new implementation
   const uint4 reg_margin = 48 * 8 / sizeof(SimpleCounter);// for reg objects to be in different CPU cash blocks
 
   template<template<class>class SegColl,class Counter>
@@ -394,8 +359,7 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
         } break;
 
     }
-    coll.coll_to_SVG(get_SVG_segments_stream());
-    coll.GetRegistrator()->write_SVG(alg, get_SVG_intersections_stream());
+
     return coll.GetRegistrator()->get_stat(stat);
   };
 
@@ -408,17 +372,14 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
         CLine1SegmentCollection<Counter> coll(n, segs, &reg);
         return find_int(n, coll, alg, stat);
       };
-
       case line2: {
         CLine2SegmentCollection<Counter> coll(n, segs, &reg);
         return find_int(n, coll, alg, stat); 
       };
-              
       case arc:{
         CArcSegmentCollection<Counter>  coll(n, segs, &reg);
         return find_int(n, coll, alg, stat);
       };
-
       case graph: {
         CGraphSegmentCollection<Counter> coll(n, segs, &reg);
         return find_int(n, coll, alg, stat);
@@ -426,6 +387,41 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
     }
     return 0;
   };
+
+  void write_SVG(chostream* SVG_stream, int4 seg_type, int4 n, PSeg segs, int4 algs, uint4 stat)
+  {
+    auto apply_algs = [=](auto& coll) {
+      coll.coll_to_SVG(SVG_stream);
+      for (int4 a = sizeof(alg_list) / sizeof(alg_list[0]) - 1; a > -1; --a)
+        if (algs & alg_list[a]) {
+          auto alg = alg_list[a];
+          TrueRegistrator reg;
+          coll.SetRegistrator(&reg);
+          find_int(n, coll, alg, stat);
+          reg.write_SVG(alg, SVG_stream);
+        }
+    };
+
+    switch (seg_type) {
+      case line1: {
+        CLine1SegmentCollection<TrueRegistrator> coll(n, segs, nullptr);
+        apply_algs(coll);
+      }; break;
+      case line2: {
+        CLine2SegmentCollection<TrueRegistrator> coll(n, segs, nullptr);
+        apply_algs(coll);
+      }; break;
+      case arc: {
+        CArcSegmentCollection<TrueRegistrator>  coll(n, segs, nullptr);
+        apply_algs(coll);
+      }; break;
+      case graph: {
+        CGraphSegmentCollection<TrueRegistrator> coll(n, segs, nullptr);
+        apply_algs(coll);
+      }; break;
+    }
+  };
+
 
   find_intersections_func get_find_intersections_func(uint4 reg_type)
   {

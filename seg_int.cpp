@@ -171,8 +171,6 @@ double _benchmark_new(int4 n, PSeg seg_coll, int4 s_type, int4 alg, double& res,
     auto start = high_resolution_clock::now();
     res = find_intersections(s_type, n, seg_coll,alg,reg_stat);
     tottime += timeit = static_cast<duration<double>>(high_resolution_clock::now() - start).count();
-    set_SVG_intersections_stream(nullptr);
-    set_SVG_segments_stream(nullptr);
 
     if (timeit < mint)
       mint = timeit;
@@ -197,8 +195,6 @@ void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr
   double exec_time[33], nInt[33];
   const char *ss = "Llag", *sd = "rlmspc";
   char counters_string[256],*counters_mute;
-  int4 alg_list[] = { triv, simple_sweep, fast, optimal, fast_parallel, bentley_ottmann,fast_no_ip,mem_save };
-  const char *alg_names[] = { "trivial","simple_sweep","fast","optimal","fast_parallel","bentley_ottmann","fast no inters points","fast 'no R'" };
   const char *stat_names_new[] = { "inters. numb","max inters. per segm","inters. numb","inters. numb" };
   const char *stat_names_old[] = { "inters. numb","inters. numb","inters. numb","inters. numb" };
   const char **stat_names= stat_names_new;
@@ -220,14 +216,11 @@ void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr
   ON_BENCH_BEG
 
     if ((impl == impl_old)&& (seg_type == graph)) { if (!print_less)printf("old implementation can't deal with graph segments\n"); return; }
-    auto SVG_str = get_SVG_stream();
-    set_SVG_segments_stream(SVG_str);
     for (int4 a = sizeof(alg_list) / sizeof(alg_list[0]) - 1; a>-1; a--)
       //for (int4 a = 0;a<sizeof(alg_list) / sizeof(alg_list[0]); a++)
     {
       if (alg&alg_list[a])
       {
-        set_SVG_intersections_stream(SVG_str);
         exec_time[a]=-1;
         if ((alg_list[a] == fast_no_ip) && (seg_type == arc)) { if (!print_less)printf("fast no inters. points algorithm can handle only line segments\n"); continue; }
         if ((alg_list[a] == bentley_ottmann) && (impl == impl_new)) { if (!print_less)printf("new implementation does't support segments functions for Bentley & Ottman algorithm\n"); continue; }
@@ -247,7 +240,7 @@ void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr
 
     if (rtime_printout && (!print_less) && (reg_stat != 1)) {
       if ((alg & triv) ){
-        double n_checks = n * 0.5 * (double)(n - 1);
+        double n_checks = ((double)n) * 0.5 * (n - 1);
         double check_time = exec_time[0] / n_checks;
         printf("\ntrivial alg made %13.0f intersection checks\n", n_checks);
         printf("one intersection check takes %6.3f ns, let's use intersection check time (ICT) as a time unit \n\n", 1E+09 * check_time);
@@ -348,6 +341,9 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
  R=r: really storing pairs and intersections registrator (be carefull with memory!!!); 
   total count statistic. As we can have O(N^2) int. the option is limited to N=20000 max
 -SR: capital S for random seed; R - random seed value; if R=0 - non pseudo random generator used
+-fhtmfile: if presented, program writes SVG picture to htmfile. For examle -fC:/tmp/res.htm
+  To limit resulting file size option works only for 5000 segments and less, also only first 
+  150000 intersections are drawn.
 )WYX"
     );
     
@@ -483,7 +479,7 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
       }
   }
   if((seg_type==graph)&&(distr_type!=random)) {printf("-sg  is compartible only with -dr!\n"); if (wait) { printf("\npress 'Enter' to continue"); getchar(); } return 0;}
-  if ((reg_stat == _Registrator::store_pairs_and_ints_just_count_stat) && (n > 20000)) {
+  if ((reg_stat == _Registrator::store_pairs_and_ints_just_count_stat) && (n > max_truereg_items)) {
     printf("Too many segments (and possible intersections!) for true registration! Just counting used instead.\n"); 
     reg_stat == _Registrator::just_count;
     }
@@ -501,30 +497,28 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
     seg_coll = create_test_collection(seg_type, n, distr_type, distr_param,rv, nullptr);
 
   bool dont_need_ip = (alg & fast_no_ip) != 0;
-  std::ostrstream SVG_str;
-  std::ofstream svgf;
-  bool stream_ok=fname && (svgf.open(fname), svgf.is_open());
-  if (stream_ok) {
-    //coll_to_SVG(seg_coll, seg_type, n, &SVG_str);
-    set_SVG_stream(&SVG_str);
-  }
   if (impl&_Implementation::impl_old)
     perform_tests(use_counters, _Implementation::impl_old, alg, seg_type, distr_type, distr_param, print_less, rtime_printout, dont_need_ip, n, seg_coll, seg_ptr_coll,reg_stat);
-  if (impl&_Implementation::impl_new)
-    perform_tests(use_counters, _Implementation::impl_new, alg, seg_type, distr_type, distr_param, print_less, rtime_printout, dont_need_ip, n, seg_coll, seg_ptr_coll,reg_stat);
+  if (impl & _Implementation::impl_new) {
+    std::ostrstream SVG_str;
+    std::ofstream svgf;
+    if (fname && (n <= max_SVG_items) && (svgf.open(fname), svgf.is_open())) {
+      write_SVG(&SVG_str, seg_type, n, seg_coll, alg, reg_stat);
+      auto insert_pos = strstr(STYLE_temlate, to_insert_SVG);
+      {
+        std::ostream_iterator<char> it(svgf);
+        std::copy(STYLE_temlate, insert_pos, it);
+      }
+      SVG_str << std::ends;
+      svgf << SVG_str.str();
+      svgf << "</svg>\n" << insert_pos;
+      svgf.close();
+    }
+
+    perform_tests(use_counters, _Implementation::impl_new, alg, seg_type, distr_type, distr_param, print_less, rtime_printout, dont_need_ip, n, seg_coll, seg_ptr_coll, reg_stat);
+  }
 
   
-  if (stream_ok) {
-    auto insert_pos = strstr(STYLE_temlate, to_insert_SVG);
-    {
-      std::ostream_iterator<char> it(svgf);
-      std::copy(STYLE_temlate, insert_pos, it);
-    }
-    SVG_str << std::ends;
-    svgf << SVG_str.str();
-    svgf << "</svg>\n" << insert_pos;
-    svgf.close();
-  }
   delete_test_collection(seg_type, seg_coll, seg_ptr_coll);
 
   if(wait){printf("\npress 'Enter' to continue"); getchar();}

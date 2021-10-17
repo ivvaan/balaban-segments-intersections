@@ -28,6 +28,14 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <vector>
 #include "utils.h"
 
+enum _RegistrationType
+{
+  count = 1,
+  segments = 2,
+  point = 4,
+  count_and_segments = 3,
+  full = 7
+};
 
 
 

@@ -47,8 +47,9 @@ typedef int  BOOL;
 extern bool print_at_lineseg1_init;
 #endif
 
-const uint4 max_SVG_items = 20000;
-const uint4 max_SVG_points = 150000;
+constexpr uint4 max_SVG_items = 5000;
+constexpr uint4 max_SVG_points = 150000;
+constexpr uint4 max_truereg_items = 20000;
 
 
 inline REAL sq(REAL x) { return x * x; }
@@ -70,6 +71,9 @@ enum _Algorithm
   fast_no_ip = 64,
   mem_save = 128
 };
+
+inline int4 alg_list[] = { triv, simple_sweep, fast, optimal, fast_parallel, bentley_ottmann,fast_no_ip,mem_save };
+inline const char* alg_names[] = { "trivial","simple_sweep","fast","optimal","fast_parallel","bentley_ottmann","fast no inters points","fast 'no R'" };
 
 enum _Segment
 {
