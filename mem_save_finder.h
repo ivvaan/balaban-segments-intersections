@@ -48,27 +48,28 @@ public:
     ProgramStackRec stack_rec(-1, 2 * nTotSegm); //need to be initialized this way
     L[0] = SegmentsColl::get_segm(ENDS[0]);
     from_begin = true;
-    FindR(*this, segments, -1, 0, 2 * nTotSegm - 1, &stack_rec, 1, 0, get_max_call(2 * nTotSegm));
+    L_size = 1;
+    FindR(*this, segments, -1, 0, 2 * nTotSegm - 1, &stack_rec, 0, get_max_call(2 * nTotSegm));
     FreeMem();
   }
 
   template<class SegmentsColl>
-  int4 SearchInStrip(SegmentsColl& segments, int4 qp, int4 Size)
+  void SearchInStrip(SegmentsColl& segments, int4 qp)
   {
-    auto _L = from_begin ? L : L + (LR_len - Size);
+    auto _L = from_begin ? L : L + (LR_len - L_size);
     if constexpr (SegmentsColl::is_line_segments)
     {
       //For line segments we can do more efficient insertion sorting using intersection check as comparison.
       //If s1<s2 at the left bound then s1 intersects s2 inside the stripe means s1>s2 at the right bound of the stripe.
       //All segments are sorted at the left bound by precondition, so intesection is the same as comparison
       // at the right bound. Byproduct of the sorting is intersections detection.
-      SearchInStripLineSeg(segments, _L, Size);
+      SearchInStripLineSeg(segments, _L);
     }
     else {
 
       auto _Q = Q + qp;  //prepere Q pointer for SearchInStripNonLineSeg
       //Make sequential simplified Split
-      SearchInStripNonLineSeg(segments, _L, _Q++, Size); //_Q pointed to element before the first new (moved from L) 
+      SearchInStripNonLineSeg(segments, _L, _Q++); //_Q pointed to element before the first new (moved from L) 
       //segment in Q and we need to increment Q for correct copy (see below)
 
       //as a result of SearchInStripNonLineSeg we have all the intersections 
@@ -76,17 +77,15 @@ public:
       //so we need to copy them back and
       //once segments in L again (but in icorrect order)
       //we sort it
-      std::sort(_L, std::copy(_Q, _Q + Size, _L),
+      std::sort(_L, std::copy(_Q, _Q + L_size, _L),
         [segments](int4 s1, int4 s2) {return segments.RBelow(s1, s2); });
     }
-
-    return Size;
-
   };
 
   template<class SegmentsColl>
-  int4 InsDel(SegmentsColl& segments, uint4 end_index, ProgramStackRec* stack_pos, int4 Size)
+  void InsDel(SegmentsColl& segments, uint4 end_index, ProgramStackRec* stack_pos)
   {
+    int4 Size = L_size;
     int4 i;
     auto sn = SegmentsColl::get_segm(ENDS[end_index]);
     if (from_begin)
@@ -140,12 +139,13 @@ public:
         FindIntI(segments, SegR[sn], stack_pos); // get internal intersections
       }
     }
-    return Size;
+    L_size = Size;
   };
 
   template<class SegmentsColl>
-  int4 Merge(SegmentsColl& segments, uint4 LBoundIdx, int4 QB, int4 QE, int4 Size)
+  void Merge(SegmentsColl& segments, uint4 LBoundIdx, int4 QB, int4 QE)
   {
+    int4 Size = L_size;
     int4 cur_R_pos = 0, new_size = 0;
     int4 cur_seg;
     if (from_begin)
@@ -178,7 +178,8 @@ public:
       while (cur_stair > QB)
         _L[new_size--] = Q[cur_stair--];
       from_begin = false;
-      return -new_size;
+      L_size = -new_size;
+      return;
     }
     auto _R = L + (LR_len - Size);
     int4 cur_stair = QB;
@@ -207,12 +208,13 @@ public:
     while (cur_stair < QE)
       L[new_size++] = Q[++cur_stair];
     from_begin = true;
-    return new_size;
+    L_size = new_size;
   };
 
   template<class SegmentsColl>
-  int4 Split(SegmentsColl& segments, uint4 RBoundIdx, int4& _step_index, int4 Size)
+  void Split(SegmentsColl& segments, uint4 RBoundIdx, int4& _step_index)
   {
+    auto Size = L_size;
     auto _Q = Q + _step_index;
     auto _L = from_begin ? L : L + (LR_len - Size);
     int4  new_L_size = 0,_Q_pos=0;
@@ -250,7 +252,8 @@ public:
     if (_Q_pos == 0)
     {
       dont_split_stripe = false;
-      return new_L_size;
+      L_size = new_L_size;
+      return;
     }
     Q_tail = Q + len_of_Q;
     int4 loc;
@@ -271,7 +274,7 @@ public:
     dont_split_stripe = n_int>new_L_size;
     _step_index += _Q_pos;
     
-    return new_L_size;
+    L_size = new_L_size;
   };
 
   void FreeMem()

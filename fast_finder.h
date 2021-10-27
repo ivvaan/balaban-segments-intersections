@@ -46,8 +46,8 @@ public:
     AllocMem(segments);
     ProgramStackRec stack_rec(-1, 2 * nTotSegm); //need to be initialized this way
     L[0] = SegmentsColl::get_segm(ENDS[0]);
-
-    FindR(*this, segments, -1, 0, 2 * nTotSegm - 1, &stack_rec, 1, 0, get_max_call(2 * nTotSegm));
+    L_size = 1;
+    FindR(*this, segments, -1, 0, 2 * nTotSegm - 1, &stack_rec, 0, get_max_call(2 * nTotSegm));
     FreeMem();
   }
 
@@ -65,7 +65,8 @@ public:
       i_f.clone(master);
       coll.clone(*segments, add_reg);
       ProgramStackRec psr(-1, 2 * i_f.nTotSegm);
-      FindR(i_f,coll, -1, from, to, &psr, i_f.CalcLAt(coll, from), 0,max_call);
+      i_f.L_size = i_f.CalcLAt(coll, from);
+      FindR(i_f,coll, -1, from, to, &psr, 0,max_call);
       coll.unclone();
       i_f.unclone();
     };
@@ -85,14 +86,15 @@ public:
 
     ProgramStackRec stack_rec(-1, 2 * nTotSegm); //need to be initialized this way
     L[0] = SegmentsColl<CIntRegistrator>::get_segm(ENDS[0]);
-    FindR(*this,segments, -1, 0, start_from, &stack_rec, 1, 0,max_call);
+    L_size = 1;
+    FindR(*this,segments, -1, 0, start_from, &stack_rec,  0,max_call);
     for (auto cur_thread = wrk_threads.begin(); cur_thread != wrk_threads.end(); cur_thread++)
       cur_thread->join(); //waiting for calculation of all threads are finished
     FreeMem();
   }
 
   template<class SegmentsColl>
-  int4 SearchInStrip(SegmentsColl &segments, int4 qp, const int4 Size)
+  void SearchInStrip(SegmentsColl &segments, int4 qp)
   {
     if constexpr(SegmentsColl::is_line_segments)
     {
@@ -100,26 +102,25 @@ public:
       //If s1<s2 at the left bound then s1 intersects s2 inside the stripe means s1>s2 at the right bound of the stripe.
       //All segments are sorted at the left bound by precondition, so intesection is the same as comparison
       // at the right bound. Byproduct of the sorting is intersections detection.
-      SearchInStripLineSeg(segments, L, Size);
+      SearchInStripLineSeg(segments, L);
     }
     else {
       //We use R as temporary Q making sequential simplified Split
-      SearchInStripNonLineSeg(segments, L, R - 1, Size);
+      SearchInStripNonLineSeg(segments, L, R - 1);
       //at the and we have all the intersections found
       //and all the segments moved from L to Q
       //so we move them back
       std::swap(L, R);
       //now segments in L once again, but in icorrect order
       //sort it
-      std::sort(L, L + Size, [segments](int4 s1, int4 s2) {return segments.RBelow(s1, s2); });
+      std::sort(L, L + L_size, [segments](int4 s1, int4 s2) {return segments.RBelow(s1, s2); });
     }
-
-    return Size;
   };
 
   template<class SegmentsColl>
-  int4 InsDel(SegmentsColl &segments, uint4 end_index, ProgramStackRec * stack_pos, int4 Size)
+  void InsDel(SegmentsColl &segments, uint4 end_index, ProgramStackRec * stack_pos)
   {
+    int4 Size = L_size;
     int4 i;
     auto sn = SegmentsColl::get_segm(ENDS[end_index]);
     if (SegmentsColl::is_last(ENDS[end_index])) // if endpoint - delete
@@ -144,12 +145,13 @@ public:
       segments.SetCurSegAE(sn);
       FindIntI(segments, SegR[sn], stack_pos);// get internal intersections
     }
-    return Size;
+    L_size = Size;
   }
 
   template<class SegmentsColl>
-  int4 Merge(SegmentsColl &segments, uint4 LBoundIdx, int4 QB, int4 QE, int4 Size)
+  void Merge(SegmentsColl &segments, uint4 LBoundIdx, int4 QB, int4 QE)
   {
+    auto Size = L_size;
     int4 cur_R_pos = 0, new_size = 0, cur_stair = QB;
     auto _R = L, _L = R;
     int4 cur_seg = _R[cur_R_pos];
@@ -183,12 +185,13 @@ public:
     while (cur_stair<QE)
       _L[new_size++] = Q[++cur_stair];
     L = _L; R = _R;
-    return new_size;
+    L_size = new_size;
   };
 
   template<class SegmentsColl>
-  int4 Split(SegmentsColl& segments, uint4 RBoundIdx, int4& _step_index, int4 Size)
+  void Split(SegmentsColl& segments, uint4 RBoundIdx, int4& _step_index)
   {
+    auto Size = L_size;
     auto _Q = Q + _step_index;
     uint4 new_L_size = 0, _Q_pos = 0;
     auto Q_tail = Q + len_of_Q;
@@ -231,7 +234,8 @@ public:
     if(_Q_pos == 0)
     { 
       dont_split_stripe = false;
-      return new_L_size;
+      L_size = new_L_size;
+      return;
     }
     Q_tail = Q + len_of_Q;
     if (!SegmentsColl::is_line_segments)
@@ -250,7 +254,7 @@ public:
     }
     dont_split_stripe = n_int > new_L_size;
     _step_index += _Q_pos;
-    return new_L_size;
+    L_size = new_L_size;
   };
 
  
