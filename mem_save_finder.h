@@ -212,10 +212,9 @@ public:
   };
 
   template<class SegmentsColl>
-  void Split(SegmentsColl& segments, uint4 RBoundIdx, int4& _step_index)
+  int4 Split(SegmentsColl& segments, int4 *_Q, uint4 RBoundIdx)
   {
     auto Size = L_size;
-    auto _Q = Q + _step_index;
     auto _L = from_begin ? L : L + (LR_len - Size);
     int4  new_L_size = 0,_Q_pos=0;
     auto Q_tail = Q + len_of_Q;
@@ -253,7 +252,7 @@ public:
     {
       dont_split_stripe = false;
       L_size = new_L_size;
-      return;
+      return 0;
     }
     Q_tail = Q + len_of_Q;
     int4 loc;
@@ -272,9 +271,8 @@ public:
       }
 //    dont_split_stripe = location != _step_index;
     dont_split_stripe = n_int>new_L_size;
-    _step_index += _Q_pos;
-    
     L_size = new_L_size;
+    return _Q_pos;
   };
 
   void FreeMem()

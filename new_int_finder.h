@@ -164,7 +164,7 @@ protected:
     ProgramStackRec stack_rec(ladder_start_index);
     if (i_f.L_size > 0)
     {
-      i_f.Split(segments, interval_right_index, stack_rec.Q_pos);
+      stack_rec.Q_pos+=i_f.Split(segments, i_f.Q + stack_rec.Q_pos, interval_right_index);
       if (ladder_start_index < stack_rec.Q_pos)
         stack_pos = stack_rec.Set(stack_pos, interval_right_index);
     };

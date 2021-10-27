@@ -334,7 +334,7 @@ private:
     }
     else
     {// use fast variant if new staircase is small 
-      CFAST::Split(segments,interval_right_index,stack_rec.Q_pos);
+      stack_rec.Q_pos+=CFAST::Split(segments,Q+ stack_rec.Q_pos,interval_right_index);
       if ((ladder_start_index < stack_rec.Q_pos))
       {
         for (int4 i = ladder_start_index + 1; i <= stack_rec.Q_pos; ++i)

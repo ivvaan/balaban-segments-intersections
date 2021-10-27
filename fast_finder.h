@@ -189,10 +189,9 @@ public:
   };
 
   template<class SegmentsColl>
-  void Split(SegmentsColl& segments, uint4 RBoundIdx, int4& _step_index)
+  int4 Split(SegmentsColl& segments, int4 *_Q,uint4 RBoundIdx)
   {
     auto Size = L_size;
-    auto _Q = Q + _step_index;
     uint4 new_L_size = 0, _Q_pos = 0;
     auto Q_tail = Q + len_of_Q;
     int4 *R_pos;
@@ -235,7 +234,7 @@ public:
     { 
       dont_split_stripe = false;
       L_size = new_L_size;
-      return;
+      return 0;
     }
     Q_tail = Q + len_of_Q;
     if (!SegmentsColl::is_line_segments)
@@ -253,8 +252,8 @@ public:
       n_int+= cur_Q - segment_location_Q;
     }
     dont_split_stripe = n_int > new_L_size;
-    _step_index += _Q_pos;
     L_size = new_L_size;
+    return _Q_pos;
   };
 
  
