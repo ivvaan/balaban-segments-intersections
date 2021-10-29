@@ -101,7 +101,7 @@ public:
   };
 
 #define REGISTER_INTERSECTION(s1,s2,p)\
-  if constexpr(_RegistrationType::point&IntersectionRegistrator::reg_type)\
+  if constexpr((_RegistrationType::point & IntersectionRegistrator::reg_type) != 0)\
     registrator->register_pair_and_point(s1, s2-collection, p);\
   else\
     registrator->register_pair(s1, s2-collection);

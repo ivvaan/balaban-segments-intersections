@@ -189,6 +189,112 @@ public:
   };
 
   template<class SegmentsColl>
+  int4 Split4LineSeg(SegmentsColl& segments, int4* _Q, uint4 RBoundIdx)
+  {
+    uint4  _Q_pos = 0;
+    long long n_int = 0;
+    auto Q_tail = Q + len_of_Q;
+    auto new_L_pos = L;
+    auto R_pos = R;
+    segments.SetSearchDirDown(true);
+    for (auto L_pos = L, last_L = L + L_size; L_pos < last_L; ++L_pos){
+      auto cur_seg = *L_pos;
+      segments.SetCurSegCutBE(cur_seg);
+      auto step = _Q_pos;
+      for (auto cur_Q = _Q + step; (step != 0) && (segments.FindCurSegIntWith(*cur_Q)); --step, --cur_Q);
+
+      if (_Q_pos != step) {//segment  intersects ladder stairs
+        *(new_L_pos++) = cur_seg;//place segment in L
+        n_int += _Q_pos - step; //increment found intersections number 
+        continue;
+      }
+      //segment doesn't intersect the ladder stairs
+      if (SegR[cur_seg] >= RBoundIdx) {//segment is covering current stripe 
+        _Q[++_Q_pos] = cur_seg; //place segment in Q
+        continue;
+      }
+      //segment is not covering current stripe 
+      *(R_pos++) = *(new_L_pos++) = cur_seg; //place segment in L and R
+      //storing segment position in Q_tail
+      *(--Q_tail) = _Q_pos;  //it should be _Q_pos+1. We save 
+      // one addition per loop by incrementing _Q later.
+    }
+    L_size = new_L_pos-L;
+    if (_Q_pos == 0) {
+      dont_split_stripe = false;
+      return 0;
+    }
+    // important to start from stair above current segm, meanwhile _Q[*Q_tail] is stair below
+    ++_Q;// so we incremement _Q and _Q[*Q_tail] become stair above
+    auto last_Q = _Q + _Q_pos;
+    segments.SetSearchDirDown(false);
+    for (--R_pos; R_pos>=R; --R_pos,++Q_tail)
+    {
+      segments.SetCurSegCutBE(*R_pos);
+      auto cur_Q = _Q + *Q_tail;          // getting position stored in tail of Q;
+      while ((cur_Q < last_Q) && (segments.FindCurSegIntWith(*cur_Q)))++cur_Q;
+      n_int += (cur_Q -_Q) - *Q_tail;
+    } 
+    dont_split_stripe = n_int > L_size;
+    return _Q_pos;
+  };
+
+  template<class SegmentsColl>
+  int4 Split4NonLineSeg(SegmentsColl& segments, int4* _Q, uint4 RBoundIdx)
+  {
+    uint4  _Q_pos = 0;
+    long long n_int = 0;
+    auto Q_tail = Q + len_of_Q;
+    auto new_L_pos = L;
+    segments.SetSearchDirDown(true);
+    for (auto L_pos = L, last_L = L + L_size; L_pos < last_L; ++L_pos) {
+      auto cur_seg = *L_pos;
+      auto step = _Q_pos;
+      segments.SetCurSegCutBE(cur_seg);
+      for (auto cur_Q = _Q + step; (step != 0) && (segments.FindCurSegIntWith(*cur_Q)); --step, --cur_Q);
+
+      if ((_Q_pos == step) && (SegR[cur_seg] >= RBoundIdx)) //segment doesn't intersect ladder stairs
+        //and is covering current stripe and doesn't intersect ladder stairs
+          _Q[++_Q_pos] = cur_seg;
+      else {   //segment  intersects ladder stairs or is not covering 
+        n_int += _Q_pos - step; //inc int counter
+        *(new_L_pos++)= cur_seg; //place segment in L
+        //storing segment position in Q_tail
+        *(--Q_tail) = _Q_pos;  //it should be _Q_pos+1. We save 
+        // one addition per loop by incrementing _Q later.
+      }
+    }
+    L_size = new_L_pos - L;
+    if (_Q_pos == 0){
+      dont_split_stripe = false;
+      return 0;
+    }
+    Q_tail = Q + len_of_Q - 1;
+    // important to start from stair above current segm, meanwhile _Q[*Q_tail] is stair below
+    ++_Q;// so we incremement _Q and _Q[*Q_tail] become stair above
+    segments.SetSearchDirDown(false);
+    for (auto L_pos=L, last_Q = _Q + _Q_pos; L_pos < new_L_pos ; ++L_pos, --Q_tail)
+    {
+      segments.SetCurSegCutBE(*L_pos);
+      auto cur_Q = _Q + *Q_tail;          // getting position stored in tail of Q;
+      while ((cur_Q < last_Q) && (segments.FindCurSegIntWith(*cur_Q)))++cur_Q;
+      n_int += (cur_Q - _Q) - *Q_tail;
+    }
+    dont_split_stripe = n_int > L_size;
+    return _Q_pos;
+  };
+
+
+  template<class SegmentsColl>
+  int4 Split(SegmentsColl& segments, int4* _Q, uint4 RBoundIdx)
+  {
+    if constexpr (SegmentsColl::is_line_segments)
+      return Split4LineSeg(segments, _Q, RBoundIdx);
+    return Split4NonLineSeg(segments, _Q, RBoundIdx);
+  };
+
+
+/*  template<class SegmentsColl>
   int4 Split(SegmentsColl& segments, int4 *_Q,uint4 RBoundIdx)
   {
     auto Size = L_size;
@@ -256,7 +362,7 @@ public:
     return _Q_pos;
   };
 
- 
+ */
  
   protected:
   int4 *R = nullptr;

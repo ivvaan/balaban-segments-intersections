@@ -73,28 +73,33 @@ public:
     SetCurSeg(s);
     curB = MAX(B, curB);
     curE = MIN(E, curE);
-    active_end.x = curE;
-    active_end.y = cur_seg.YAtX(curE);
+    if constexpr ((IntersectionRegistrator::reg_type & _RegistrationType::point) == 0) {
+      active_end.x = curE;
+      active_end.y = cur_seg.YAtX(curE);
+    }
   };
 
   void SetCurSegCutBeg(uint4 s)
   {
     SetCurSeg(s);
     curB = MAX(B, curB);
-    active_end = cur_seg.EndPoint();
+    if constexpr ((IntersectionRegistrator::reg_type & _RegistrationType::point) == 0)
+      active_end = cur_seg.EndPoint();
   };
 
   void SetCurSegCutEnd(uint4 s)
   {
     SetCurSeg(s);
     curE = MIN(E, curE);
-    active_end = cur_seg.BegPoint();
+    if constexpr ((IntersectionRegistrator::reg_type & _RegistrationType::point) == 0)
+      active_end = cur_seg.BegPoint();
   };
 
   void SetCurSegAE(uint4 s)
   {
     SetCurSeg(s);
-    active_end = cur_seg.EndPoint();
+    if constexpr ((IntersectionRegistrator::reg_type & _RegistrationType::point) == 0)
+      active_end = cur_seg.EndPoint();
   };
 
   bool LBelow(int4 s_1, int4 s_2) const //retuns if s1 below s2 at current vertical line
@@ -129,7 +134,7 @@ public:
       mul /= prod;
       auto xc = s2.org.x - mul*s2.shift.x;
       if (((xc <= x1) || (xc>x2))) return false;
-      if constexpr(_RegistrationType::point&IntersectionRegistrator::reg_type)
+      if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) != 0)
         registrator->register_pair_and_point(cur_seg_idx, s_, TPlaneVect(xc, s2.org.y - mul * s2.shift.y));
       else
         registrator->register_pair(cur_seg_idx, s_);
@@ -150,7 +155,7 @@ public:
     if (((mul = s1.shift % delt) > 0) ^ (mul + prod > 0))
       if (((mul = delt % s2.shift) > 0) ^ (mul - prod > 0))
       {
-        if constexpr (_RegistrationType::point & IntersectionRegistrator::reg_type)
+        if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) != 0)
           registrator->register_pair_and_point(cur_seg_idx, s_, s1.org + (mul / prod) * s1.shift);
         else
           registrator->register_pair(cur_seg_idx, s_);
@@ -168,7 +173,7 @@ public:
     if (((mul = s1.shift % delt) > 0) ^ (mul + prod > 0))
       if (((mul = delt % s2.shift) > 0) ^ (mul - prod > 0))
       {
-        if constexpr (_RegistrationType::point & IntersectionRegistrator::reg_type)
+        if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) != 0)
           registrator->register_pair_and_point(cur_seg_idx, s_, s1.org + (mul / prod) * s1.shift);
         else
           registrator->register_pair(cur_seg_idx, s_);
@@ -179,7 +184,7 @@ public:
 
   bool FindCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
   {
-    if constexpr (!(_RegistrationType::point & IntersectionRegistrator::reg_type))
+    if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0)
       return (search_dir_down ^ UnderActiveEnd(s_)) ?
       registrator->register_pair(cur_seg_idx, s_), true : false;
   

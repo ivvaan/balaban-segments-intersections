@@ -179,7 +179,7 @@ public:
       if (((xc <= x1) || (xc>x2))) return false;
       if constexpr(register_int)
       {
-        if constexpr(_RegistrationType::point&IntersectionRegistrator::reg_type)
+        if constexpr((_RegistrationType::point & IntersectionRegistrator::reg_type) != 0)
         {
           TPlaneVect p(xc, s2.org.y - mul*s2.shift.y);
           registrator->register_pair_and_point(cur_seg_idx, s_,p);

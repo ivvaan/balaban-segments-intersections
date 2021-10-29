@@ -72,27 +72,31 @@ public:
     SetCurSeg(s);
     cur_seg.x1 = MAX(cur_seg.x1, B);
     cur_seg.x2 = MIN(cur_seg.x2, E);
-    active_end = cur_seg.EndPoint();
+    if constexpr ((IntersectionRegistrator::reg_type & _RegistrationType::point) == 0)
+      active_end = cur_seg.EndPoint();
   };
 
   void SetCurSegCutBeg(uint4 s)
   {
     SetCurSeg(s);
     cur_seg.x1 = MAX(cur_seg.x1, B);
-    active_end=cur_seg.EndPoint();
+    if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0)
+      active_end=cur_seg.EndPoint();
   };
 
   void SetCurSegCutEnd(uint4 s)
   {
     SetCurSeg(s);
     cur_seg.x2 = MIN(cur_seg.x2, E);
-    active_end = cur_seg.BegPoint();
+    if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0)
+      active_end = cur_seg.BegPoint();
   };
 
   void SetCurSegAE(uint4 s)
   {
     SetCurSeg(s);
-    active_end = cur_seg.EndPoint();
+    if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0)
+      active_end = cur_seg.EndPoint();
   };
 
 
@@ -121,7 +125,7 @@ public:
     auto da = s2.a - s1.a;
     auto db = s1.b - s2.b;
     if ((da * x1 - db > 0) ^ (da * x2 - db < 0)) return false;
-    if constexpr(_RegistrationType::point&IntersectionRegistrator::reg_type)
+    if constexpr((_RegistrationType::point & IntersectionRegistrator::reg_type) != 0)
     {
       auto x = db / da;
       registrator->register_pair_and_point(cur_seg_idx, s_, TPlaneVect(x,s1.YAtX(x)));
@@ -140,7 +144,7 @@ public:
     auto da = s2.a - s1.a;
     auto db = s1.b - s2.b;
     if ((da * MAX(s1.x1, s2.x1) - db > 0) ^ (da * MIN(s1.x2, s2.x2) - db < 0)) return false;
-    if constexpr (_RegistrationType::point & IntersectionRegistrator::reg_type)
+    if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) != 0)
     {
       auto x = db / da;
       registrator->register_pair_and_point(cur_seg_idx, s_, TPlaneVect(x, s1.YAtX(x)));
@@ -154,7 +158,7 @@ public:
 
   bool FindCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
   {
-    if constexpr (!(_RegistrationType::point & IntersectionRegistrator::reg_type))
+    if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0)
       return (search_dir_down ^ UnderActiveEnd(s_)) ?
         registrator->register_pair(cur_seg_idx, s_), true : false;
 
