@@ -230,8 +230,6 @@ public:
   }
   CArcSegmentCollection() {};
 
-  void SetSearchDirDown(bool dir) { };
-
   void coll_to_SVG(chostream* SVG_stream) {
     if (!SVG_stream)return;
     int4 n = MIN(max_SVG_items, N);

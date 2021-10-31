@@ -290,8 +290,7 @@ public:
   }
   CLine1SegmentCollection() {};
   
-  void SetSearchDirDown(bool dir) { search_dir_down = dir; };
-
+ 
   void coll_to_SVG(chostream* SVG_stream) {
     if (!SVG_stream)return;
     int4 n = MIN(max_SVG_items, N);
@@ -319,6 +318,5 @@ private:
   uint4 cur_seg_idx = 0xFFFFFFFF;
   TLineSegment1 cur_seg;
   TLineSegment1 *collection = nullptr;
-  bool search_dir_down = true;
 };
 

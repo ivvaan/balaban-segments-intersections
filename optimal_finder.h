@@ -90,7 +90,6 @@ private:
   {
     
     int4 c = l;
-    segments.SetSearchDirDown(true);
     while (c>qb)
     {
       if (is_original(father_loc[c]))
@@ -104,7 +103,6 @@ private:
     int4 res = l - c;
     if (SegmentsColl::is_line_segments && (c != l))return res;
     c = ++l;
-    segments.SetSearchDirDown(false);
     while (c <= qe)
     {
       if (is_original(father_loc[c]))

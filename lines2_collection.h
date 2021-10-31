@@ -248,8 +248,6 @@ public:
 
   CLine2SegmentCollection() {};
 
-  void SetSearchDirDown(bool dir) { search_dir_down = dir; };
-
   void coll_to_SVG(chostream* SVG_stream) {
     if (!SVG_stream)return;
     int4 n = MIN(max_SVG_items, N);
@@ -275,5 +273,4 @@ private:
   TLineSegment2 cur_seg;
   TLineSegment2 *collection = nullptr;
   REAL *ends = nullptr;
-  bool search_dir_down = true;
 };

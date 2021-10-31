@@ -332,8 +332,6 @@ public:
 
   };
 
-  void SetSearchDirDown(bool dir) { };
-
   void coll_to_SVG(chostream* SVG_text) {
     if (!SVG_text)return;
     int4 n = MIN(max_SVG_items, GetSegmNumb());

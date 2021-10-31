@@ -208,13 +208,11 @@ protected:
   void FindInt(SegmentsColl& segments, int4 qb, int4 qe, int4 l) const
   {
     int4 c = l;
-    segments.SetSearchDirDown(true);
     while ((c > qb) && (segments.FindCurSegIntDownWith(Q[c]))) //first get intersections below
       --c;
     if (SegmentsColl::is_line_segments && (c != l))
       return; //if found and segment is line it can't be any more
     c = l + 1;
-    segments.SetSearchDirDown(false);
     while ((c <= qe) && (segments.FindCurSegIntUpWith(Q[c]))) // get intersections above
       ++c;
   };
@@ -251,7 +249,6 @@ protected:
       int4 new_L_size = 0;
       int4 step_index = 1;
       _Q[1] = _L[0];
-      segments.SetSearchDirDown(true);
       for (int4 cur_L_pos = 1; cur_L_pos < Size; cur_L_pos++)
       {
         auto step = step_index;
@@ -269,7 +266,6 @@ protected:
         }
       }
       Q_tail = Q + len_of_Q;
-      segments.SetSearchDirDown(false);
       for (int4 i = 0; i < new_L_size; ++i)
       {
         auto c = *(--Q_tail);
@@ -287,7 +283,6 @@ protected:
   void SearchInStripLineSeg(SegmentsColl& segments, int4* L_) {
     auto Size = L_size;
     auto _L = L_ - 1;
-    segments.SetSearchDirDown(true);
     for (uint4 i = 1; i < Size; i++)
     {
       auto sn = L_[i];
