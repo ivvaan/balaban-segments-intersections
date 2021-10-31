@@ -230,7 +230,7 @@ public:
     segments.SetSearchDirDown(false);
     for (--R_pos; R_pos>=R; --R_pos,++Q_tail)
     {
-      segments.SetCurSegCutBE(*R_pos);
+      segments.SetCurSegCutBeg(*R_pos);
       auto cur_Q = _Q + *Q_tail;          // getting position stored in tail of Q;
       while ((cur_Q < last_Q) && (segments.FindCurSegIntWith(*cur_Q)))++cur_Q;
       n_int += (cur_Q -_Q) - *Q_tail;
