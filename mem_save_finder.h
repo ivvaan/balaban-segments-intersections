@@ -169,8 +169,7 @@ public:
       while (cur_R_pos > _Size) {
         if (SegL[cur_seg] > LBoundIdx) {
           segments.SetCurSegCutEnd(cur_seg);
-          segments.SetSearchDirDown(false);
-          for (auto c = QB + 1; (c <= QE) && segments.FindCurSegIntWith(Q[c]); ++c); // get intersections above
+          for (auto c = QB + 1; (c <= QE) && segments.FindCurSegIntUpWith(Q[c]); ++c); // get intersections above
         }
         _L[new_size--] = cur_seg;
         cur_seg = _R[--cur_R_pos];
@@ -199,8 +198,7 @@ public:
     while (cur_R_pos < Size) {
       if (SegL[cur_seg] > LBoundIdx) {
         segments.SetCurSegCutEnd(cur_seg);
-        segments.SetSearchDirDown(true);
-        for (auto c = QE; (c > QB) && segments.FindCurSegIntWith(Q[c]); --c); //get intersections below
+        for (auto c = QE; (c > QB) && segments.FindCurSegIntDownWith(Q[c]); --c); //get intersections below
       }
       L[new_size++] = cur_seg;
       cur_seg = _R[++cur_R_pos];
@@ -219,13 +217,12 @@ public:
     int4  new_L_size = 0,_Q_pos=0;
     auto Q_tail = Q + len_of_Q;
     long long n_int=0;
-    segments.SetSearchDirDown(true);
     for (int4 cur_L_pos = 0; cur_L_pos < Size; cur_L_pos++)
     {
       int4 cur_seg = _L[cur_L_pos];
       auto step = _Q_pos;
       segments.SetCurSegCutBE(cur_seg);
-      for (auto cur_Q = _Q + step; (step!=0) && (segments.FindCurSegIntWith(*cur_Q)); --step, --cur_Q);
+      for (auto cur_Q = _Q + step; (step!=0) && (segments.FindCurSegIntDownWith(*cur_Q)); --step, --cur_Q);
 
       if (_Q_pos == step)
       {
@@ -260,13 +257,12 @@ public:
     // important to start from stair above current segm, meanwhile _Q[loc] is stair below
     _Q++;// so we incremement _Q and _Q[loc] become stair above
     auto last_Q = _Q + _Q_pos;
-    segments.SetSearchDirDown(false);
     for (int4 i = 0; i < new_L_size; ++i)
       if ((loc = *(--Q_tail)) != INT_MAX) {
         segments.SetCurSegCutBE(_L[i]);
         auto cur_Q = _Q + loc;
         auto ini_Q = cur_Q;
-        while ((cur_Q < last_Q) && (segments.FindCurSegIntWith(*cur_Q)))++cur_Q;
+        while ((cur_Q < last_Q) && (segments.FindCurSegIntUpWith(*cur_Q)))++cur_Q;
         n_int+= cur_Q - ini_Q;
       }
 //    dont_split_stripe = location != _step_index;

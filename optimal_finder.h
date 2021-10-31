@@ -90,12 +90,11 @@ private:
   {
     
     int4 c = l;
-    segments.SetSearchDirDown(true);
     while (c>qb)
     {
       if (is_original(father_loc[c]))
       { //if original stair try to find and register intersection
-        if (!segments.FindCurSegIntWith(Q[c])) break;
+        if (!segments.FindCurSegIntDownWith(Q[c])) break;
       }
       else //if inherited stair just check if intersects
         if (!segments.IsIntersectsCurSegDown(Q[c])) break;
@@ -104,12 +103,11 @@ private:
     int4 res = l - c;
     if (SegmentsColl::is_line_segments && (c != l))return res;
     c = ++l;
-    segments.SetSearchDirDown(false);
     while (c <= qe)
     {
       if (is_original(father_loc[c]))
       {
-        if (!segments.FindCurSegIntWith(Q[c])) break;
+        if (!segments.FindCurSegIntUpWith(Q[c])) break;
       }
       else
         if (!segments.IsIntersectsCurSegUp(Q[c])) break;

@@ -182,12 +182,19 @@ public:
     return false;
   };
 
-  bool FindCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+  bool FindCurSegIntDownWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
   {
     if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0)
-      return (search_dir_down ^ UnderActiveEnd(s_)) ?
-      registrator->register_pair(cur_seg_idx, s_), true : false;
-  
+      return UnderActiveEnd(s_)? false : (registrator->register_pair(cur_seg_idx, s_),true);
+
+    return FindIntWith(curB, curE, s_);
+  };
+
+  bool FindCurSegIntUpWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+  {
+    if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0)
+      return UnderActiveEnd(s_) ? registrator->register_pair(cur_seg_idx, s_), true : false;
+
     return FindIntWith(curB, curE, s_);
   };
 
@@ -283,8 +290,7 @@ public:
   }
   CLine1SegmentCollection() {};
   
-  void SetSearchDirDown(bool dir) { search_dir_down = dir; };
-
+ 
   void coll_to_SVG(chostream* SVG_stream) {
     if (!SVG_stream)return;
     int4 n = MIN(max_SVG_items, N);
@@ -312,6 +318,5 @@ private:
   uint4 cur_seg_idx = 0xFFFFFFFF;
   TLineSegment1 cur_seg;
   TLineSegment1 *collection = nullptr;
-  bool search_dir_down = true;
 };
 

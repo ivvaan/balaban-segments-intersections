@@ -208,14 +208,12 @@ protected:
   void FindInt(SegmentsColl& segments, int4 qb, int4 qe, int4 l) const
   {
     int4 c = l;
-    segments.SetSearchDirDown(true);
-    while ((c > qb) && (segments.FindCurSegIntWith(Q[c]))) //first get intersections below
+    while ((c > qb) && (segments.FindCurSegIntDownWith(Q[c]))) //first get intersections below
       --c;
     if (SegmentsColl::is_line_segments && (c != l))
       return; //if found and segment is line it can't be any more
     c = l + 1;
-    segments.SetSearchDirDown(false);
-    while ((c <= qe) && (segments.FindCurSegIntWith(Q[c]))) // get intersections above
+    while ((c <= qe) && (segments.FindCurSegIntUpWith(Q[c]))) // get intersections above
       ++c;
   };
 
@@ -251,13 +249,12 @@ protected:
       int4 new_L_size = 0;
       int4 step_index = 1;
       _Q[1] = _L[0];
-      segments.SetSearchDirDown(true);
       for (int4 cur_L_pos = 1; cur_L_pos < Size; cur_L_pos++)
       {
         auto step = step_index;
         auto cur_seg = _L[cur_L_pos];
         segments.SetCurSegCutBE(cur_seg);
-        while ((step) && (segments.FindCurSegIntWith(_Q[step])))
+        while ((step) && (segments.FindCurSegIntDownWith(_Q[step])))
           --step;
 
         if (step_index == step)
@@ -269,13 +266,12 @@ protected:
         }
       }
       Q_tail = Q + len_of_Q;
-      segments.SetSearchDirDown(false);
       for (int4 i = 0; i < new_L_size; ++i)
       {
         auto c = *(--Q_tail);
         if (c >= step_index) break;
         segments.SetCurSegCutBE(_L[i]);
-        while ((c < step_index) && (segments.FindCurSegIntWith(_Q[++c])));
+        while ((c < step_index) && (segments.FindCurSegIntDownWith(_Q[++c])));
       }
       _Q += step_index;
       Size = new_L_size;
@@ -287,15 +283,14 @@ protected:
   void SearchInStripLineSeg(SegmentsColl& segments, int4* L_) {
     auto Size = L_size;
     auto _L = L_ - 1;
-    segments.SetSearchDirDown(true);
     for (uint4 i = 1; i < Size; i++)
     {
       auto sn = L_[i];
       segments.SetCurSegCutBE(sn);
-      if (segments.FindCurSegIntWith(_L[i])) {
+      if (segments.FindCurSegIntDownWith(_L[i])) {
         L_[i] = _L[i];
         uint4 j = i - 1;
-        for (; (j) && (segments.FindCurSegIntWith(_L[j])); --j)
+        for (; (j) && (segments.FindCurSegIntDownWith(_L[j])); --j)
           L_[j] = _L[j];
         L_[j] = sn;
       }

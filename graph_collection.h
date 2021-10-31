@@ -206,7 +206,11 @@ public:
     return FindIntWith<true>(curB, curE, s_);
   };
 
-  bool FindCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+  bool FindCurSegIntDownWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+  {
+    return FindIntWith<true>(curB, curE, s_);
+  };
+  bool FindCurSegIntUpWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
   {
     return FindIntWith<true>(curB, curE, s_);
   };
@@ -327,8 +331,6 @@ public:
     MY_FREE_ARR_MACRO(vertex_idx);
 
   };
-
-  void SetSearchDirDown(bool dir) { };
 
   void coll_to_SVG(chostream* SVG_text) {
     if (!SVG_text)return;

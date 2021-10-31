@@ -160,7 +160,12 @@ public:
     return IntPointsInStripe<false>(x1, x2, s);
   };
 
-  bool FindCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+  bool FindCurSegIntDownWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+  {
+    return IntPointsInStripe<false>(cur_seg.x1, cur_seg.x2, collection + s_);
+  };
+
+  bool FindCurSegIntUpWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
   {
     return IntPointsInStripe<false>(cur_seg.x1, cur_seg.x2, collection + s_);
   };
@@ -224,8 +229,6 @@ public:
     Init(n, c, r);
   }
   CArcSegmentCollection() {};
-
-  void SetSearchDirDown(bool dir) { };
 
   void coll_to_SVG(chostream* SVG_stream) {
     if (!SVG_stream)return;

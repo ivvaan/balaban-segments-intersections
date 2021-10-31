@@ -156,12 +156,7 @@ public:
     return true;
   };
 
-  bool FindCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
-  {
-    if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0)
-      return (search_dir_down ^ UnderActiveEnd(s_)) ?
-        registrator->register_pair(cur_seg_idx, s_), true : false;
-
+  bool FindIntWith(int4 s_) {
     auto& s1 = collection[s_];
     auto& s2 = cur_seg;
     auto da = s2.a - s1.a;
@@ -170,6 +165,24 @@ public:
     auto x = db / da;
     registrator->register_pair_and_point(cur_seg_idx, s_, TPlaneVect(x, s1.YAtX(x)));
     return true;
+
+  }
+
+
+  bool FindCurSegIntDownWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+  {
+    if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0)
+      return UnderActiveEnd(s_) ? false : (registrator->register_pair(cur_seg_idx, s_), true);
+
+    return FindIntWith(s_);
+  };
+
+  bool FindCurSegIntUpWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+  {
+    if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0)
+      return UnderActiveEnd(s_) ? registrator->register_pair(cur_seg_idx, s_), true : false;
+
+    return FindIntWith(s_);
   };
 
   bool IsIntersectsCurSegDown(int4 s_) const//check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
@@ -235,8 +248,6 @@ public:
 
   CLine2SegmentCollection() {};
 
-  void SetSearchDirDown(bool dir) { search_dir_down = dir; };
-
   void coll_to_SVG(chostream* SVG_stream) {
     if (!SVG_stream)return;
     int4 n = MIN(max_SVG_items, N);
@@ -262,5 +273,4 @@ private:
   TLineSegment2 cur_seg;
   TLineSegment2 *collection = nullptr;
   REAL *ends = nullptr;
-  bool search_dir_down = true;
 };
