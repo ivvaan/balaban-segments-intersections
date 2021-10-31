@@ -142,7 +142,6 @@ public:
   static constexpr uint4 reg_type = _RegistrationType::count + _RegistrationType::segments + _RegistrationType::point;
 
   PairAndPointRegistrator() {
-    intersections.reserve(4 * 1024 * 1024);
   };
 
   ~PairAndPointRegistrator() {
@@ -151,11 +150,15 @@ public:
  
 
   void register_pair(uint4 s1, uint4 s2) noexcept {
+    if (counter == 0)
+      intersections.reserve(1024 * 1024);
     ++counter;
   };
   void register_pair_and_point(uint4 s1, uint4 s2, const ipoint& p) {
+    if (counter == 0)
+      intersections.reserve(1024 * 1024);
     ++counter;
-    if (s1<s2)
+    if (s1 < s2)
       intersections.emplace_back(s1, s2, p);
     else
       intersections.emplace_back(s2, s1, p);
