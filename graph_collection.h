@@ -206,7 +206,11 @@ public:
     return FindIntWith<true>(curB, curE, s_);
   };
 
-  bool FindCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+  bool FindCurSegIntDownWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+  {
+    return FindIntWith<true>(curB, curE, s_);
+  };
+  bool FindCurSegIntUpWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
   {
     return FindIntWith<true>(curB, curE, s_);
   };

@@ -170,7 +170,7 @@ public:
         if (SegL[cur_seg] > LBoundIdx) {
           segments.SetCurSegCutEnd(cur_seg);
           segments.SetSearchDirDown(false);
-          for (auto c = QB + 1; (c <= QE) && segments.FindCurSegIntWith(Q[c]); ++c); // get intersections above
+          for (auto c = QB + 1; (c <= QE) && segments.FindCurSegIntUpWith(Q[c]); ++c); // get intersections above
         }
         _L[new_size--] = cur_seg;
         cur_seg = _R[--cur_R_pos];
@@ -200,7 +200,7 @@ public:
       if (SegL[cur_seg] > LBoundIdx) {
         segments.SetCurSegCutEnd(cur_seg);
         segments.SetSearchDirDown(true);
-        for (auto c = QE; (c > QB) && segments.FindCurSegIntWith(Q[c]); --c); //get intersections below
+        for (auto c = QE; (c > QB) && segments.FindCurSegIntDownWith(Q[c]); --c); //get intersections below
       }
       L[new_size++] = cur_seg;
       cur_seg = _R[++cur_R_pos];
@@ -225,7 +225,7 @@ public:
       int4 cur_seg = _L[cur_L_pos];
       auto step = _Q_pos;
       segments.SetCurSegCutBE(cur_seg);
-      for (auto cur_Q = _Q + step; (step!=0) && (segments.FindCurSegIntWith(*cur_Q)); --step, --cur_Q);
+      for (auto cur_Q = _Q + step; (step!=0) && (segments.FindCurSegIntDownWith(*cur_Q)); --step, --cur_Q);
 
       if (_Q_pos == step)
       {
@@ -266,7 +266,7 @@ public:
         segments.SetCurSegCutBE(_L[i]);
         auto cur_Q = _Q + loc;
         auto ini_Q = cur_Q;
-        while ((cur_Q < last_Q) && (segments.FindCurSegIntWith(*cur_Q)))++cur_Q;
+        while ((cur_Q < last_Q) && (segments.FindCurSegIntUpWith(*cur_Q)))++cur_Q;
         n_int+= cur_Q - ini_Q;
       }
 //    dont_split_stripe = location != _step_index;

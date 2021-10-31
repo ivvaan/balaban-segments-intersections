@@ -209,13 +209,13 @@ protected:
   {
     int4 c = l;
     segments.SetSearchDirDown(true);
-    while ((c > qb) && (segments.FindCurSegIntWith(Q[c]))) //first get intersections below
+    while ((c > qb) && (segments.FindCurSegIntDownWith(Q[c]))) //first get intersections below
       --c;
     if (SegmentsColl::is_line_segments && (c != l))
       return; //if found and segment is line it can't be any more
     c = l + 1;
     segments.SetSearchDirDown(false);
-    while ((c <= qe) && (segments.FindCurSegIntWith(Q[c]))) // get intersections above
+    while ((c <= qe) && (segments.FindCurSegIntUpWith(Q[c]))) // get intersections above
       ++c;
   };
 
@@ -257,7 +257,7 @@ protected:
         auto step = step_index;
         auto cur_seg = _L[cur_L_pos];
         segments.SetCurSegCutBE(cur_seg);
-        while ((step) && (segments.FindCurSegIntWith(_Q[step])))
+        while ((step) && (segments.FindCurSegIntDownWith(_Q[step])))
           --step;
 
         if (step_index == step)
@@ -275,7 +275,7 @@ protected:
         auto c = *(--Q_tail);
         if (c >= step_index) break;
         segments.SetCurSegCutBE(_L[i]);
-        while ((c < step_index) && (segments.FindCurSegIntWith(_Q[++c])));
+        while ((c < step_index) && (segments.FindCurSegIntDownWith(_Q[++c])));
       }
       _Q += step_index;
       Size = new_L_size;
@@ -292,10 +292,10 @@ protected:
     {
       auto sn = L_[i];
       segments.SetCurSegCutBE(sn);
-      if (segments.FindCurSegIntWith(_L[i])) {
+      if (segments.FindCurSegIntDownWith(_L[i])) {
         L_[i] = _L[i];
         uint4 j = i - 1;
-        for (; (j) && (segments.FindCurSegIntWith(_L[j])); --j)
+        for (; (j) && (segments.FindCurSegIntDownWith(_L[j])); --j)
           L_[j] = _L[j];
         L_[j] = sn;
       }

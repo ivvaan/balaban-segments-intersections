@@ -95,7 +95,7 @@ private:
     {
       if (is_original(father_loc[c]))
       { //if original stair try to find and register intersection
-        if (!segments.FindCurSegIntWith(Q[c])) break;
+        if (!segments.FindCurSegIntDownWith(Q[c])) break;
       }
       else //if inherited stair just check if intersects
         if (!segments.IsIntersectsCurSegDown(Q[c])) break;
@@ -109,7 +109,7 @@ private:
     {
       if (is_original(father_loc[c]))
       {
-        if (!segments.FindCurSegIntWith(Q[c])) break;
+        if (!segments.FindCurSegIntUpWith(Q[c])) break;
       }
       else
         if (!segments.IsIntersectsCurSegUp(Q[c])) break;

@@ -311,12 +311,11 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
   return int_numb;
   };
 
-  //for new implementation
-  const uint4 reg_margin = 48 * 8 / sizeof(SimpleCounter);// for reg objects to be in different CPU cash blocks
 
   template<template<class>class SegColl,class Counter>
   double find_int( int4 n, SegColl<Counter> &coll,int4 alg,uint4 stat)
   {
+    constexpr uint4 reg_margin = 48 * 8 / sizeof(Counter);// for reg objects to be in different CPU cash blocks
     switch (alg) {
         case triv: {
             CTrivialIntFinder fi;
@@ -349,7 +348,7 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
             Counter* additional_reg_obj[n_threads];
             for (int i = 0; i < n_threads - 1; i++) {
                 //reg_objects[i * reg_obj_margin] = 0;
-                additional_reg_obj[i] = reg_objects + i * reg_obj_margin;
+                additional_reg_obj[i] = reg_objects + i * reg_margin;
             }
             CFastIntFinder fi;
             fi.prepare_ends(coll);

@@ -176,8 +176,7 @@ public:
       if (SegL[cur_seg]>LBoundIdx)
       {
         segments.SetCurSegCutEnd(cur_seg);
-        segments.SetSearchDirDown(true);
-        for (auto c = QE; (c > QB) && segments.FindCurSegIntWith(Q[c]); --c); //get intersections below
+        for (auto c = QE; (c > QB) && segments.FindCurSegIntDownWith(Q[c]); --c); //get intersections below
       }
       _L[new_size++] = cur_seg;
       cur_seg = _R[++cur_R_pos];
@@ -196,12 +195,11 @@ public:
     auto Q_tail = Q + len_of_Q;
     auto new_L_pos = L;
     auto R_pos = R;
-    segments.SetSearchDirDown(true);
     for (auto L_pos = L, last_L = L + L_size; L_pos < last_L; ++L_pos){
       auto cur_seg = *L_pos;
       segments.SetCurSegCutBE(cur_seg);
       auto step = _Q_pos;
-      for (auto cur_Q = _Q + step; (step != 0) && (segments.FindCurSegIntWith(*cur_Q)); --step, --cur_Q);
+      for (auto cur_Q = _Q + step; (step != 0) && (segments.FindCurSegIntDownWith(*cur_Q)); --step, --cur_Q);
 
       if (_Q_pos != step) {//segment  intersects ladder stairs
         *(new_L_pos++) = cur_seg;//place segment in L
@@ -232,7 +230,7 @@ public:
     {
       segments.SetCurSegCutBeg(*R_pos);
       auto cur_Q = _Q + *Q_tail;          // getting position stored in tail of Q;
-      while ((cur_Q < last_Q) && (segments.FindCurSegIntWith(*cur_Q)))++cur_Q;
+      while ((cur_Q < last_Q) && (segments.FindCurSegIntUpWith(*cur_Q)))++cur_Q;
       n_int += (cur_Q -_Q) - *Q_tail;
     } 
     dont_split_stripe = n_int > L_size;
@@ -251,7 +249,7 @@ public:
       auto cur_seg = *L_pos;
       auto step = _Q_pos;
       segments.SetCurSegCutBE(cur_seg);
-      for (auto cur_Q = _Q + step; (step != 0) && (segments.FindCurSegIntWith(*cur_Q)); --step, --cur_Q);
+      for (auto cur_Q = _Q + step; (step != 0) && (segments.FindCurSegIntDownWith(*cur_Q)); --step, --cur_Q);
 
       if ((_Q_pos == step) && (SegR[cur_seg] >= RBoundIdx)) //segment doesn't intersect ladder stairs
         //and is covering current stripe and doesn't intersect ladder stairs
@@ -277,7 +275,7 @@ public:
     {
       segments.SetCurSegCutBE(*L_pos);
       auto cur_Q = _Q + *Q_tail;          // getting position stored in tail of Q;
-      while ((cur_Q < last_Q) && (segments.FindCurSegIntWith(*cur_Q)))++cur_Q;
+      while ((cur_Q < last_Q) && (segments.FindCurSegIntUpWith(*cur_Q)))++cur_Q;
       n_int += (cur_Q - _Q) - *Q_tail;
     }
     dont_split_stripe = n_int > L_size;
@@ -309,7 +307,7 @@ public:
       int4 cur_seg = L[cur_L_pos];
       int4 step = _Q_pos;
       segments.SetCurSegCutBE(cur_seg);
-      for (auto cur_Q = _Q + step; (step!=0) && (segments.FindCurSegIntWith(*cur_Q)); --step, --cur_Q);
+      for (auto cur_Q = _Q + step; (step!=0) && (segments.FindCurSegIntDownWith(*cur_Q)); --step, --cur_Q);
         
 
       if (_Q_pos == step)//segment doesn't intersect ladder stairs
@@ -354,7 +352,7 @@ public:
       auto segment_location_Q = _Q + *(--Q_tail);          // getting position stored in tail of Q;
       auto cur_Q = segment_location_Q;
       segments.SetCurSegCutBE(*_R);
-      while ((cur_Q < last_Q) && (segments.FindCurSegIntWith(*cur_Q)))++cur_Q;
+      while ((cur_Q < last_Q) && (segments.FindCurSegIntUpWith(*cur_Q)))++cur_Q;
       n_int+= cur_Q - segment_location_Q;
     }
     dont_split_stripe = n_int > new_L_size;
