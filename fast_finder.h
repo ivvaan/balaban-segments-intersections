@@ -224,13 +224,12 @@ public:
     }
     // important to start from stair above current segm, meanwhile _Q[*Q_tail] is stair below
     ++_Q;// so we incremement _Q and _Q[*Q_tail] become stair above
-    auto last_Q = _Q + _Q_pos;
-    for (--R_pos; R_pos>=R; --R_pos,++Q_tail)
+    for (auto last_Q = _Q + _Q_pos; R_pos>R;)
     {
-      segments.SetCurSegCutBeg(*R_pos);
-      auto cur_Q = _Q + *Q_tail;          // getting position stored in tail of Q;
-      while ((cur_Q < last_Q) && (segments.FindCurSegIntUpWith(*cur_Q)))++cur_Q;
-      n_int += (cur_Q -_Q) - *Q_tail;
+      segments.SetCurSegCutBeg(*--R_pos);
+      auto cur_Q = _Q + *Q_tail++;          // getting position stored in tail of Q;
+      while ((cur_Q < last_Q) && (segments.FindCurSegIntUpWith(*cur_Q)))
+          ++cur_Q;
     } 
     dont_split_stripe = n_int > L_size;
     return _Q_pos;
