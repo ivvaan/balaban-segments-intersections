@@ -190,32 +190,47 @@ public:
   template<class SegmentsColl>
   int4 Split4LineSeg(SegmentsColl& segments, int4* _Q, uint4 RBoundIdx)
   {
-    uint4  _Q_pos = 0;
-    long long n_int = 0;
-    auto Q_tail = Q + len_of_Q;
-    auto new_L_pos = L;
     auto R_pos = R;
-    for (auto L_pos = L, last_L = L + L_size; L_pos < last_L; ++L_pos){
-      auto cur_seg = *L_pos;
-      segments.SetCurSegCutBE(cur_seg);
-      auto step = _Q_pos;
-      for (auto cur_Q = _Q + step; (step != 0) && (segments.FindCurSegIntDownWith(*cur_Q)); --step, --cur_Q);
+    auto new_L_pos = L;
+    auto Q_tail = Q + len_of_Q;
+    auto last_L = L + L_size;
+    while ((new_L_pos < last_L) && (SegR[*new_L_pos] < RBoundIdx)) {
 
-      if (_Q_pos != step) {//segment  intersects ladder stairs
-        *(new_L_pos++) = cur_seg;//place segment in L
-        n_int += _Q_pos - step; //increment found intersections number 
-        continue;
-      }
-      //segment doesn't intersect the ladder stairs
-      if (SegR[cur_seg] >= RBoundIdx) {//segment is covering current stripe 
-        _Q[++_Q_pos] = cur_seg; //place segment in Q
-        continue;
-      }
-      //segment is not covering current stripe 
-      *(R_pos++) = *(new_L_pos++) = cur_seg; //place segment in L and R
-      //storing segment position in Q_tail
-      *(--Q_tail) = _Q_pos;  //it should be _Q_pos+1. We save 
-      // one addition per loop by incrementing _Q later.
+            //segment is not covering current stripe 
+            *(R_pos++) = *(new_L_pos++);//place segment in  R
+            //storing segment position in Q_tail
+            *(--Q_tail) = 0;  //it should be 1. We save 
+            // one addition per loop by incrementing _Q later.
+    }
+
+    long long n_int = 0;
+    uint4  _Q_pos = 0;
+    if (new_L_pos < last_L) {
+        _Q[++_Q_pos] = *new_L_pos;
+        for (auto L_pos = new_L_pos+1; L_pos < last_L; ++L_pos) {
+            auto cur_seg = *L_pos;
+            segments.SetCurSegCutBE(cur_seg);
+            auto step = _Q_pos;
+            if (segments.FindCurSegIntDownWith(_Q[step--])) {//segment  intersects ladder stairs
+                
+                for (auto cur_Q = _Q + step; (step != 0) && (segments.FindCurSegIntDownWith(*cur_Q)); --step, --cur_Q);
+
+                *(new_L_pos++) = cur_seg;//place segment in L
+                n_int += _Q_pos - step; //increment found intersections number 
+                continue;
+            }
+ 
+            //segment doesn't intersect the ladder stairs
+            if (SegR[cur_seg] >= RBoundIdx) {//segment is covering current stripe 
+                _Q[++_Q_pos] = cur_seg; //place segment in Q
+                continue;
+            }
+            //segment is not covering current stripe 
+            *(R_pos++) = *(new_L_pos++) = cur_seg; //place segment in L and R
+            //storing segment position in Q_tail
+            *(--Q_tail) = _Q_pos;  //it should be _Q_pos+1. We save 
+            // one addition per loop by incrementing _Q later.
+        }
     }
     L_size = new_L_pos-L;
     if (_Q_pos == 0) {
