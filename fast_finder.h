@@ -212,13 +212,15 @@ public:
         for (auto L_pos = new_L_pos+1; L_pos < last_L; ++L_pos) {
             auto cur_seg = *L_pos;
             segments.SetCurSegCutBE(cur_seg);
-            auto step = _Q_pos;
-            if (segments.FindCurSegIntDownWith(_Q[step--])) {//segment  intersects upper ladder stair
+            auto cur_Q = _Q + _Q_pos;
+            if (segments.FindCurSegIntDownWith(*(cur_Q--))){//segment  intersects upper ladder stair
                 // finding another ledder intersections
-                for (auto cur_Q = _Q + step; (step != 0) && (segments.FindCurSegIntDownWith(*cur_Q)); --step, --cur_Q);
+                n_int += _Q_pos;
+                while ((cur_Q != _Q) && (segments.FindCurSegIntDownWith(*cur_Q)))
+                    --cur_Q;
+                n_int -= cur_Q -_Q;
 
                 *(new_L_pos++) = cur_seg;//place segment in L
-                n_int += _Q_pos - step; //increment found intersections number 
                 continue;
             }
  
