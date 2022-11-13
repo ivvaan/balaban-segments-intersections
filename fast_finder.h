@@ -194,25 +194,27 @@ public:
     auto new_L_pos = L;
     auto Q_tail = Q + len_of_Q;
     auto last_L = L + L_size;
+ //at first, place all lowest segments not covering current stripe to R (and implicitly L)
     while ((new_L_pos < last_L) && (SegR[*new_L_pos] < RBoundIdx)) {
-
-            //segment is not covering current stripe 
             *(R_pos++) = *(new_L_pos++);//place segment in  R
-            //storing segment position in Q_tail
-            *(--Q_tail) = 0;  //it should be 1. We save 
+            //storing segment position in Q_tail 
+  //we have the empty ledder so current position is 0 and position above is 1
+            *(--Q_tail) = 0;  //it should be position above i.e. 1. We save 
             // one addition per loop by incrementing _Q later.
     }
 
     long long n_int = 0;
     uint4  _Q_pos = 0;
     if (new_L_pos < last_L) {
+        //first segment covering current stripe we place to Q 
+        //it can't intersect any of the steps(stairs) because there no stairs yet     
         _Q[++_Q_pos] = *new_L_pos;
         for (auto L_pos = new_L_pos+1; L_pos < last_L; ++L_pos) {
             auto cur_seg = *L_pos;
             segments.SetCurSegCutBE(cur_seg);
             auto step = _Q_pos;
-            if (segments.FindCurSegIntDownWith(_Q[step--])) {//segment  intersects ladder stairs
-                
+            if (segments.FindCurSegIntDownWith(_Q[step--])) {//segment  intersects upper ladder stair
+                // finding another ledder intersections
                 for (auto cur_Q = _Q + step; (step != 0) && (segments.FindCurSegIntDownWith(*cur_Q)); --step, --cur_Q);
 
                 *(new_L_pos++) = cur_seg;//place segment in L
