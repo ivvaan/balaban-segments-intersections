@@ -343,9 +343,10 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
         }
             break;
         case fast_parallel: {
-          constexpr uint4 reg_margin = 48 * 8 / sizeof(Counter);// for reg objects to be in different CPU cash blocks
+          constexpr cache_line_size = 64;
+          constexpr uint4 reg_margin = 2 + cache_line_size / sizeof(Counter);// for reg objects to be in different CPU cache lines
           Counter reg_objects[reg_margin * n_threads];
-            Counter* additional_reg_obj[n_threads];
+          Counter* additional_reg_obj[n_threads];
             for (int i = 0; i < n_threads - 1; i++) {
                 additional_reg_obj[i] = reg_objects + i * reg_margin;
             }
