@@ -1,4 +1,4 @@
-# balaban-segments-intersections
+# balaban-segment-intersections
 Automatically exported from code.google.com/p/balaban-segments-intersections
 
 Implementation for segment's intersection algorithms by I.J.Balaban.
