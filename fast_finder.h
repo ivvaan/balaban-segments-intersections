@@ -290,7 +290,6 @@ public:
       segments.SetCurSegCutBE(*L_pos);
       auto cur_Q = _Q + *Q_tail;          // getting position stored in tail of Q;
       while ((cur_Q < last_Q) && (segments.FindCurSegIntUpWith(*cur_Q)))++cur_Q;
-      n_int += (cur_Q - _Q) - *Q_tail;
     }
     dont_split_stripe = n_int > L_size;
     return _Q_pos;
