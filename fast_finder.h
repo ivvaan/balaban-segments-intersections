@@ -27,9 +27,45 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <thread>
 #include <cassert>
 
-
 class CFastIntFinder : public CommonImpl
 {
+
+  constexpr static int4 bottom_step_index = 0;
+
+  template<typename SegmentsColl>
+  struct has_get_sentinel_idx
+  {
+  private:
+    template<typename SegColl> static auto test() -> decltype(std::declval<SegColl>().get_sentinel_idx(true) == 1, std::true_type());
+
+    template<typename> static std::false_type test(...);
+
+  public:
+    static constexpr bool value = std::is_same<decltype(test<SegmentsColl>()), std::true_type>::value;
+  };
+
+  template< class T >
+  constexpr static bool has_get_sentinel_idx_member = has_get_sentinel_idx<T>::value;
+  
+  template<class SegmentsColl, bool HasSentinel = has_get_sentinel_idx_member<SegmentsColl> >
+  struct CSentinel {
+    CSentinel(SegmentsColl& coll, int4& ini) {};
+  };
+
+  template<class SegmentsColl>
+  struct CSentinel <SegmentsColl, true> {
+    CSentinel(SegmentsColl& coll, int4& ini) : to_restore(ini) {
+      prev_val = to_restore;
+      to_restore = coll.get_sentinel_idx(false);
+    };
+    ~CSentinel() {
+      to_restore = prev_val;
+    };
+  private:
+    int4& to_restore;
+    int4 prev_val;
+  };
+
 public:
   using CTHIS = CFastIntFinder;
   using CIMP = CommonImpl;
@@ -44,10 +80,10 @@ public:
   void find_intersections(SegmentsColl &segments)
   {
     AllocMem(segments);
-    ProgramStackRec stack_rec(-1, 2 * nTotSegm); //need to be initialized this way
+    ProgramStackRec stack_rec(bottom_step_index, 2 * nTotSegm); //need to be initialized this way
     L[0] = SegmentsColl::get_segm(ENDS[0]);
     L_size = 1;
-    FindR(*this, segments, -1, 0, 2 * nTotSegm - 1, &stack_rec, 0, get_max_call(2 * nTotSegm));
+    FindR(*this, segments, bottom_step_index, 0, 2 * nTotSegm - 1, &stack_rec, 0, get_max_call(2 * nTotSegm));
     FreeMem();
   }
 
@@ -64,9 +100,9 @@ public:
       SegmentsColl<CIntRegistrator> coll;
       i_f.clone(master);
       coll.clone(*segments, add_reg);
-      ProgramStackRec psr(-1, 2 * i_f.nTotSegm);
+      ProgramStackRec psr(bottom_step_index, 2 * i_f.nTotSegm);
       i_f.L_size = i_f.CalcLAt(coll, from);
-      FindR(i_f,coll, -1, from, to, &psr, 0,max_call);
+      FindR(i_f,coll, bottom_step_index, from, to, &psr, 0,max_call);
       coll.unclone();
       i_f.unclone();
     };
@@ -87,7 +123,7 @@ public:
     ProgramStackRec stack_rec(-1, 2 * nTotSegm); //need to be initialized this way
     L[0] = SegmentsColl<CIntRegistrator>::get_segm(ENDS[0]);
     L_size = 1;
-    FindR(*this,segments, -1, 0, start_from, &stack_rec,  0,max_call);
+    FindR(*this,segments, bottom_step_index, 0, start_from, &stack_rec,  0,max_call);
     for (auto cur_thread = wrk_threads.begin(); cur_thread != wrk_threads.end(); cur_thread++)
       cur_thread->join(); //waiting for calculation of all threads are finished
     FreeMem();
@@ -209,17 +245,19 @@ public:
         //first segment covering current stripe we place to Q 
         //it can't intersect any of the steps(stairs) because there no stairs yet     
         *++_Q_pos = *new_L_pos;
+        CSentinel<SegmentsColl> sentinel(segments, *_Q);
         for (auto cur_L_seg = new_L_pos + 1; cur_L_seg < last_L; ++cur_L_seg) {
             segments.SetCurSegCutBE(*cur_L_seg);
             auto cur_Q = _Q_pos;
             if (segments.FindCurSegIntDownWith(*(cur_Q--))){//segment  intersects upper ladder stair
                 // finding another ledder intersections
-                while ((cur_Q != _Q) && (segments.FindCurSegIntDownWith(*cur_Q)))
+                while ((has_get_sentinel_idx_member<SegmentsColl>||(cur_Q != _Q))
+                  && (segments.FindCurSegIntDownWith(*cur_Q)))
                     --cur_Q;
                 n_int += _Q_pos-cur_Q;//increment found int number
-
+ 
                 *(new_L_pos++) = *cur_L_seg;//place segment in L
-                continue;
+              continue;
             }
  
             //segment doesn't intersect the ladder stairs
@@ -242,11 +280,14 @@ public:
     // important to start from stair above current segm, meanwhile _Q[*Q_tail] is stair below
     ++_Q;// so we incremement _Q and _Q[*Q_tail] become stair above
     ++_Q_pos;
+    if constexpr(has_get_sentinel_idx_member<SegmentsColl>)
+      *_Q_pos=segments.get_sentinel_idx(true);
     while (R_pos>R)
     {
       segments.SetCurSegCutBeg(*--R_pos);
       auto cur_Q = _Q + *Q_tail++;          // getting position stored in tail of Q;
-      while ((cur_Q != _Q_pos) && (segments.FindCurSegIntUpWith(*cur_Q)))
+      while ((has_get_sentinel_idx_member<SegmentsColl>||(cur_Q != _Q_pos)) &&
+        (segments.FindCurSegIntUpWith(*cur_Q)))
           ++cur_Q;
     } 
     dont_split_stripe = n_int > L_size;

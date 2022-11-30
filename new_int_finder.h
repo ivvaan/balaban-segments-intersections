@@ -128,7 +128,7 @@ public:
           if (nsegm_on_vline > max_segm_on_vline)
             max_segm_on_vline = nsegm_on_vline;
         }
-      LR_len = max_segm_on_vline+1;
+      LR_len = max_segm_on_vline+2;//+2 for sentinel and to have some space 
       nTotSegm = N;
           
     };
