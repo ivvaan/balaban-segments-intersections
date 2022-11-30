@@ -213,7 +213,14 @@ out& operator <<(out& o, const couple<real>& v)
 
 typedef couple<REAL> TPlaneVect;
 
-struct minmaxrect { TPlaneVect ld, rt; };
+struct minmaxrect { 
+  TPlaneVect ld, rt; 
+  minmaxrect get_scaled(REAL factor) {
+    auto fp = 0.5 * (1. + factor);
+    auto fm = 0.5 * (1. - factor);
+    return { fp * ld + fm * rt , fp * rt + fm * ld };
+  };
+};
 template<class SegArr>
 minmaxrect get_mmrect01(SegArr c[], int4 N) {
   REAL xmin = 0, ymin = 0, xmax = 1, ymax = 1;

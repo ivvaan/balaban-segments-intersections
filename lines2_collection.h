@@ -215,6 +215,10 @@ public:
     
   };
 
+  int4 get_sentinel_idx(bool is_top_sentinel) {
+    return N + is_top_sentinel;
+  };
+
   void unclone() { if (clone_of == nullptr)return; collection = nullptr; clone_of = nullptr; };
   void SortAt(uint4 pt, uint4 n, int4 *L)
   {
