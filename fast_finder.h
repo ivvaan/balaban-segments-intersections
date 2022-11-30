@@ -184,6 +184,7 @@ public:
     L_size = Size;
   }
 
+
   template<class SegmentsColl>
   void Merge(SegmentsColl &segments, uint4 LBoundIdx, int4 QB, int4 QE)
   {
@@ -191,6 +192,12 @@ public:
     int4 cur_R_pos = 0, new_size = 0, cur_stair = QB;
     auto _R = L, _L = R;
     int4 cur_seg = _R[cur_R_pos];
+    auto bot_Q = Q + QB;
+    auto top_Q = Q + QE + 1;
+    CSentinel sentinel(segments, *bot_Q);
+    if constexpr (has_get_sentinel_idx_member<SegmentsColl>)
+      *top_Q = segments.get_sentinel_idx(true);
+
     while ((cur_stair<QE) && (cur_R_pos<Size))
     {
 
@@ -199,7 +206,18 @@ public:
         if (SegL[cur_seg]>LBoundIdx)
         {
           segments.SetCurSegCutEnd(cur_seg);
-          FindInt(segments, QB, QE, cur_stair);
+          {
+            auto c = Q+cur_stair;
+            while ((has_get_sentinel_idx_member<SegmentsColl> || (c != bot_Q)) &&
+              (segments.FindCurSegIntDownWith(*c)))
+                --c; //first get intersections below
+            if (!SegmentsColl::is_line_segments || (c == Q + cur_stair)) {//if found and segment is line it can't be any more
+              c = Q + cur_stair + 1;
+              while ((has_get_sentinel_idx_member<SegmentsColl>||(c != top_Q)) && 
+                (segments.FindCurSegIntUpWith(*c))) // get intersections above
+                  ++c;
+            }
+          };
         }
         _L[new_size++] = cur_seg;
         cur_seg = _R[++cur_R_pos];
@@ -212,7 +230,8 @@ public:
       if (SegL[cur_seg]>LBoundIdx)
       {
         segments.SetCurSegCutEnd(cur_seg);
-        for (auto c = QE; (c > QB) && segments.FindCurSegIntDownWith(Q[c]); --c); //get intersections below
+        for (auto c = top_Q; (has_get_sentinel_idx_member<SegmentsColl> || (c > bot_Q))
+          && segments.FindCurSegIntDownWith(*--c);); //get intersections below
       }
       _L[new_size++] = cur_seg;
       cur_seg = _R[++cur_R_pos];
