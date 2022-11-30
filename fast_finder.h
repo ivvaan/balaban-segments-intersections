@@ -189,41 +189,39 @@ public:
   void Merge(SegmentsColl &segments, uint4 LBoundIdx, int4 QB, int4 QE)
   {
     auto Size = L_size;
-    int4 cur_R_pos = 0, new_size = 0, cur_stair = QB;
+    int4 cur_R_pos = 0, new_size = 0;
     auto _R = L, _L = R;
     int4 cur_seg = _R[cur_R_pos];
     auto bot_Q = Q + QB;
     auto top_Q = Q + QE + 1;
+    auto cur_stair = bot_Q + 1;
     CSentinel sentinel(segments, *bot_Q);
     if constexpr (has_get_sentinel_idx_member<SegmentsColl>)
       *top_Q = segments.get_sentinel_idx(true);
 
-    while ((cur_stair<QE) && (cur_R_pos<Size))
+    while ((cur_stair<top_Q) && (cur_R_pos<Size))
     {
-
-      if (segments.RBelow(cur_seg, Q[cur_stair + 1]))
+      if (segments.RBelow(cur_seg, *cur_stair))
       {
         if (SegL[cur_seg]>LBoundIdx)
         {
           segments.SetCurSegCutEnd(cur_seg);
-          {
-            auto c = Q+cur_stair;
-            while ((has_get_sentinel_idx_member<SegmentsColl> || (c != bot_Q)) &&
-              (segments.FindCurSegIntDownWith(*c)))
-                --c; //first get intersections below
-            if (!SegmentsColl::is_line_segments || (c == Q + cur_stair)) {//if found and segment is line it can't be any more
-              c = Q + cur_stair + 1;
-              while ((has_get_sentinel_idx_member<SegmentsColl>||(c != top_Q)) && 
-                (segments.FindCurSegIntUpWith(*c))) // get intersections above
-                  ++c;
-            }
-          };
+          auto c = cur_stair - 1;
+          while ((has_get_sentinel_idx_member<SegmentsColl> || (c != bot_Q)) &&
+            (segments.FindCurSegIntDownWith(*c)))
+              --c; //first get intersections below
+          if (!SegmentsColl::is_line_segments || (c == cur_stair - 1)) {//if found and segment is line it can't be any more
+            c = cur_stair;
+            while ((has_get_sentinel_idx_member<SegmentsColl>||(c != top_Q)) && 
+              (segments.FindCurSegIntUpWith(*c))) // get intersections above
+                ++c;
+          }
         }
         _L[new_size++] = cur_seg;
         cur_seg = _R[++cur_R_pos];
       }
       else
-        _L[new_size++] = Q[++cur_stair];
+        _L[new_size++] = *(cur_stair++);
     }
     while (cur_R_pos<Size)
     {
@@ -236,8 +234,8 @@ public:
       _L[new_size++] = cur_seg;
       cur_seg = _R[++cur_R_pos];
     }
-    while (cur_stair<QE)
-      _L[new_size++] = Q[++cur_stair];
+    while (cur_stair<top_Q)
+      _L[new_size++] = *(cur_stair++);
     L = _L; R = _R;
     L_size = new_size;
   };
