@@ -120,7 +120,7 @@ public:
       wrk_threads.emplace_back(thread_func, this, &segments, from, to, max_call,regs[i - 2]); // starts intersection finding in a stripe <from,to>
     }
 
-    ProgramStackRec stack_rec(-1, 2 * nTotSegm); //need to be initialized this way
+    ProgramStackRec stack_rec(bottom_step_index, 2 * nTotSegm); //need to be initialized this way
     L[0] = SegmentsColl<CIntRegistrator>::get_segm(ENDS[0]);
     L_size = 1;
     FindR(*this,segments, bottom_step_index, 0, start_from, &stack_rec,  0,max_call);
