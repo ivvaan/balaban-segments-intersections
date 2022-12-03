@@ -208,12 +208,13 @@ protected:
   void FindInt(SegmentsColl& segments, int4 qb, int4 qe, int4 l) const
   {
     int4 c = l;
-    while ((c > qb) && (segments.FindCurSegIntDownWith(Q[c]))) //first get intersections below
+    while ((c != qb) && (segments.FindCurSegIntDownWith(Q[c]))) //first get intersections below
       --c;
     if (SegmentsColl::is_line_segments && (c != l))
       return; //if found and segment is line it can't be any more
     c = l + 1;
-    while ((c <= qe) && (segments.FindCurSegIntUpWith(Q[c]))) // get intersections above
+    qe++;
+    while ((c != qe) && (segments.FindCurSegIntUpWith(Q[c]))) // get intersections above
       ++c;
   };
 

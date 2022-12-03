@@ -113,7 +113,7 @@ public:
       std::swap(L, R);
       //now segments in L once again, but in icorrect order
       //sort it
-      std::sort(L, L + L_size, [segments](int4 s1, int4 s2) {return segments.RBelow(s1, s2); });
+      std::sort(L, L + L_size, [&](int4 s1, int4 s2) {return segments.RBelow(s1, s2); });
     }
   };
 
