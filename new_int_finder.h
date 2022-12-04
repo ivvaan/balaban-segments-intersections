@@ -212,7 +212,9 @@ protected:
       --c;
     if ((SegmentsColl::is_line_segments && (c != l)))
       return; //if found and segment is line or no stair above it can't be any more
-    while ((++l != qe)&&segments.FindCurSegIntUpWith(*l)); // get intersections above
+    do {
+      ++l;
+    } while ((l!= qe)&&segments.FindCurSegIntUpWith(*l)); // get intersections above
   };
 
   template <class SegmentsColl>
