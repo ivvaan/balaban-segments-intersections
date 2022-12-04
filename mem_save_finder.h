@@ -148,6 +148,7 @@ public:
     int4 Size = L_size;
     int4 cur_R_pos = 0, new_size = 0;
     int4 cur_seg;
+    auto bot_Q = Q + QB, top_Q = Q + QE+1;
     if (from_begin)
     {
       auto _R = L + Size - 1;
@@ -158,7 +159,7 @@ public:
         if (segments.RBelow(Q[cur_stair], cur_seg)) {
           if (SegL[cur_seg] > LBoundIdx) {
             segments.SetCurSegCutEnd(cur_seg);
-            FindInt(segments, QB, QE, cur_stair);
+            FindInt(segments, bot_Q, top_Q, Q+cur_stair);
           }
           _L[new_size--] = cur_seg;
           cur_seg = _R[--cur_R_pos];
@@ -187,7 +188,7 @@ public:
       if (segments.RBelow(cur_seg, Q[cur_stair + 1])) {
         if (SegL[cur_seg] > LBoundIdx) {
           segments.SetCurSegCutEnd(cur_seg);
-          FindInt(segments, QB, QE, cur_stair);
+          FindInt(segments, top_Q, bot_Q, Q+cur_stair);
         }
         L[new_size++] = cur_seg;
         cur_seg = _R[++cur_R_pos];

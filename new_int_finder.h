@@ -205,17 +205,14 @@ protected:
 
   //functions for fast algorithm
   template <class SegmentsColl>
-  void FindInt(SegmentsColl& segments, int4 qb, int4 qe, int4 l) const
+  static void FindInt(SegmentsColl& segments, int4* qb, int4* qe, int4* l)
   {
-    int4 c = l;
-    while ((c != qb) && (segments.FindCurSegIntDownWith(Q[c]))) //first get intersections below
+    auto c = l;
+    while ((c != qb) && segments.FindCurSegIntDownWith(*c)) //first get intersections below
       --c;
-    if (SegmentsColl::is_line_segments && (c != l))
-      return; //if found and segment is line it can't be any more
-    c = l + 1;
-    qe++;
-    while ((c != qe) && (segments.FindCurSegIntUpWith(Q[c]))) // get intersections above
-      ++c;
+    if ((SegmentsColl::is_line_segments && (c != l)))
+      return; //if found and segment is line or no stair above it can't be any more
+    while ((++l != qe)&&segments.FindCurSegIntUpWith(*l)); // get intersections above
   };
 
   template <class SegmentsColl>
@@ -223,20 +220,21 @@ protected:
   {
     while (stack_pos->right_bound <= r_index)
       stack_pos = stack_pos->prev; // go from bottom to top and find staircase to start
-    int4 l, r, m, QB, QE = stack_pos->Q_pos;
+    auto r = stack_pos->Q_pos + 1;
+    int4 l, m, qb;
     for (stack_pos = stack_pos->prev; stack_pos != nullptr; stack_pos = stack_pos->prev) {
-      l = QB = stack_pos->Q_pos;
-      r = QE + 1;
-      while ((r - l) > 1) // binary search
+      l = qb = stack_pos->Q_pos;
+      auto Qe = Q + r;
+      while (r > l + 1) // binary search
       {
-        m = (r + l) >> 1; //        m=(r+l)/2;
+        m = (r + l) / 2; // 
         if (segments.UnderCurPoint(Q[m]))
           l = m;
         else
           r = m;
       }
-      FindInt(segments, QB, QE, l);
-      QE = QB; // move staircase bound to parent staircase
+      FindInt(segments, Q+qb, Qe, Q+l);
+      r = qb+1; // move staircase bound to parent staircase
     };
   };
 

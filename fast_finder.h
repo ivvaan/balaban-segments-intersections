@@ -155,6 +155,7 @@ public:
     int4 cur_R_pos = 0, new_size = 0, cur_stair = QB;
     auto _R = L, _L = R;
     int4 cur_seg = _R[cur_R_pos];
+    auto bot_Q = Q + QB, top_Q = Q + QE+1;
     while ((cur_stair<QE) && (cur_R_pos<Size))
     {
 
@@ -163,7 +164,7 @@ public:
         if (SegL[cur_seg]>LBoundIdx)
         {
           segments.SetCurSegCutEnd(cur_seg);
-          FindInt(segments, QB, QE, cur_stair);
+          FindInt(segments, bot_Q, top_Q, Q+cur_stair);
         }
         _L[new_size++] = cur_seg;
         cur_seg = _R[++cur_R_pos];
