@@ -317,9 +317,10 @@ void TArcSegment::InitRandom(CRandomValueGen &rv, int4 seg_n, int4 type, REAL pa
 
   
   TLineSegment1 seg;
+  double delta = type > mixed ? 0.001 * par : 0.001;
   do
   seg.InitRandom(rv, 0, type, par);
-  while (seg.shift.x<0.001); //excluding too vertical case they have big radius
+  while (seg.shift.x<delta); //excluding too vertical case they have big radius
   auto slope = seg.shift.y / seg.shift.x;
   TPlaneVect norm(0.5*slope, -0.5);
   REAL dd = 1. / 64.;
