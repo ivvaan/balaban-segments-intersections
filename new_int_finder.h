@@ -205,7 +205,7 @@ protected:
 
   //functions for fast algorithm
   template <class SegmentsColl>
-  static void FindInt(SegmentsColl& segments, int4* qb, int4* qe, int4* l)
+  static void FindInt(SegmentsColl& segments, int4* const qb, int4* const qe, int4* l)
   {
     auto c = l;
     while ((c != qb) && segments.FindCurSegIntDownWith(*c)) //first get intersections below
@@ -250,7 +250,7 @@ protected:
       int4 new_L_size = 0;
       int4 step_index = 1;
       _Q[1] = _L[0];
-      for (int4 cur_L_pos = 1; cur_L_pos < Size; cur_L_pos++)
+      for (uint4 cur_L_pos = 1; cur_L_pos < Size; cur_L_pos++)
       {
         auto step = step_index;
         auto cur_seg = _L[cur_L_pos];

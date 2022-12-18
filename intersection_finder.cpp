@@ -1130,7 +1130,7 @@ void CIntersectionFinder<is_line_seg>::AllocMem(BOOL for_optimal)
 		// for optimal alg it needs additional space reserve nTotSegm/(inherit_each-1)+inherit_each+1 to store inherited stairs
 		len_of_Q = nTotSegm + nTotSegm / (inherit_each - 1) + inherit_each + 1;
 		father_loc = new int4[len_of_Q];
-    for (int4 i = 0; i < len_of_Q; i++)father_loc[i] = undef_loc;
+    for (decltype(len_of_Q) i = 0; i != len_of_Q; i++)father_loc[i] = undef_loc;
 		//father_loc[undef_loc] = undef_loc;//nesessary precondition for optFindIntI
 	}
 	Q = new int4[len_of_Q];
@@ -1408,7 +1408,8 @@ void CIntersectionFinder<is_line_seg>::balaban_optimal(uint4 n, PSeg _Scoll[])
 template<bool is_line_seg>
 int4 CIntersectionFinder<is_line_seg>::CalcLAt(uint4 end_index)
 {
-	int4 i, Size = 0;
+	uint4 i;
+	int4 Size = 0;
 	EndIndexes * cur_ends;
 	for (i = 0; i<nTotSegm; i++)
 	{
@@ -1446,7 +1447,7 @@ void CIntersectionFinder<is_line_seg>::fast_parallel(uint4 n, PSeg _Scoll[], int
             i_f.unclone();
         };
   double part = 2 * n /(double) n_threads;
-  uint4 _max_call = get_maxcall(part);
+  uint4 _max_call = get_maxcall((uint4)part);
   int4 i = 1;
   uint4 start_from = part;
   uint4 from,to = start_from;
@@ -1677,7 +1678,7 @@ void CIntersectionFinder<is_line_seg>::IntOnRightOfSWL(int4 s1, int4 s2)// impor
 	{
 		events_max *= 2;
 		TEvent *newEvents = new TEvent[events_max];
-		for (uint4 i = 0; i<events_n; i++)
+		for (int4 i = 0; i<events_n; i++)
 			newEvents[i] = Events[i];
 		delete[] Events;
 		Events = newEvents;

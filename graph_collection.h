@@ -334,9 +334,9 @@ public:
 
   void coll_to_SVG(chostream* SVG_text) {
     if (!SVG_text)return;
-    int4 n = MIN(max_SVG_items, GetSegmNumb());
+    uint4 n = MIN(max_SVG_items, GetSegmNumb());
     REAL xmin = 0, ymin = 0, xmax = 1, ymax = 1;
-    for (int4 i = 0; i < nVertices; ++i) {
+    for (uint4 i = 0; i < nVertices; ++i) {
       xmin = MIN(xmin, vertices[i].x);
       xmax = MAX(xmax, vertices[i].x);
       ymin = MIN(ymin, vertices[i].y);
@@ -345,7 +345,7 @@ public:
     *SVG_text << "<svg height='100%' width='100%' viewBox='";
     *SVG_text << xmin << " " << ymin << " "
       << xmax - xmin << " " << ymax - ymin << "'>\n";
-    for (uint4 s = 0; s < n; ++s)
+    for (uint4 s = 0; s != n; ++s)
     {
       auto& bp = vertices[get_first_idx(s)];
       auto& ep = vertices[get_last_idx(s)];

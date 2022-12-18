@@ -130,7 +130,7 @@ public:
       else // if startpoint - insert
       {
         segments.SetCurPointAtBeg(sn);
-        for (i = LR_len - Size; (i < LR_len) && (segments.UnderCurPoint(L[i])); ++i)
+        for (i = LR_len - Size; (i != LR_len) && (segments.UnderCurPoint(L[i])); ++i)
           L[i - 1] = L[i];
         L[i - 1] = sn;
         ++Size;
@@ -218,7 +218,7 @@ public:
     int4  new_L_size = 0,_Q_pos=0;
     auto Q_tail = Q + len_of_Q;
     long long n_int=0;
-    for (int4 cur_L_pos = 0; cur_L_pos < Size; cur_L_pos++)
+    for (decltype(Size) cur_L_pos = 0; cur_L_pos != Size; cur_L_pos++)
     {
       int4 cur_seg = _L[cur_L_pos];
       auto step = _Q_pos;

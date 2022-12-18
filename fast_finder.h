@@ -151,11 +151,13 @@ public:
   template<class SegmentsColl>
   void Merge(SegmentsColl &segments, uint4 LBoundIdx, int4 QB, int4 QE)
   {
-    auto Size = L_size;
-    int4 cur_R_pos = 0, new_size = 0, cur_stair = QB;
-    auto _R = L, _L = R;
+    const auto Size = L_size;
+    uint4 cur_R_pos = 0, new_size = 0;
+    int4 cur_stair = QB;
+    int4 * const __restrict _R = L;
+    int4 * const __restrict _L = R;
     int4 cur_seg = _R[cur_R_pos];
-    auto bot_Q = Q + QB, top_Q = Q + QE+1;
+    auto const bot_Q = Q + QB, top_Q = Q + QE+1;
     while ((cur_stair<QE) && (cur_R_pos<Size))
     {
 
@@ -194,7 +196,7 @@ public:
     auto R_pos = R;
     auto new_L_pos = L;
     auto Q_tail = Q + len_of_Q;
-    auto last_L = L + L_size;
+    auto const last_L = L + L_size;
  //at first, place all lowest segments not covering current stripe to R (and implicitly L)
     while ((new_L_pos < last_L) && (SegR[*new_L_pos] < RBoundIdx)) {
             *(R_pos++) = *(new_L_pos++);//place segment in  R
@@ -203,43 +205,41 @@ public:
             *(--Q_tail) = 0;  //it should be position above i.e. 1. We save 
             // one addition per loop by incrementing _Q later.
     }
-
-    long long n_int = 0;
-    auto  _Q_pos = _Q;
-    if (new_L_pos < last_L) {
-        //first segment covering current stripe we place to Q 
-        //it can't intersect any of the steps(stairs) because there no stairs yet     
-        *++_Q_pos = *new_L_pos;
-        for (auto cur_L_seg = new_L_pos + 1; cur_L_seg < last_L; ++cur_L_seg) {
-            segments.SetCurSegCutBE(*cur_L_seg);
-            auto cur_Q = _Q_pos;
-            if (segments.FindCurSegIntDownWith(*(cur_Q--))){//segment  intersects upper ladder stair
-                // finding another ledder intersections
-                while ((cur_Q != _Q) && (segments.FindCurSegIntDownWith(*cur_Q)))
-                    --cur_Q;
-                n_int += _Q_pos-cur_Q;//increment found int number
-
-                *(new_L_pos++) = *cur_L_seg;//place segment in L
-                continue;
-            }
- 
-            //segment doesn't intersect the ladder stairs
-            if (SegR[*cur_L_seg] >= RBoundIdx) {//segment is covering current stripe 
-                *++_Q_pos = *cur_L_seg; //place segment in Q
-                continue;
-            }
-            //segment is not covering current stripe 
-            *(R_pos++) = *(new_L_pos++) = *cur_L_seg; //place segment in L and R
-            //storing segment position in Q_tail
-            *(--Q_tail) = _Q_pos - _Q;  //it should be _Q_pos+1. We save 
-            // one addition per loop by incrementing _Q later.
-        }
-    }
-    L_size = new_L_pos-L;
-    if (_Q_pos == _Q) {
+    if (new_L_pos == last_L){
       dont_split_stripe = false;
       return 0;
     }
+
+    long long n_int = 0;
+    auto  _Q_pos = _Q;
+    //first segment covering current stripe we place to Q 
+    //it can't intersect any of the steps(stairs) because there no stairs yet     
+    *++_Q_pos = *new_L_pos;
+    for (auto cur_L_seg = new_L_pos + 1; cur_L_seg < last_L; ++cur_L_seg) {
+        segments.SetCurSegCutBE(*cur_L_seg);
+        auto cur_Q = _Q_pos;
+        if (segments.FindCurSegIntDownWith(*(cur_Q--))){//segment  intersects upper ladder stair
+            // finding another ledder intersections
+            while ((cur_Q != _Q) && (segments.FindCurSegIntDownWith(*cur_Q)))
+                --cur_Q;
+            n_int += _Q_pos-cur_Q;//increment found int number
+
+            *(new_L_pos++) = *cur_L_seg;//place segment in L
+            continue;
+        }
+ 
+        //segment doesn't intersect the ladder stairs
+        if (SegR[*cur_L_seg] >= RBoundIdx) {//segment is covering current stripe 
+            *++_Q_pos = *cur_L_seg; //place segment in Q
+            continue;
+        }
+        //segment is not covering current stripe 
+        *(R_pos++) = *(new_L_pos++) = *cur_L_seg; //place segment in L and R
+        //storing segment position in Q_tail
+        *(--Q_tail) = _Q_pos - _Q;  //it should be _Q_pos+1. We save 
+        // one addition per loop by incrementing _Q later.
+    }
+    L_size = new_L_pos-L;
     // important to start from stair above current segm, meanwhile _Q[*Q_tail] is stair below
     ++_Q;// so we incremement _Q and _Q[*Q_tail] become stair above
     ++_Q_pos;

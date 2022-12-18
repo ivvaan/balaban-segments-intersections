@@ -194,7 +194,7 @@ class SegmentFunctions
 
   };
 
-const int4 reg_obj_margin = 32;// for reg objects to be in different CPU cash blocks
+const int4 reg_obj_margin = 2 + std::hardware_constructive_interference_size / sizeof(double);// for reg objects to be in different CPU cache lines
 double reg_objects[reg_obj_margin*n_threads];
 
 double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double* counters, bool dont_need_ip )
@@ -343,7 +343,7 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
         }
             break;
         case fast_parallel: {
-          constexpr uint4 cache_line_size = 64;
+          constexpr uint4 cache_line_size = std::hardware_constructive_interference_size;
           constexpr uint4 reg_margin = 2 + cache_line_size / sizeof(Counter);// for reg objects to be in different CPU cache lines
           Counter reg_objects[reg_margin * n_threads];
           Counter* additional_reg_obj[n_threads];

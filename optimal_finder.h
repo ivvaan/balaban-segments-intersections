@@ -78,7 +78,7 @@ private:
     len_of_Q = LR_len + LR_len / (inherit_each - 1) + inherit_each + 1;
     Q = new int4[len_of_Q];
     father_loc = new int4[len_of_Q];
-    for (int4 i = 0; i < len_of_Q; i++)father_loc[i] = undef_loc;
+    for (decltype(len_of_Q) i = 0; i < len_of_Q; i++)father_loc[i] = undef_loc;
     //father_loc[undef_loc] = undef_loc;//nesessary precondition for optFindIntI
   };
 
@@ -193,7 +193,8 @@ private:
   void Merge(SegmentsColl &segments, uint4 LBoundIdx, int4 QB, int4 QE)
   {
     auto Size = L_size;
-    int4 cur_R_pos = 0, new_size = 0, cur_stair = QB;
+    uint4 cur_R_pos = 0, new_size = 0;
+    int4 cur_stair = QB;
     auto _R = L, _L = R;
     int4 cur_seg = _R[cur_R_pos];
     while ((cur_stair<QE) && (cur_R_pos<Size))
@@ -234,7 +235,8 @@ private:
   {
     auto Size = L_size;
     auto step_index = _step_index;
-    int4 father_last_step = step_index, new_L_size = 0, cur_L_pos = 0;
+    int4 father_last_step = step_index;
+    uint4 new_L_size = 0, cur_L_pos = 0;
     int4 cur_seg;
     auto location = R;
     while ((cur_L_pos<Size) && (cur_father_pos <= father_last_step))
@@ -300,7 +302,7 @@ private:
       Q[step_index] = Q[cur_father_pos];
     };
     long long n_int = 0;
-    for (int4 i = 0; i < new_L_size; i++)
+    for (decltype(new_L_size) i = 0; i != new_L_size; i++)
     {
       segments.SetCurSegCutBE(L[i]);
       n_int +=FindInt(segments,father_last_step, step_index, location[i]);//location[i] should contain the location of the segment L[i]

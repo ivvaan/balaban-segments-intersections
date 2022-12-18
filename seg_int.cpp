@@ -370,11 +370,10 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
           break;
           case 'i':
           {
-            impl = atoi(argv[i] + 2);
-            if ((impl < 1) || (impl > 3))
-            {
+           impl = atoi(argv[i] + 2);
+           if ((impl < 1) || (impl > 3)) {
               impl = 3; printf("some error in -i param. 3 used instead.\n");
-            }
+           }
           }
           break;
           case 's':
@@ -481,7 +480,7 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
   if((seg_type==graph)&&(distr_type!=random)) {printf("-sg  is compartible only with -dr!\n"); if (wait) { printf("\npress 'Enter' to continue"); getchar(); } return 0;}
   if ((reg_stat == _Registrator::store_pairs_and_ints_just_count_stat) && (n > max_truereg_items)) {
     printf("Too many segments (and possible intersections!) for true registration! Just counting used instead.\n"); 
-    reg_stat == _Registrator::just_count;
+    reg_stat = _Registrator::just_count;
     }
 
   if (!print_less)printf("actual params is: -a%i -s%c -d%c -r%c -i%i -n%i -S%i -p%f -e%f\n", alg, ss[seg_type], sd[distr_type],sr[reg_stat], impl, n, random_seed, distr_param,ICT);
