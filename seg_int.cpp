@@ -326,7 +326,7 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
  D=l: random length almost x parallel segments, the bigger
   distr_param/N the less parallel segments
  D=m: mixed random length almost x parallel 'long' segments
-  (33%) and 'small' segments(67%), the bigger distr_param/N
+  (33%%) and 'small' segments(67%%), the bigger distr_param/N
   the less parallel 'long' and longer 'short' segments
  D=s: short segments: random segment with  length multiplied by distr_param/N
  D=distr_param: random segment with  length multiplied by distr_param

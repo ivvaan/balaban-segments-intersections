@@ -92,12 +92,14 @@ public:
 
   struct ProgramStackRec //structure to use program stack to store list of starcases above current call
   {
-    ProgramStackRec *prev=nullptr; //link to program stack record storing parent staircase information 
     int4 Q_pos; //starting position and 
     uint4 right_bound;//right boind of current staircase
-    inline ProgramStackRec(int4 qp) :Q_pos(qp) {};
-    inline ProgramStackRec(int4 qp, uint4 rb) : Q_pos(qp), right_bound(rb) {};
-    inline ProgramStackRec *Set(ProgramStackRec *p, uint4 rb) { prev = p, right_bound = rb; return this; };
+    ProgramStackRec* prev = nullptr; //link to program stack record storing parent staircase information 
+    ProgramStackRec(int4 qp) :Q_pos(qp) {};
+    ProgramStackRec(int4 qp, uint4 rb) : Q_pos(qp), right_bound(rb) {};
+    ProgramStackRec(int4 qp, uint4 rb, ProgramStackRec* pr) : Q_pos(qp), right_bound(rb), prev(pr) {};
+    ProgramStackRec* Set(ProgramStackRec* p, uint4 rb) { prev = p, right_bound = rb; return this; };
+
   };
 
 
@@ -153,53 +155,68 @@ protected:
   };
 
   template <class IntersectionFinder, class SegmentsColl>
-  static  void FindR(IntersectionFinder &i_f, SegmentsColl& segments, int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec* stack_pos, uint4 call_numb, uint4 max_call = 30)
+  static  void FindR(IntersectionFinder &i_f, SegmentsColl& segments, int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec* stack_pos, int4 call_numb, int4 max_call = 30)
   {
     segments.SetCurStripe(i_f.ENDS[interval_left_index], i_f.ENDS[interval_right_index]);
-    if (interval_right_index - interval_left_index == 1){ 
-      if(i_f.L_size > 1) i_f.SearchInStrip(segments, ladder_start_index);
+    if (interval_right_index - interval_left_index == 1) {
+      if (i_f.L_size > 1) 
+        i_f.SearchInStrip(segments, ladder_start_index);
       return;
     }
 
-    ProgramStackRec stack_rec(ladder_start_index);
-    if (i_f.L_size > 0)
-    {
-      stack_rec.Q_pos+=i_f.Split(segments, i_f.Q + stack_rec.Q_pos, interval_right_index);
-      if (ladder_start_index < stack_rec.Q_pos)
-        stack_pos = stack_rec.Set(stack_pos, interval_right_index);
+    do {
+      if (i_f.L_size == 0)break;
+      auto Q_pos = i_f.Split(segments, i_f.Q + ladder_start_index, interval_right_index);
+      if (Q_pos == 0)break;
+      Q_pos += ladder_start_index;
+      ProgramStackRec stack_rec(Q_pos, interval_right_index, stack_pos);
+      if (i_f.dont_split_stripe && (call_numb < max_call)) //if found a lot of intersections repeat FindR
+        FindR(i_f, segments, Q_pos, interval_left_index, interval_right_index, &stack_rec, call_numb + 1, max_call);
+      else //cut stripe 
+      {
+        uint4 m = (interval_left_index + interval_right_index) >> 1;
+        if (call_numb > 1)
+        { // if L contains a lot of segments then cut on two parts
+          max_call -= 2;
+          FindR(i_f, segments, Q_pos, interval_left_index, m, &stack_rec, 0, max_call);
+          i_f.InsDel(segments, m, &stack_rec);
+          FindR(i_f, segments, Q_pos, m, interval_right_index, &stack_rec, 0, max_call);
+        }
+        else
+        {// if L contains not so many segments than cut on four parts (works faster for some segment distributions)
+          max_call -= 4;
+          uint4 q = (interval_left_index + m) >> 1;
+          if (interval_left_index != q) {
+            FindR(i_f, segments, Q_pos, interval_left_index, q, &stack_rec, 0, max_call);
+            i_f.InsDel(segments, q, &stack_rec);
+          }
+          FindR(i_f, segments, Q_pos, q, m, &stack_rec, 0, max_call);
+          i_f.InsDel(segments, m, &stack_rec);
+          q = (interval_right_index + m) >> 1;
+          if (q != m) {
+            FindR(i_f, segments, Q_pos, m, q, &stack_rec, 0, max_call);
+            i_f.InsDel(segments, q, &stack_rec);
+          }
+          FindR(i_f, segments, Q_pos, q, interval_right_index, &stack_rec, 0, max_call);
+        }
+      }
+      i_f.Merge(segments, interval_left_index, ladder_start_index, Q_pos);
+      return;
+    } while (false);
+    //if L or Q empty cut into 8 parts
+    constexpr const int4 divide_into = 8;
+    max_call -= 6;
+    double step = MAX(1.0, static_cast<double>(interval_right_index - interval_left_index) / divide_into);
+    double rb = 0.25 + interval_left_index;
+    uint4 right_bound = interval_left_index;
+    while (true) {
+      auto left_bound = right_bound;
+      right_bound = rb += step;
+      FindR(i_f, segments, ladder_start_index, left_bound, right_bound, stack_pos, 0, max_call);
+      if (right_bound == interval_right_index)
+        return;
+      i_f.InsDel(segments, right_bound, stack_pos);
     };
-    if (i_f.dont_split_stripe && (call_numb < max_call)) //if found a lot of intersections repeat FindR
-      FindR(i_f, segments, stack_rec.Q_pos, interval_left_index, interval_right_index, stack_pos, call_numb + 1, max_call);
-    else //cut stripe 
-    {
-      uint4 m = (interval_left_index + interval_right_index) >> 1;
-      if (call_numb > 1)
-      { // if L contains a lot of segments then cut on two parts
-        max_call -= 2;
-        FindR(i_f, segments, stack_rec.Q_pos, interval_left_index, m, stack_pos, 0, max_call);
-        i_f.InsDel(segments, m, stack_pos);
-        FindR(i_f, segments, stack_rec.Q_pos, m, interval_right_index, stack_pos, 0, max_call);
-      }
-      else
-      {// if L contains not so many segments than cut on four parts (works faster for some segment distributions)
-        max_call -= 4;
-        uint4 q = (interval_left_index + m) >> 1;
-        if (interval_left_index != q) {
-          FindR(i_f, segments, stack_rec.Q_pos, interval_left_index, q, stack_pos,  0, max_call);
-          i_f.InsDel(segments, q, stack_pos);
-        }
-        FindR(i_f, segments, stack_rec.Q_pos, q, m, stack_pos,  0, max_call);
-        i_f.InsDel(segments, m, stack_pos);
-        q = (interval_right_index + m) >> 1;
-        if (q != m) {
-          FindR(i_f, segments, stack_rec.Q_pos, m, q, stack_pos,  0, max_call);
-          i_f.InsDel(segments, q, stack_pos);
-        }
-        FindR(i_f, segments, stack_rec.Q_pos, q, interval_right_index, stack_pos,  0, max_call);
-      }
-    }
-    if (ladder_start_index < stack_rec.Q_pos)
-      i_f.Merge(segments, interval_left_index, ladder_start_index, stack_rec.Q_pos);
   };
 
 
