@@ -175,7 +175,7 @@ protected:
       else //cut stripe 
       {
         uint4 m = (interval_left_index + interval_right_index) >> 1;
-        if (call_numb > 1)
+        if ((call_numb > 1)||(interval_left_index + 4 > interval_right_index ))
         { // if L contains a lot of segments then cut on two parts
           max_call -= 2;
           FindR(i_f, segments, Q_pos, interval_left_index, m, &stack_rec, 0, max_call);
@@ -186,20 +186,20 @@ protected:
         {// if L contains not so many segments than cut on four parts (works faster for some segment distributions)
           max_call -= 4;
           uint4 q = (interval_left_index + m) >> 1;
-          if (interval_left_index != q) {
-            FindR(i_f, segments, Q_pos, interval_left_index, q, &stack_rec, 0, max_call);
-            i_f.InsDel(segments, q, &stack_rec);
-          }
+          FindR(i_f, segments, Q_pos, interval_left_index, q, &stack_rec, 0, max_call);
+          i_f.InsDel(segments, q, &stack_rec);
           FindR(i_f, segments, Q_pos, q, m, &stack_rec, 0, max_call);
           i_f.InsDel(segments, m, &stack_rec);
           q = (interval_right_index + m) >> 1;
-          if (q != m) {
-            FindR(i_f, segments, Q_pos, m, q, &stack_rec, 0, max_call);
-            i_f.InsDel(segments, q, &stack_rec);
-          }
+          FindR(i_f, segments, Q_pos, m, q, &stack_rec, 0, max_call);
+          i_f.InsDel(segments, q, &stack_rec);
           FindR(i_f, segments, Q_pos, q, interval_right_index, &stack_rec, 0, max_call);
         }
       }
+      //actually works without this line, but it simplifies segment collection class
+      //protocol
+      segments.SetCurStripeLeft(i_f.ENDS[interval_left_index]);
+
       i_f.Merge(segments, interval_left_index, ladder_start_index, Q_pos);
       return;
     } while (false);
