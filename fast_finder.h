@@ -193,9 +193,11 @@ public:
   template<class SegmentsColl>
   int4 Split4LineSeg(SegmentsColl& segments, int4* _Q, uint4 RBoundIdx)
   {
+
     auto R_pos = R;
     auto new_L_pos = L;
     auto Q_tail = Q + len_of_Q;
+    assert(Q_tail > _Q + L_size);
     auto const last_L = L + L_size;
  //at first, place all lowest segments not covering current stripe to R (and implicitly L)
     while ((new_L_pos < last_L) && (SegR[*new_L_pos] < RBoundIdx)) {
