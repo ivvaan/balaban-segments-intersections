@@ -201,7 +201,7 @@ protected:
       for (auto right_bound = interval_left_index + 1; true; ++right_bound) {
         segments.SetCurStripe(i_f.ENDS[right_bound - 1], i_f.ENDS[right_bound]);
         if (i_f.L_size > 1)
-          i_f.SearchInStrip(segments, ladder_start_index);
+          i_f.SearchInStrip(segments, Q_pos);
         if (right_bound == interval_right_index)
           break;
         i_f.InsDel(segments, right_bound, &stack_rec);
@@ -218,7 +218,7 @@ protected:
     max_call -= 6;
     double step = MAX(1.0, static_cast<double>(interval_right_index - interval_left_index) / divide_into);
     double rb = 0.25 + interval_left_index;
-    uint4 right_bound = interval_left_index;
+    auto right_bound = interval_left_index;
     while (true) {
       auto left_bound = right_bound;
       right_bound = rb += step;
@@ -242,7 +242,6 @@ protected:
     segments.SetCurStripe(i_f.ENDS[interval_left_index], i_f.ENDS[interval_right_index]);
     _FindR(i_f, segments, ladder_start_index, interval_left_index, interval_right_index, stack_pos, call_numb, max_call);
   };
-
 
   //functions for fast algorithm
   template <class SegmentsColl>

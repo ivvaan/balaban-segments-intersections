@@ -77,8 +77,8 @@ public:
       //so we need to copy them back and
       //once segments in L again (but in icorrect order)
       //we sort it
-      std::sort(_L, std::copy(_Q, _Q + L_size, _L),
-        [segments](int4 s1, int4 s2) {return segments.RBelow(s1, s2); });
+     std::sort(_L, std::copy(_Q, _Q + L_size, _L),
+        [&](int4 s1, int4 s2) {return segments.RBelow(s1, s2); });
     }
   };
 
