@@ -164,21 +164,19 @@ protected:
       if (Q_pos == 0)break;
       Q_pos += ladder_start_index;
       ProgramStackRec stack_rec(Q_pos, interval_right_index, stack_pos);
-      do {
-        if (i_f.dont_split_stripe && (call_numb < max_call)) { //if found a lot of intersections repeat FindR
-          _FindR(i_f, segments, Q_pos, interval_left_index, interval_right_index, &stack_rec, call_numb + 1, max_call);
-          break;
-        }
-        uint4 m = (interval_left_index + interval_right_index) >> 1;
-        if ((call_numb > 1) || (interval_left_index + 4 > interval_right_index)) {
-          // if L contains a lot of segments then cut on two parts
-          max_call -= 2;
-          FindR(i_f, segments, Q_pos, interval_left_index, m, &stack_rec, 0, max_call);
-          i_f.InsDel(segments, m, &stack_rec);
-          FindR(i_f, segments, Q_pos, m, interval_right_index, &stack_rec, 0, max_call);
-          break;
-        }
-        // if L contains not so many segments than cut on four parts (works faster for some segment distributions)
+      if (i_f.dont_split_stripe && (call_numb < max_call)) { //if found a lot of intersections repeat FindR
+        _FindR(i_f, segments, Q_pos, interval_left_index, interval_right_index, &stack_rec, call_numb + 1, max_call);
+        i_f.Merge(segments, interval_left_index, ladder_start_index, Q_pos);
+        return;
+      }
+      uint4 m = (interval_left_index + interval_right_index) >> 1;
+      if ((interval_left_index + 4 > interval_right_index)|| (call_numb > 1)&& (i_f.L_size != 0)) {
+        // if L contains a lot of segments then cut on two parts
+        max_call -= 2;
+        FindR(i_f, segments, Q_pos, interval_left_index, m, &stack_rec, 0, max_call);
+        i_f.InsDel(segments, m, &stack_rec);
+        FindR(i_f, segments, Q_pos, m, interval_right_index, &stack_rec, 0, max_call);
+      } else {// if L contains not so many segments than cut on four parts (works faster for some segment distributions)
         max_call -= 4;
         uint4 q = (interval_left_index + m) >> 1;
         FindR(i_f, segments, Q_pos, interval_left_index, q, &stack_rec, 0, max_call);
@@ -189,8 +187,8 @@ protected:
         FindR(i_f, segments, Q_pos, m, q, &stack_rec, 0, max_call);
         i_f.InsDel(segments, q, &stack_rec);
         FindR(i_f, segments, Q_pos, q, interval_right_index, &stack_rec, 0, max_call);
-      } while (false);
-      //actually works without this line, but it simplifies segment collection class
+      }
+        //actually works without this line, but it simplifies segment collection class
       //protocol
       segments.SetCurStripeLeft(i_f.ENDS[interval_left_index]);
 

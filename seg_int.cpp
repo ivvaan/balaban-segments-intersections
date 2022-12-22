@@ -88,7 +88,8 @@ auto hProcess=GetCurrentProcess();\
 auto dwProcessPriSave = GetPriorityClass(hProcess);\
 SetPriorityClass(hProcess, REALTIME_PRIORITY_CLASS);\
 auto dwThreadPriSave = GetThreadPriority(GetCurrentThread()); \
-SetThreadPriority(hThread, THREAD_PRIORITY_TIME_CRITICAL);
+SetThreadPriority(hThread, THREAD_PRIORITY_TIME_CRITICAL);\
+if(thread_affinity_mask)SetThreadAffinityMask(hThread, thread_affinity_mask);
 
 #define ON_BENCH_END \
 SetThreadPriority(hThread, dwThreadPriSave);\
@@ -212,7 +213,8 @@ void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr
   }
   else
     if (!print_less)printf("\nnew implementation testing... ************************************************\n");
-
+  unsigned long thread_affinity_mask = alg & fast_parallel ? 0:8;
+  
   ON_BENCH_BEG
 
     if ((impl == impl_old)&& (seg_type == graph)) { if (!print_less)printf("old implementation can't deal with graph segments\n"); return; }
