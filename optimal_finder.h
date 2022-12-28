@@ -42,48 +42,36 @@ public:
   template<class SegmentsColl>
   void find_intersections(SegmentsColl &segments)
   {
-    AllocMem(segments);
+    //AllocMem
+    len_of_Q = LR_len + LR_len / (inherit_each - 1) + inherit_each + 1;
+    DECL_RAII_ARR(L, LR_len);
+    DECL_RAII_ARR(R, LR_len);
+    DECL_RAII_ARR(Q, len_of_Q);
+    DECL_RAII_ARR(father_loc, len_of_Q);
+    std::fill_n(father_loc, len_of_Q, undef_loc);
+
     ProgramStackRec stack_rec(inherit_each, 2 * nTotSegm);  //need to be initialized this way 
     L[0] = SegmentsColl::get_segm(ENDS[0]);
     L_size = 1;
     FindR(segments, inherit_each + 1, inherit_each, 0, 2 * nTotSegm - 1, &stack_rec, 0);
-    CFAST::FreeMem();
-    FreeMem();
-  }
+ }
 
-  void FreeMem()
-  {
-    MY_FREE_ARR_MACRO(father_loc);
-  };
 
 
 private:
-  static inline const int4 undef_loc = 0;
+  static constexpr int4 undef_loc = 0;
 
-  static inline const int4 max_call = 32; //max number of sequential recursive call (opt)FindR before dividing current strip
+  static constexpr int4 max_call = 32; //max number of sequential recursive call (opt)FindR before dividing current strip
 
-  static inline const int4 inherit_each = 16; // defines how often in optimal algorithm stairs are inherited,  one inherited per inherit_each
-  static inline const int4 inherit_offset = inherit_each / 2; // first stair to inherit; must be in [1..inherit_each-1]
+  static constexpr int4 inherit_each = 16; // defines how often in optimal algorithm stairs are inherited,  one inherited per inherit_each
+  static constexpr int4 inherit_offset = inherit_each / 2; // first stair to inherit; must be in [1..inherit_each-1]
                                                        // so inherited stair positions are: inherit_offset,inherit_offset+inherit_each,inherit_offset+2*inherit_each,...
-  static inline const int4 big_staircase_threshold = inherit_each*8;// 1024;//used in optFindR
+  static constexpr int4 big_staircase_threshold = inherit_each*8;// 1024;//used in optFindR
 
   int4 *father_loc = nullptr;
 
-  template<class SegmentsColl>
-  void AllocMem(SegmentsColl &segments)
-  {
-    assert(nTotSegm == segments.GetSegmNumb());
-    L = new int4[LR_len];
-    R = new int4[LR_len];
-    len_of_Q = LR_len + LR_len / (inherit_each - 1) + inherit_each + 1;
-    Q = new int4[len_of_Q];
-    father_loc = new int4[len_of_Q];
-    for (decltype(len_of_Q) i = 0; i < len_of_Q; i++)father_loc[i] = undef_loc;
-    //father_loc[undef_loc] = undef_loc;//nesessary precondition for optFindIntI
-  };
 
-
-  static inline bool is_original(int4 v) { return v < 1; };
+  static bool is_original(int4 v) { return v < 1; };
 
   template<class SegmentsColl>
   int4 FindInt(SegmentsColl& segments, int4 qb, int4 qe, int4 l) const
@@ -379,7 +367,9 @@ private:
 
     }
     if (ladder_start_index >= stack_rec.Q_pos) return;
-//    segments.SetCurVLine(ENDS[interval_right_index]);
+    
+    segments.SetCurStripeLeft(ENDS[interval_left_index]);
+
     if(use_opt)
       Merge(segments, interval_left_index, ladder_start_index, stack_rec.Q_pos);
     else

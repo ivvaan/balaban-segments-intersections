@@ -26,7 +26,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <vector>
 #include <thread>
 #include <cassert>
-
+#include <type_traits>
 
 class CFastIntFinder : public CommonImpl
 {
@@ -41,56 +41,57 @@ public:
   ~CFastIntFinder() { unclone(); FreeMem(); };
 
   template<class SegmentsColl>
-  void find_intersections(SegmentsColl &segments)
+  void find_intersections(SegmentsColl &segments,uint4 from=0,uint4 to=0)
   {
-    AllocMem(segments);
+    //AllocMem
+    len_of_Q = LR_len;
+    DECL_RAII_ARR(L, LR_len);
+    DECL_RAII_ARR(R, LR_len);
+    DECL_RAII_ARR(Q, len_of_Q);
+
+    if (to == 0) {
+      from = 0;
+      to = 2 * nTotSegm - 1;
+    }
+    if (from == 0) {
+      L[0] = SegmentsColl::get_segm(ENDS[0]);
+      L_size = 1;
+    }
+    else
+      L_size = CalcLAt(segments, from);
+
     ProgramStackRec stack_rec(-1, 2 * nTotSegm); //need to be initialized this way
-    L[0] = SegmentsColl::get_segm(ENDS[0]);
-    L_size = 1;
-    FindR(*this, segments, -1, 0, 2 * nTotSegm - 1, &stack_rec, 0, get_max_call(2 * nTotSegm));
-    FreeMem();
+    
+    FindR(*this, segments, -1, from, to, &stack_rec, 0, get_max_call(to-from));
   }
 
-/*  template<class SegmentsColl, class CIntRegistrator >
-  void find_intersections(SegmentsColl& segments, uint4 n_threads, CIntRegistrator* regs[])*/
-  template<template <class> class SegmentsColl, class CIntRegistrator >
+ template<template <class> class SegmentsColl, class CIntRegistrator >
   void find_intersections(SegmentsColl<CIntRegistrator>& segments, uint4 n_threads, CIntRegistrator* regs[])
   {
-    AllocMem(segments);
     using namespace std;
     vector<thread> wrk_threads;
-    auto thread_func = [](CTHIS *master, SegmentsColl<CIntRegistrator> *segments, uint4 from, uint4 to,uint4 max_call, CIntRegistrator* add_reg) {
+    auto thread_func = [](CTHIS *master, SegmentsColl<CIntRegistrator> *segments, uint4 from, uint4 to, CIntRegistrator* add_reg) {
       CTHIS i_f;
       SegmentsColl<CIntRegistrator> coll;
       i_f.clone(master);
       coll.clone(*segments, add_reg);
-      ProgramStackRec psr(-1, 2 * i_f.nTotSegm);
-      i_f.L_size = i_f.CalcLAt(coll, from);
-      FindR(i_f,coll, -1, from, to, &psr, 0,max_call);
+      i_f.find_intersections(coll, from, to);
       coll.unclone();
       i_f.unclone();
     };
     auto n = segments.GetSegmNumb();
 
     double part = 2 * n / (double)n_threads;
-    uint4 max_call = get_max_call(part);
-    int4 i = 1;
     uint4 start_from = part;
-    uint4 from, to = start_from;
-    while (i < n_threads) {
+    for (uint4 i = 2, from = start_from, to; i <= n_threads; ++i) {
+      to = (i == n_threads) ? 2 * n - 1 : (uint4)(part * i);
+      wrk_threads.emplace_back(thread_func, this, &segments, from, to, regs[i - 2]); // starts intersection finding in a stripe <from,to>
       from = to;
-      i++;
-      to = (i == n_threads) ? 2 * n - 1 : part * i;
-      wrk_threads.emplace_back(thread_func, this, &segments, from, to, max_call,regs[i - 2]); // starts intersection finding in a stripe <from,to>
     }
 
-    ProgramStackRec stack_rec(-1, 2 * nTotSegm); //need to be initialized this way
-    L[0] = SegmentsColl<CIntRegistrator>::get_segm(ENDS[0]);
-    L_size = 1;
-    FindR(*this,segments, -1, 0, start_from, &stack_rec,  0,max_call);
-    for (auto cur_thread = wrk_threads.begin(); cur_thread != wrk_threads.end(); cur_thread++)
-      cur_thread->join(); //waiting for calculation of all threads are finished
-    FreeMem();
+    find_intersections(segments, 0, start_from);
+    for (auto& cur_thread:wrk_threads)
+      cur_thread.join(); //waiting for calculation of all threads are finished
   }
 
   template<class SegmentsColl>
@@ -193,7 +194,6 @@ public:
   template<class SegmentsColl>
   int4 Split4LineSeg(SegmentsColl& segments, int4* _Q, uint4 RBoundIdx)
   {
-
     auto R_pos = R;
     auto new_L_pos = L;
     auto Q_tail = Q + len_of_Q;
@@ -320,9 +320,6 @@ public:
       SegL = master->SegL;
       SegR = master->SegR;
       ENDS = master->ENDS;
-      L = new int4[LR_len];
-      Q = new int4[len_of_Q];
-      R = new int4[LR_len];
       clone_of = master;
   };
 
@@ -332,7 +329,6 @@ public:
           SegL = nullptr;
           SegR = nullptr;
           ENDS = nullptr;
-          FreeMem();
           clone_of = nullptr;
       }
   };
@@ -348,23 +344,7 @@ public:
       return Size;
   };
 
-  template<class SegmentsColl>
-  void AllocMem(SegmentsColl& segments)
-  {
-      assert(nTotSegm == segments.GetSegmNumb());
-      len_of_Q = LR_len;
-      L = new int4[LR_len];
-      R = new int4[LR_len];
-      Q = new int4[len_of_Q];
-  };
 public:
-  void FreeMem()
-  {
-      MY_FREE_ARR_MACRO(L);
-      MY_FREE_ARR_MACRO(R);
-      MY_FREE_ARR_MACRO(Q);
-      //CIMP::FreeMem();
-  };
 
 };
 

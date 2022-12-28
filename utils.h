@@ -47,6 +47,10 @@ typedef int  BOOL;
 extern bool print_at_lineseg1_init;
 #endif
 
+#define DECL_RAII_ARR(L,len)\
+auto L##_ = std::make_unique<std::remove_pointer_t<decltype(L)>[]>(len);\
+L = L##_.get();
+
 constexpr uint4 max_SVG_items = 5000;
 constexpr uint4 max_SVG_points = 150000;
 constexpr uint4 max_truereg_items = 20000;

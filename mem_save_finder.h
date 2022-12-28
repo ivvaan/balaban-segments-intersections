@@ -29,8 +29,6 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <thread>
 #include <cassert>
 
-
-
 class CMemSaveIntFinder : public CommonImpl 
 {
 public:
@@ -44,13 +42,16 @@ public:
   template<class SegmentsColl>
   void find_intersections(SegmentsColl& segments)
   {
-    AllocMem(segments);
+ // AllocMem
+    len_of_Q = LR_len;
+    DECL_RAII_ARR(L, LR_len);
+    DECL_RAII_ARR(Q, len_of_Q);
+
     ProgramStackRec stack_rec(-1, 2 * nTotSegm); //need to be initialized this way
     L[0] = SegmentsColl::get_segm(ENDS[0]);
     from_begin = true;
     L_size = 1;
     FindR(*this, segments, -1, 0, 2 * nTotSegm - 1, &stack_rec, 0, get_max_call(2 * nTotSegm));
-    FreeMem();
   }
 
   template<class SegmentsColl>
@@ -272,25 +273,9 @@ public:
     return _Q_pos;
   };
 
-  void FreeMem()
-  {
-    MY_FREE_ARR_MACRO(L);
-    MY_FREE_ARR_MACRO(Q);
-    //CIMP::FreeMem();
-  };
-
 
 private:
   bool from_begin = true;
-
-  template<class SegmentsColl>
-  void AllocMem(SegmentsColl& segments)
-  {
-    assert(nTotSegm  == segments.GetSegmNumb());
-    len_of_Q = LR_len;
-    L = new int4[LR_len];
-    Q = new int4[len_of_Q];
-  };
 
 };
 
