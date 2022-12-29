@@ -190,20 +190,6 @@ public:
     }
     );
   };
-  void clone(CArcSegmentCollection &c, IntersectionRegistrator *r)
-  {
-    clone_of = &c;
-    Init(c.N, c.collection,r);
-  };
-
-
-  void unclone() { if (clone_of == nullptr)return; collection = nullptr; clone_of = nullptr; };
-  void SortAt(uint4 pt, uint4 n, int4 *L)
-  {
-    SetCurStripeLeft(pt);
-    std::sort(L, L + n, [this](int4 s1, int4 s2) {return LBelow(s1, s2); });
-  };
-
   void SetRegistrator(IntersectionRegistrator *r)
   {
     registrator = r;
@@ -224,11 +210,40 @@ public:
     SetRegistrator(r);
   };
 
-  CArcSegmentCollection(uint4 n, void* c, IntersectionRegistrator *r)
+  void SortAt(uint4 pt, uint4 n, int4* L)
+  {
+    SetCurStripeLeft(pt);
+    std::sort(L, L + n, [this](int4 s1, int4 s2) {return LBelow(s1, s2); });
+  };
+
+  void clone(CArcSegmentCollection& c, IntersectionRegistrator* r)
+  {
+    clone_of = &c;
+    Init(c.N, c.collection, r);
+  };
+
+  void unclone() {
+    if (clone_of == nullptr)return; 
+    collection = nullptr; 
+    clone_of = nullptr;
+  };
+
+  CArcSegmentCollection() {};
+
+  CArcSegmentCollection(uint4 n, void* c, IntersectionRegistrator* r)
   {
     Init(n, c, r);
   }
-  CArcSegmentCollection() {};
+
+  CArcSegmentCollection(CArcSegmentCollection& coll, IntersectionRegistrator* r)
+  {
+    clone(coll,r);
+  }
+
+  ~CArcSegmentCollection()
+  {
+    unclone();
+  }
 
   void coll_to_SVG(chostream* SVG_stream) {
     if (!SVG_stream)return;

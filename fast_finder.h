@@ -41,7 +41,7 @@ public:
   ~CFastIntFinder() { unclone(); FreeMem(); };
 
   template<class SegmentsColl>
-  void find_intersections(SegmentsColl &segments,uint4 from=0,uint4 to=0)
+  void find_intersections(SegmentsColl  &segments,uint4 from=0,uint4 to=0)
   {
     //AllocMem
     len_of_Q = LR_len;
@@ -71,13 +71,8 @@ public:
     using namespace std;
     vector<thread> wrk_threads;
     auto thread_func = [](CTHIS *master, SegmentsColl<CIntRegistrator> *segments, uint4 from, uint4 to, CIntRegistrator* add_reg) {
-      CTHIS i_f;
-      SegmentsColl<CIntRegistrator> coll;
-      i_f.clone(master);
-      coll.clone(*segments, add_reg);
-      i_f.find_intersections(coll, from, to);
-      coll.unclone();
-      i_f.unclone();
+      SegmentsColl<CIntRegistrator> coll(*segments, add_reg);
+      CTHIS(master).find_intersections(coll, from, to);
     };
     auto n = segments.GetSegmNumb();
 
@@ -307,7 +302,8 @@ public:
     return Split4NonLineSeg(segments, _Q, RBoundIdx);
   };
 
- 
+  CFastIntFinder() {};
+
   protected:
   int4 *R = nullptr;
   CTHIS* clone_of = nullptr;
@@ -332,7 +328,13 @@ public:
           clone_of = nullptr;
       }
   };
+
+
+  CFastIntFinder(CTHIS* master) {
+    clone(master);
+  };
  
+
   template<class SegmentsColl>
   uint4 CalcLAt(SegmentsColl& segments, uint4 end_index)
   {

@@ -324,6 +324,12 @@ public:
     Init(n, c, r);
   }
   CGraphSegmentCollection() {};
+
+  CGraphSegmentCollection(CGraphSegmentCollection& coll, IntersectionRegistrator* r)
+  {
+    clone(coll, r);
+  }
+
   ~CGraphSegmentCollection() 
   {
     unclone();

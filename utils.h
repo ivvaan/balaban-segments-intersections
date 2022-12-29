@@ -51,6 +51,8 @@ extern bool print_at_lineseg1_init;
 auto L##_ = std::make_unique<std::remove_pointer_t<decltype(L)>[]>(len);\
 L = L##_.get();
 
+#define MY_FREE_ARR_MACRO(a) if (a!=nullptr) {delete[] a; a = nullptr;}
+
 constexpr uint4 max_SVG_items = 5000;
 constexpr uint4 max_SVG_points = 150000;
 constexpr uint4 max_truereg_items = 20000;

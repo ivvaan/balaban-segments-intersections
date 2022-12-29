@@ -248,6 +248,17 @@ public:
 
   CLine2SegmentCollection() {};
 
+  CLine2SegmentCollection(CLine2SegmentCollection& coll, IntersectionRegistrator* r)
+  {
+    clone(coll, r);
+  }
+
+  ~CLine2SegmentCollection()
+  {
+    unclone();
+  }
+
+
   void coll_to_SVG(chostream* SVG_stream) {
     if (!SVG_stream)return;
     int4 n = MIN(max_SVG_items, N);

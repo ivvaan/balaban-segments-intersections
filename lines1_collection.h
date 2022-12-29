@@ -288,8 +288,20 @@ public:
   {
     Init(n, c, r);
   }
+
   CLine1SegmentCollection() {};
-  
+ 
+  CLine1SegmentCollection(CLine1SegmentCollection& coll, IntersectionRegistrator* r)
+  {
+    clone(coll, r);
+  }
+
+  ~CLine1SegmentCollection()
+  {
+    unclone();
+  }
+
+
  
   void coll_to_SVG(chostream* SVG_stream) {
     if (!SVG_stream)return;

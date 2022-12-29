@@ -37,17 +37,6 @@ enum _RegistrationType
   full = 7
 };
 
-
-
-#define MY_FREE_ARR_MACRO(a) \
-    if (a!=nullptr) {                 \
-        delete[] a;          \
-        a = nullptr;            \
-    }
-
-
-
-
 template <class ipoint>
 class JustCountingRegistrator
 {
