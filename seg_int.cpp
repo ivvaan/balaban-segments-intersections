@@ -88,8 +88,8 @@ auto hProcess=GetCurrentProcess();\
 auto dwProcessPriSave = GetPriorityClass(hProcess);\
 SetPriorityClass(hProcess, REALTIME_PRIORITY_CLASS);\
 auto dwThreadPriSave = GetThreadPriority(GetCurrentThread()); \
-SetThreadPriority(hThread, THREAD_PRIORITY_TIME_CRITICAL);\
-if(thread_affinity_mask)SetThreadAffinityMask(hThread, thread_affinity_mask);
+if(thread_affinity_mask){SetThreadPriority(hThread, THREAD_PRIORITY_TIME_CRITICAL);\
+SetThreadAffinityMask(hThread, thread_affinity_mask);}
 
 #define ON_BENCH_END \
 SetThreadPriority(hThread, dwThreadPriSave);\
@@ -138,6 +138,10 @@ double _benchmark_old(char* counters_string, int4 n, PSeg* seg_ptr_coll, int4 s_
   int4 n_call=0;
   using namespace std::chrono;
   double mint = 1.0e10;
+  unsigned long thread_affinity_mask = alg & fast_parallel ? 0 : 8;
+
+  ON_BENCH_BEG
+    
   do
   {
       auto start = high_resolution_clock::now();
@@ -152,6 +156,9 @@ double _benchmark_old(char* counters_string, int4 n, PSeg* seg_ptr_coll, int4 s_
 #else
   while (false);
 #endif
+
+  ON_BENCH_END
+
   if(counters_string)
    sprintf(counters_string,"%11.2f;%11.2f;%11.2f;%11.2f;%11.2f;%11.2f;%11.2f;%11.2f",c[0],c[1],c[2],c[3],c[4],c[5],c[6],c[7]);
    //printf("avg Size %11.2f\n",c[3]/(c[4]+1));
@@ -166,6 +173,9 @@ double _benchmark_new(int4 n, PSeg seg_coll, int4 s_type, int4 alg, double& res,
   int4 n_call = 0;
   using namespace std::chrono;
   double mint = 1.0e10;
+  unsigned long thread_affinity_mask = alg & fast_parallel ? 0 : 8;
+
+  ON_BENCH_BEG
   do
   {
     auto find_intersections = get_find_intersections_func(reg_stat);
@@ -182,7 +192,8 @@ double _benchmark_new(int4 n, PSeg seg_coll, int4 s_type, int4 alg, double& res,
 #else
   while (false);
 #endif
-  //return (stop - start) / (n_call*CLOCKS_PER_SEC);
+  ON_BENCH_END
+
   return mint; //tottime / n_call;
 }
 
@@ -213,9 +224,6 @@ void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr
   }
   else
     if (!print_less)printf("\nnew implementation testing... ************************************************\n");
-  unsigned long thread_affinity_mask = alg & fast_parallel ? 0:8;
-  
-  ON_BENCH_BEG
 
     if ((impl == impl_old)&& (seg_type == graph)) { if (!print_less)printf("old implementation can't deal with graph segments\n"); return; }
     for (int4 a = sizeof(alg_list) / sizeof(alg_list[0]) - 1; a>-1; a--)
@@ -238,7 +246,6 @@ void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr
           printf("alg=%s; %s=%13.0f; exec time=%6.5f;%s\n", alg_names[a],stat_names[reg_stat],  nInt[a], exec_time[a], counters_string);
       }
     };
-  ON_BENCH_END
 
     if (rtime_printout && (!print_less) && (reg_stat != 1)) {
       if ((alg & triv) ){
