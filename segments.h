@@ -79,6 +79,10 @@ public:
   {
     return org.y + shift.y*(X - org.x) / shift.x;
   };   
+  REAL YAtX_Numerator(REAL X)
+  {
+    return shift.x * org.y + shift.y * (X - org.x);
+  };
   void write_SVG(int4 id,chostream *SVG_text) {
     if (SVG_text) {
       auto bp = BegPoint();
