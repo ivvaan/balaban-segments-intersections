@@ -263,11 +263,11 @@ protected:
     auto last_L = _L + L_size;
     auto first_L = _L + 1;
     auto _Q_pos = _Q;
-    auto Q_tail = Q + len_of_Q;
     do
     {
       auto new_L_pos = _L;
       segments.SetCurSegCutBE(*++_Q_pos = _L[0]);
+      auto Q_tail = Q + len_of_Q;
       for (auto cur_L = first_L; cur_L < last_L; ++cur_L)
       {
         auto step = _Q_pos;
