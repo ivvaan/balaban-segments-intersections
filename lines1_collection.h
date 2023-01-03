@@ -22,6 +22,9 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 // NEW IMPLEMENTATION
 
 #include "segments.h"
+
+//#define USE_SENTINEL
+
 template<class IntersectionRegistrator>
 class CLine1SegmentCollection
 {
@@ -66,6 +69,7 @@ public:
     cur_seg = collection[s];
     curB = cur_seg.org.x;
     curE = cur_seg.org.x + cur_seg.shift.x;
+    is_chopped = false;
   };
 
   void SetCurSegCutBE(uint4 s)
@@ -76,6 +80,10 @@ public:
     if constexpr ((IntersectionRegistrator::reg_type & _RegistrationType::point) == 0) {
       active_end.x = curE;
       active_end.y = cur_seg.YAtX(curE);
+      if (E == curE) {
+        is_chopped = true;
+        chopped_Y[s] = active_end.y;
+      }
     }
   };
 
@@ -188,10 +196,32 @@ public:
     if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0) {
       auto r = registrator;
       auto cs = cur_seg_idx;
-      while ((s_ != last) && !UnderActiveEnd(*s_)) {
-        r->register_pair(cs, *s_);
-        --s_;
+      
+      if (is_chopped) {
+        REAL Y = active_end.y;
+         
+#ifdef USE_SENTINEL //seach with sentinel, getting rid of loop bound checking
+        auto saved = *last; *last = N;//place sentinel to *last storing previous value
+        //The caller ensures that "last" points to the allocated memory address 
+        //and that it is accessible for reading and writing.
+        //Y_cache[N] is smaller than any other double value 
+        while (Y < Y_cache[*s_]) {
+          r->register_pair(cs, *s_);
+          --s_;
+        }
+        *last = saved;//restore *last
+#else
+        while ((s_ != last) && (Y < chopped_Y[*s_])) {
+          r->register_pair(cs, *s_);
+          --s_;
+        }
+#endif
       }
+      else
+        while ((s_ != last) && !UnderActiveEnd(*s_)) {
+          r->register_pair(cs, *s_);
+          --s_;
+        }
       return s_;
     }
       
@@ -313,6 +343,8 @@ public:
   CLine1SegmentCollection(uint4 n, void* c, IntersectionRegistrator *r)
   {
     Init(n, c, r);
+    chopped_Y = new REAL[N+1];
+    chopped_Y[N] = std::numeric_limits<REAL>::min();
   }
 
   CLine1SegmentCollection() {};
@@ -320,11 +352,14 @@ public:
   CLine1SegmentCollection(CLine1SegmentCollection& coll, IntersectionRegistrator* r)
   {
     clone(coll, r);
+    chopped_Y = new REAL[N + 1];
+    chopped_Y[N] = std::numeric_limits<REAL>::min();
   }
 
   ~CLine1SegmentCollection()
   {
     unclone();
+    MY_FREE_ARR_MACRO(chopped_Y);
   }
 
 
@@ -347,14 +382,16 @@ private:
   };
 
 
+  TLineSegment1 cur_seg;
+  TLineSegment1* collection = nullptr;
   IntersectionRegistrator *registrator = nullptr;
+  REAL* chopped_Y = nullptr;
   CLine1SegmentCollection *clone_of = nullptr;
   uint4 N=0;
   REAL B, E, curB, curE;
   TPlaneVect cur_point, active_end;
 
   uint4 cur_seg_idx = 0xFFFFFFFF;
-  TLineSegment1 cur_seg;
-  TLineSegment1 *collection = nullptr;
+  bool is_chopped = false;
 };
 
