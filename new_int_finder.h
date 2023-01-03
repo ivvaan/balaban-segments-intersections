@@ -131,7 +131,7 @@ public:
           if (nsegm_on_vline > max_segm_on_vline)
             max_segm_on_vline = nsegm_on_vline;
         }
-      LR_len = max_segm_on_vline+1;
+      LR_len = max_segm_on_vline+ 2;//+2 for sentinels to have some space
       nTotSegm = N;
           
     };
@@ -261,39 +261,42 @@ protected:
   void SearchInStripNonLineSeg(SegmentsColl& segments, int4* _L, int4* _Q)//simplified version for SearchInStrip
   {
     auto Size = L_size;
+    auto _Q_pos = _Q;
     do
     {
-      auto Q_tail = Q + len_of_Q;
       int4 new_L_size = 0;
-      int4 step_index = 1;
-      _Q[1] = _L[0];
+      *++_Q_pos = _L[0];
+      auto Q_tail = Q + len_of_Q;
       for (uint4 cur_L_pos = 1; cur_L_pos < Size; cur_L_pos++)
       {
-        auto step = step_index;
+        auto step = _Q_pos;
         auto cur_seg = _L[cur_L_pos];
         segments.SetCurSegCutBE(cur_seg);
-        while ((step) && (segments.FindCurSegIntDownWith(_Q[step])))
+        while ((step!=_Q) && (segments.FindCurSegIntDownWith(*step)))
           --step;
 
-        if (step_index == step)
-          _Q[++step_index] = cur_seg;
+        if (_Q_pos == step)
+          *++_Q_pos = cur_seg;
         else
         {
           _L[new_L_size++] = cur_seg;
-          *(--Q_tail) = step_index;
+          *(--Q_tail) = _Q_pos-_Q;
         }
       }
       Q_tail = Q + len_of_Q;
       for (int4 i = 0; i < new_L_size; ++i)
       {
-        auto c = *(--Q_tail);
-        if (c >= step_index) break;
+        auto c =_Q + *(--Q_tail);
+        if (c >= _Q_pos) break;
         segments.SetCurSegCutBE(_L[i]);
-        while ((c < step_index) && (segments.FindCurSegIntDownWith(_Q[++c])));
+        ++c;
+        while ((c != _Q_pos+1) && (segments.FindCurSegIntDownWith(*c)))++c;
       }
-      _Q += step_index;
+      _Q = _Q_pos;
       Size = new_L_size;
-    } while (Size);
+    } while (Size>1);
+    if (Size == 1)
+      *++_Q = _L[0];
 
   };
 

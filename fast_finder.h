@@ -60,9 +60,9 @@ public:
     else
       L_size = CalcLAt(segments, from);
 
-    ProgramStackRec stack_rec(-1, 2 * nTotSegm); //need to be initialized this way
-    
-    FindR(*this, segments, -1, from, to, &stack_rec, 0, get_max_call(to-from));
+    constexpr int4 bottom_index = 0;
+    ProgramStackRec stack_rec(bottom_index, 2 * nTotSegm); //need to be initialized this way
+    FindR(*this, segments, bottom_index, from, to, &stack_rec, 0, get_max_call(to-from));
   }
 
  template<template <class> class SegmentsColl, class CIntRegistrator >
