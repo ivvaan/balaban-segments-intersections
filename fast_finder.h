@@ -175,7 +175,7 @@ public:
       if (SegL[cur_seg]>LBoundIdx)
       {
         segments.SetCurSegCutEnd(cur_seg);
-        for (auto c = QE; (c > QB) && segments.FindCurSegIntDownWith(Q[c]); --c); //get intersections below
+        segments.FindCurSegIntDownWith(Q+QE,Q+QB);
       }
       _L[new_size++] = cur_seg;
       cur_seg = _R[++cur_R_pos];
@@ -252,43 +252,41 @@ public:
   template<class SegmentsColl>
   int4 Split4NonLineSeg(SegmentsColl& segments, int4* _Q, uint4 RBoundIdx)
   {
-    uint4  _Q_pos = 0;
+    auto  _Q_pos = _Q;
     long long n_int = 0;
     auto Q_tail = Q + len_of_Q;
     auto new_L_pos = L;
     for (auto L_pos = L, last_L = L + L_size; L_pos < last_L; ++L_pos) {
       auto cur_seg = *L_pos;
       segments.SetCurSegCutBE(cur_seg);
-      auto cur_Q = segments.FindCurSegIntDownWith(_Q + _Q_pos, _Q);
-      //auto cur_Q = _Q + step;
-      //for (; (cur_Q != _Q) && (segments.FindCurSegIntDownWith(*cur_Q)); --step, --cur_Q);
-
-      if ((cur_Q == _Q+ _Q_pos) && (SegR[cur_seg] >= RBoundIdx)) //segment doesn't intersect ladder stairs
+      auto cur_Q = segments.FindCurSegIntDownWith(_Q_pos, _Q);
+      if ((cur_Q == _Q_pos) && (SegR[cur_seg] >= RBoundIdx)) //segment doesn't intersect ladder stairs
         //and is covering current stripe and doesn't intersect ladder stairs
-          _Q[++_Q_pos] = cur_seg;
+          *++_Q_pos = cur_seg;
       else {   //segment  intersects ladder stairs or is not covering 
-        n_int += (_Q - cur_Q)+ _Q_pos; //inc int counter
+        n_int += _Q_pos - cur_Q; //inc int counter
         *(new_L_pos++)= cur_seg; //place segment in L
         //storing segment position in Q_tail
-        *(--Q_tail) = _Q_pos;  //it should be _Q_pos+1. We save 
+        *(--Q_tail) = _Q_pos -_Q;  //it should be _Q_pos+1. We save 
         // one addition per loop by incrementing _Q later.
       }
     }
     L_size = new_L_pos - L;
-    if (_Q_pos == 0){
+    if (_Q_pos == _Q){
       dont_split_stripe = false;
       return 0;
     }
     Q_tail = Q + len_of_Q - 1;
     // important to start from stair above current segm, meanwhile _Q[*Q_tail] is stair below
     ++_Q;// so we incremement _Q and _Q[*Q_tail] become stair above
-    for (auto L_pos=L, last_Q = _Q + _Q_pos; L_pos < new_L_pos ; ++L_pos, --Q_tail)
+    ++_Q_pos;
+    for (auto L_pos=L; L_pos < new_L_pos ; ++L_pos, --Q_tail)
     {
       segments.SetCurSegCutBE(*L_pos);
-      segments.FindCurSegIntUpWith(_Q + *Q_tail, last_Q);
+      segments.FindCurSegIntUpWith(_Q + *Q_tail, _Q_pos);
     }
     dont_split_stripe = n_int > L_size;
-    return _Q_pos;
+    return _Q_pos-_Q;
   };
 
 
