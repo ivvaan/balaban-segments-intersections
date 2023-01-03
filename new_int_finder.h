@@ -260,17 +260,18 @@ protected:
   template<class SegmentsColl>
   void SearchInStripNonLineSeg(SegmentsColl& segments, int4* _L, int4* _Q)//simplified version for SearchInStrip
   {
-    auto Size = L_size;
+    auto last_L = _L + L_size;
+    auto first_L = _L + 1;
     auto _Q_pos = _Q;
+    auto Q_tail = Q + len_of_Q;
     do
     {
-      int4 new_L_size = 0;
-      *++_Q_pos = _L[0];
-      auto Q_tail = Q + len_of_Q;
-      for (uint4 cur_L_pos = 1; cur_L_pos < Size; cur_L_pos++)
+      auto new_L_pos = _L;
+      segments.SetCurSegCutBE(*++_Q_pos = _L[0]);
+      for (auto cur_L = first_L; cur_L < last_L; ++cur_L)
       {
         auto step = _Q_pos;
-        auto cur_seg = _L[cur_L_pos];
+        auto cur_seg = *cur_L;
         segments.SetCurSegCutBE(cur_seg);
         while ((step!=_Q) && (segments.FindCurSegIntDownWith(*step)))
           --step;
@@ -279,31 +280,31 @@ protected:
           *++_Q_pos = cur_seg;
         else
         {
-          _L[new_L_size++] = cur_seg;
+          *new_L_pos++ = cur_seg;
           *(--Q_tail) = _Q_pos-_Q;
         }
       }
-      Q_tail = Q + len_of_Q;
-      for (int4 i = 0; i < new_L_size; ++i)
+      //Q_tail = Q + len_of_Q;
+      ++_Q; ++_Q_pos;
+      for (auto cur_L = new_L_pos; cur_L != _L ; )
       {
-        auto c =_Q + *(--Q_tail);
+        auto c =_Q + *(Q_tail++);
         if (c >= _Q_pos) break;
-        segments.SetCurSegCutBE(_L[i]);
-        ++c;
-        while ((c != _Q_pos+1) && (segments.FindCurSegIntDownWith(*c)))++c;
+        segments.SetCurSegCutBE(*--cur_L);
+        segments.FindCurSegIntDownWith(c, _Q_pos);
       }
-      _Q = _Q_pos;
-      Size = new_L_size;
-    } while (Size>1);
-    if (Size == 1)
+      _Q = --_Q_pos;
+      last_L = new_L_pos;
+    } while (last_L > first_L);
+    if (last_L == first_L)
       *++_Q = _L[0];
-
   };
 
   template<class SegmentsColl>
   void SearchInStripLineSeg(SegmentsColl& segments, int4* L_) {
     auto Size = L_size;
     auto _L = L_ - 1;
+    segments.SetCurSegCutBE(L_[0]);
     for (uint4 i = 1; i < Size; i++)
     {
       auto sn = L_[i];
