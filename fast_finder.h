@@ -258,15 +258,16 @@ public:
     auto new_L_pos = L;
     for (auto L_pos = L, last_L = L + L_size; L_pos < last_L; ++L_pos) {
       auto cur_seg = *L_pos;
-      auto step = _Q_pos;
       segments.SetCurSegCutBE(cur_seg);
-      for (auto cur_Q = _Q + step; (step != 0) && (segments.FindCurSegIntDownWith(*cur_Q)); --step, --cur_Q);
+      auto cur_Q = segments.FindCurSegIntDownWith(_Q + _Q_pos, _Q);
+      //auto cur_Q = _Q + step;
+      //for (; (cur_Q != _Q) && (segments.FindCurSegIntDownWith(*cur_Q)); --step, --cur_Q);
 
-      if ((_Q_pos == step) && (SegR[cur_seg] >= RBoundIdx)) //segment doesn't intersect ladder stairs
+      if ((cur_Q == _Q+ _Q_pos) && (SegR[cur_seg] >= RBoundIdx)) //segment doesn't intersect ladder stairs
         //and is covering current stripe and doesn't intersect ladder stairs
           _Q[++_Q_pos] = cur_seg;
       else {   //segment  intersects ladder stairs or is not covering 
-        n_int += _Q_pos - step; //inc int counter
+        n_int += (_Q - cur_Q)+ _Q_pos; //inc int counter
         *(new_L_pos++)= cur_seg; //place segment in L
         //storing segment position in Q_tail
         *(--Q_tail) = _Q_pos;  //it should be _Q_pos+1. We save 
