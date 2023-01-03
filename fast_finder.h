@@ -211,15 +211,13 @@ public:
     auto  _Q_pos = _Q;
     //first segment covering current stripe we place to Q 
     //it can't intersect any of the steps(stairs) because there no stairs yet     
-    *++_Q_pos = *new_L_pos;
+    segments.SetCurSegCutBE(*++_Q_pos = *new_L_pos);//we don't need SetCurSegCutBE but it is allow to speedup by y values caching 
     for (auto cur_L_seg = new_L_pos + 1; cur_L_seg < last_L; ++cur_L_seg) {
         segments.SetCurSegCutBE(*cur_L_seg);
         auto cur_Q = _Q_pos;
         if (segments.FindCurSegIntDownWith(*(cur_Q--))){//segment  intersects upper ladder stair
             // finding another ledder intersections
-            while ((cur_Q != _Q) && (segments.FindCurSegIntDownWith(*cur_Q)))
-                --cur_Q;
-            n_int += _Q_pos-cur_Q;//increment found int number
+            n_int += _Q_pos- segments.FindCurSegIntDownWith(cur_Q,_Q);//increment found int number
 
             *(new_L_pos++) = *cur_L_seg;//place segment in L
             continue;
@@ -240,12 +238,12 @@ public:
     // important to start from stair above current segm, meanwhile _Q[*Q_tail] is stair below
     ++_Q;// so we incremement _Q and _Q[*Q_tail] become stair above
     ++_Q_pos;
-    while (R_pos>R)
+    while (R_pos!=R)
     {
-      segments.SetCurSegCutBeg(*--R_pos);
-      auto cur_Q = _Q + *Q_tail++;          // getting position stored in tail of Q;
-      while ((cur_Q != _Q_pos) && (segments.FindCurSegIntUpWith(*cur_Q)))
-          ++cur_Q;
+      --R_pos;
+      segments.SetCurSegCutBeg(*R_pos);
+      segments.FindCurSegIntUpWith(_Q + *Q_tail, _Q_pos);
+      ++Q_tail;
     } 
     dont_split_stripe = n_int > L_size;
     return _Q_pos-_Q;
@@ -286,8 +284,7 @@ public:
     for (auto L_pos=L, last_Q = _Q + _Q_pos; L_pos < new_L_pos ; ++L_pos, --Q_tail)
     {
       segments.SetCurSegCutBE(*L_pos);
-      auto cur_Q = _Q + *Q_tail;          // getting position stored in tail of Q;
-      while ((cur_Q < last_Q) && (segments.FindCurSegIntUpWith(*cur_Q)))++cur_Q;
+      segments.FindCurSegIntUpWith(_Q + *Q_tail, last_Q);
     }
     dont_split_stripe = n_int > L_size;
     return _Q_pos;

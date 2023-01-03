@@ -184,6 +184,38 @@ public:
     return FindIntWith(curB, curE, s_);
   };
 
+  auto FindCurSegIntDownWith(int4* s_, int4* last) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+    if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0) {
+      auto r = registrator;
+      auto cs = cur_seg_idx;
+      while ((s_ != last) && !UnderActiveEnd(*s_)) {
+        r->register_pair(cs, *s_);
+        --s_;
+      }
+      return s_;
+    }
+      
+    while ((s_ != last) && FindIntWith(curB, curE, *s_))
+      --s_;
+    return s_;
+  };
+
+  auto FindCurSegIntUpWith(int4* s_, int4* last) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+    if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0) {
+      auto r = registrator;
+      auto cs = cur_seg_idx;
+      while ((s_ != last) && UnderActiveEnd(*s_)) {
+        r->register_pair(cs, *s_);
+        ++s_;
+      }
+      return s_;
+    }
+
+    while ((s_ != last) && FindIntWith(curB, curE, *s_))
+      ++s_;
+    return s_;
+  };
+
   bool FindCurSegIntUpWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
   {
     if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0)
