@@ -32,7 +32,7 @@ class TLineSegment1
 public:
   static const int4 is_line = 1;
   TLineSegment1():org(),shift() {};
-  TLineSegment1(TPlaneVect &p1, TPlaneVect &p2) :org(p1), shift(p2-p1) {};
+  TLineSegment1(const TPlaneVect &p1, const TPlaneVect &p2) :org(p1), shift(p2-p1) {};
   // int4 parnum,intpar;
   TPlaneVect org;
   TPlaneVect shift;
@@ -45,7 +45,7 @@ public:
       shift = -shift;
     }
   };
-  void Init(TLineSegment1 &s) { org = s.org; shift = s.shift; };
+  void Init(const TLineSegment1 &s) { org = s.org; shift = s.shift; };
   void InitRandom(CRandomValueGen &rv, int4 seg_n, int4 type, REAL par);
   TPlaneVect BegPoint()
   {
@@ -111,7 +111,7 @@ public:
   static const int4 is_line = 1;
   REAL x1, a, x2, b;
   TLineSegment2() { x1 = 0; x2 = 0; a = 0; b = 0; };
-  void Init(TLineSegment1 &s) { x1 = s.org.x; x2 = s.org.x + s.shift.x; a = s.shift.y / s.shift.x; b = s.org.y - a*s.org.x; };
+  void Init(const TLineSegment1 &s) { x1 = s.org.x; x2 = s.org.x + s.shift.x; a = s.shift.y / s.shift.x; b = s.org.y - a*s.org.x; };
   void InitRandom(CRandomValueGen &rv, int4 s_n, int4 type, REAL par)
   {
     TLineSegment1 seg;

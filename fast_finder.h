@@ -30,6 +30,43 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 
 class CFastIntFinder : public CommonImpl
 {
+
+  constexpr static int4 bottom_step_index = 0;
+
+  template<typename SegmentsColl>
+  struct has_get_sentinel_idx
+  {
+  private:
+    template<typename SegColl> static auto test() -> decltype(std::declval<SegColl>().get_sentinel_idx(true) == 1, std::true_type());
+
+    template<typename> static std::false_type test(...);
+
+  public:
+    static constexpr bool value = std::is_same<decltype(test<SegmentsColl>()), std::true_type>::value;
+  };
+
+  template< class T >
+  constexpr static bool has_get_sentinel_idx_member = has_get_sentinel_idx<T>::value;
+  
+  template<class SegmentsColl, bool HasSentinel = has_get_sentinel_idx_member<SegmentsColl> >
+  struct CSentinel {
+    CSentinel(SegmentsColl& coll, int4& ini) {};
+  };
+
+  template<class SegmentsColl>
+  struct CSentinel <SegmentsColl, true> {
+    CSentinel(SegmentsColl& coll, int4& ini) : to_restore(ini) {
+      prev_val = to_restore;
+      to_restore = coll.get_sentinel_idx(false);
+    };
+    ~CSentinel() {
+      to_restore = prev_val;
+    };
+  private:
+    int4& to_restore;
+    int4 prev_val;
+  };
+
 public:
   using CTHIS = CFastIntFinder;
   using CIMP = CommonImpl;

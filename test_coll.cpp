@@ -40,31 +40,61 @@ constexpr int4 n_threads = 6;
 
 // creating and deleting collections
 PSeg first_segment_ptr = NULL;
+template <class T>
+minmaxrect get_minmax(int4 n, T c[])
+{
+  TPlaneVect bp = c[0].BegPoint();
+  TPlaneVect ep = c[0].EndPoint();
+  REAL xmin = bp.x;
+  REAL xmax = ep.x;
+  REAL ymin = MIN(bp.y, ep.y);
+  REAL ymax = MAX(bp.y, ep.y);
+  for (int4 i = 1; i < n; ++i) {
+    bp = c[i].BegPoint();
+    ep = c[i].EndPoint();
+    xmin = MIN(xmin, bp.x);
+    xmax = MAX(xmax, ep.x);
+    ymin = std::min({ ymin,bp.y,ep.y });
+    ymax = std::max({ ymax,bp.y,ep.y });
+  }
+
+  return { {xmin,ymin},{xmax,ymax} };
+};
+
+
+
 PSeg create_test_collection(int4 seg_type, int4 n, int4 distr, REAL par, CRandomValueGen& random_gen, PSeg** seg_ptr_coll_ptr)
 {
   PSeg* colls = nullptr;
   int4 i;
+  constexpr int4 sentinels = 2;
   if (seg_ptr_coll_ptr != nullptr)colls = new PSeg[n];
   if (distr != param_defined)par /= n / 33.0;
   if (distr == parallel)par /= 2.4;
-  PSeg result = nullptr;
+  PSeg result;
   switch (seg_type)
   {
   case line1:
   {
-    TLineSegment1* Colls = new TLineSegment1[n];
+    TLineSegment1* Colls = new TLineSegment1[n + sentinels];
     if (seg_ptr_coll_ptr != nullptr)for (i = 0; i < n; i++)colls[i] = Colls + i;
     for (i = 0; i < n; i++)
       Colls[i].InitRandom(random_gen, i, distr, par);
+    auto mmr = get_minmax(n, Colls).get_scaled(2.0);
+    Colls[n] = TLineSegment1(mmr.ld, { mmr.rt.x,mmr.ld.y });
+    Colls[n + 1] = TLineSegment1({ mmr.ld.x,mmr.rt.y }, mmr.rt);
     result = Colls;
     first_segment_ptr = Colls;
   }; break;
   case line2:
   {
-    TLineSegment2* Colls = new TLineSegment2[n];
+    TLineSegment2* Colls = new TLineSegment2[n + sentinels];
     if (seg_ptr_coll_ptr != nullptr)for (i = 0; i < n; i++)colls[i] = Colls + i;
     for (i = 0; i < n; i++)
       Colls[i].InitRandom(random_gen, i, distr, par);
+    auto mmr = get_minmax(n, Colls).get_scaled(2.0);
+    Colls[n].Init({ mmr.ld, { mmr.rt.x,mmr.ld.y } });
+    Colls[n + 1].Init({ { mmr.ld.x,mmr.rt.y }, mmr.rt });
     result = Colls;
     first_segment_ptr = Colls;
   }; break;
@@ -91,6 +121,7 @@ PSeg create_test_collection(int4 seg_type, int4 n, int4 distr, REAL par, CRandom
   if (seg_ptr_coll_ptr != nullptr)*seg_ptr_coll_ptr = colls;
   return result;
 };
+
 
 void  delete_test_collection(int4 seg_type, PSeg seg_coll, PSeg* seg_ptr_coll)
 {
