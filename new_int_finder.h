@@ -147,22 +147,6 @@ protected:
   uint4* SegL = nullptr, * SegR = nullptr, * ENDS = nullptr;
   int4* Q = nullptr;
   int4* L = nullptr;
-
-  template<typename SegmentsColl>
-  struct has_get_sentinel
-  {
-  private:
-    template<typename SegColl> static auto test() -> decltype(std::declval<SegColl>().get_sentinel(true) == 1, std::true_type());
-
-    template<typename> static std::false_type test(...);
-
-  public:
-    static constexpr bool value = std::is_same<decltype(test<SegmentsColl>()), std::true_type>::value;
-  };
-
-  template< class T >
-  constexpr static bool has_sentinels = has_get_sentinel<T>::value;
-
   template<class SegmentsColl, bool HasSentinels = has_sentinels<SegmentsColl> >
   struct CSentinel {
     CSentinel(SegmentsColl& coll, int4& ini) {};

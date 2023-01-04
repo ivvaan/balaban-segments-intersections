@@ -193,55 +193,44 @@ public:
   };
 
   auto FindCurSegIntDownWith(int4* s_, int4* last) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+  //The caller ensures that "last" points to the allocated memory address accessible for reading and writing.
     if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0) {
       auto r = registrator;
       auto cs = cur_seg_idx;
       
       if (is_chopped) {
         REAL Y = active_end.y;
-         
-#ifdef USE_SENTINEL //seach with sentinel, getting rid of loop bound checking
-        auto saved = *last; *last = N;//place sentinel to *last storing previous value
-        //The caller ensures that "last" points to the allocated memory address 
-        //and that it is accessible for reading and writing.
-        //Y_cache[N] is smaller than any other double value 
-        while (Y < Y_cache[*s_]) {
+        while ((THIS_HAS_SENTINELS||(s_!= last)) && (Y < chopped_Y[*s_])) {
           r->register_pair(cs, *s_);
           --s_;
         }
-        *last = saved;//restore *last
-#else
-        while ((s_ != last) && (Y < chopped_Y[*s_])) {
-          r->register_pair(cs, *s_);
-          --s_;
-        }
-#endif
       }
       else
-        while ((s_ != last) && !UnderActiveEnd(*s_)) {
+        while ((THIS_HAS_SENTINELS || (s_ != last)) && !UnderActiveEnd(*s_)) {
           r->register_pair(cs, *s_);
           --s_;
         }
       return s_;
     }
       
-    while ((s_ != last) && FindIntWith(curB, curE, *s_))
+    while ((THIS_HAS_SENTINELS || (s_ != last)) && FindIntWith(curB, curE, *s_))
       --s_;
     return s_;
   };
 
   auto FindCurSegIntUpWith(int4* s_, int4* last) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+  //The caller ensures that "last" points to the allocated memory address accessible for reading and writing.
     if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0) {
       auto r = registrator;
       auto cs = cur_seg_idx;
-      while ((s_ != last) && UnderActiveEnd(*s_)) {
+      while ((THIS_HAS_SENTINELS || (s_ != last)) && UnderActiveEnd(*s_)) {
         r->register_pair(cs, *s_);
         ++s_;
       }
       return s_;
     }
 
-    while ((s_ != last) && FindIntWith(curB, curE, *s_))
+    while ((THIS_HAS_SENTINELS || (s_ != last)) && FindIntWith(curB, curE, *s_))
       ++s_;
     return s_;
   };
@@ -347,8 +336,11 @@ public:
   CLine1SegmentCollection(uint4 n, void* c, IntersectionRegistrator *r)
   {
     Init(n, c, r);
-    chopped_Y = new REAL[N+1];
-    chopped_Y[N] = std::numeric_limits<REAL>::min();
+    chopped_Y = new REAL[N+2];
+    if constexpr (THIS_HAS_SENTINELS) {
+      chopped_Y[get_sentinel(false)] = std::numeric_limits<REAL>::min();
+      chopped_Y[get_sentinel(true)] = std::numeric_limits<REAL>::max();
+    }
   }
 
   CLine1SegmentCollection() {};

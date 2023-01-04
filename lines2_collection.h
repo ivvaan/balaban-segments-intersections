@@ -178,33 +178,35 @@ public:
   };
 
   auto FindCurSegIntDownWith(int4* s_, int4* last) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+  //Caller ensures that "last" points to the allocated memory address accessible for reading and writing.
     if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0) {
       auto r = registrator;
       auto cs = cur_seg_idx;
-      while ((s_ != last) && !UnderActiveEnd(*s_)) {
+      while ((THIS_HAS_SENTINELS || (s_ != last)) && !UnderActiveEnd(*s_)) {
         r->register_pair(cs, *s_);
         --s_;
       }
       return s_;
     }
 
-    while ((s_ != last) && FindIntWith(*s_))
+    while ((THIS_HAS_SENTINELS || (s_ != last)) && FindIntWith(*s_))
       --s_;
     return s_;
   };
 
   auto FindCurSegIntUpWith(int4* s_, int4* last) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+  //Caller ensures that "last" points to the allocated memory address accessible for reading and writing.
     if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0) {
       auto r = registrator;
       auto cs = cur_seg_idx;
-      while ((s_ != last) && UnderActiveEnd(*s_)) {
+      while ((THIS_HAS_SENTINELS || (s_ != last)) && UnderActiveEnd(*s_)) {
         r->register_pair(cs, *s_);
         ++s_;
       }
       return s_;
     }
 
-    while ((s_ != last) && FindIntWith(*s_))
+    while ((THIS_HAS_SENTINELS || (s_ != last)) && FindIntWith(*s_))
       ++s_;
     return s_;
   };
@@ -247,9 +249,9 @@ public:
     
   };
 
-  /*int4 get_sentinel(bool is_top_sentinel) {
+  int4 get_sentinel(bool is_top_sentinel) {
     return N + is_top_sentinel;
-  };*/
+  };
 
   void unclone() { if (clone_of == nullptr)return; collection = nullptr; clone_of = nullptr; };
   void SortAt(uint4 pt, uint4 n, int4 *L)
