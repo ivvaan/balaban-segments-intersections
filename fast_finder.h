@@ -149,39 +149,39 @@ public:
   {
     const auto Size = L_size;
     uint4 cur_R_pos = 0, new_size = 0;
-    int4 cur_stair = QB;
+    auto cur_stair = Q + QB + 1;
     int4 * const __restrict _R = L;
     int4 * const __restrict _L = R;
-    int4 cur_seg = _R[cur_R_pos];
-    auto const bot_Q = Q + QB, top_Q = Q + QE+1;
-    while ((cur_stair<QE) && (cur_R_pos<Size))
+    auto cur_seg = _R[cur_R_pos];
+    auto const bot_Q = Q + QB;
+    auto const top_Q = Q + QE + 1;
+    while ((cur_stair!= top_Q) && (cur_R_pos<Size))
     {
-
-      if (segments.RBelow(cur_seg, Q[cur_stair + 1]))
+      if (segments.RBelow(cur_seg, *cur_stair))
       {
         if (SegL[cur_seg]>LBoundIdx)
         {
           segments.SetCurSegCutEnd(cur_seg);
-          FindInt(segments, bot_Q, top_Q, Q+cur_stair);
+          FindInt(segments, bot_Q, top_Q, cur_stair-1);
         }
         _L[new_size++] = cur_seg;
         cur_seg = _R[++cur_R_pos];
       }
       else
-        _L[new_size++] = Q[++cur_stair];
+        _L[new_size++] = *cur_stair++;
     }
-    while (cur_R_pos<Size)
+    for (auto last_Q = top_Q - 1; cur_R_pos < Size;)
     {
       if (SegL[cur_seg]>LBoundIdx)
       {
         segments.SetCurSegCutEnd(cur_seg);
-        segments.FindCurSegIntDownWith(Q+QE,Q+QB);
+        segments.FindCurSegIntDownWith(last_Q,bot_Q);
       }
       _L[new_size++] = cur_seg;
       cur_seg = _R[++cur_R_pos];
     }
-    while (cur_stair<QE)
-      _L[new_size++] = Q[++cur_stair];
+    while (cur_stair!=top_Q)
+      _L[new_size++] = *cur_stair++;
     L = _L; R = _R;
     L_size = new_size;
   };
@@ -213,26 +213,25 @@ public:
     //it can't intersect any of the steps(stairs) because there no stairs yet     
     segments.SetCurSegCutBE(*++_Q_pos = *new_L_pos);//we don't need SetCurSegCutBE but it is allow to speedup by y values caching 
     for (auto cur_L_seg = new_L_pos + 1; cur_L_seg < last_L; ++cur_L_seg) {
-        segments.SetCurSegCutBE(*cur_L_seg);
-        auto cur_Q = _Q_pos;
-        if (segments.FindCurSegIntDownWith(*(cur_Q--))){//segment  intersects upper ladder stair
-            // finding another ledder intersections
-            n_int += _Q_pos- segments.FindCurSegIntDownWith(cur_Q,_Q);//increment found int number
+      auto cur_seg = *cur_L_seg;
+      segments.SetCurSegCutBE(cur_seg);
+      if (segments.FindCurSegIntDownWith(*_Q_pos)) {//segment  intersects upper ladder stair
+          // finding another ledder intersections
+        n_int += _Q_pos - segments.FindCurSegIntDownWith(_Q_pos - 1, _Q);//increment found int number
+        *(new_L_pos++) = cur_seg;//place segment in L
+        continue;
+      }
 
-            *(new_L_pos++) = *cur_L_seg;//place segment in L
-            continue;
-        }
- 
-        //segment doesn't intersect the ladder stairs
-        if (SegR[*cur_L_seg] >= RBoundIdx) {//segment is covering current stripe 
-            *++_Q_pos = *cur_L_seg; //place segment in Q
-            continue;
-        }
-        //segment is not covering current stripe 
-        *(R_pos++) = *(new_L_pos++) = *cur_L_seg; //place segment in L and R
-        //storing segment position in Q_tail
-        *(--Q_tail) = _Q_pos - _Q;  //it should be _Q_pos+1. We save 
-        // one addition per loop by incrementing _Q later.
+      //segment doesn't intersect the ladder stairs
+      if (SegR[cur_seg] >= RBoundIdx) {//segment is covering current stripe 
+        *++_Q_pos = cur_seg; //place segment in Q
+        continue;
+      }
+      //segment is not covering current stripe 
+      *(R_pos++) = *(new_L_pos++) = cur_seg; //place segment in L and R
+      //storing segment position in Q_tail
+      *(--Q_tail) = _Q_pos - _Q;  //it should be _Q_pos+1. We save 
+      // one addition per loop by incrementing _Q later.
     }
     L_size = new_L_pos-L;
     // important to start from stair above current segm, meanwhile _Q[*Q_tail] is stair below
