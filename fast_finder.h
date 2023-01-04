@@ -214,12 +214,12 @@ public:
 
     long long n_int = 0;
     auto  _Q_pos = _Q;
-    CSentinel sentinel(segments, *_Q);
     //first segment covering current stripe we place to Q 
     //it can't intersect any of the steps(stairs) because there no stairs yet     
     segments.SetCurSegCutBE(*++_Q_pos = *new_L_pos);//we don't need SetCurSegCutBE but it is allow to speedup by y values caching 
-    for (auto cur_L_seg = new_L_pos + 1; cur_L_seg < last_L; ++cur_L_seg) {
-      auto cur_seg = *cur_L_seg;
+    auto cur_L = new_L_pos + 1;
+    for (CSentinel sentinel(segments, *_Q); cur_L < last_L; ++cur_L) {
+      auto cur_seg = *cur_L;
       segments.SetCurSegCutBE(cur_seg);
       if (segments.FindCurSegIntDownWith(*_Q_pos)) {//segment  intersects upper ladder stair
           // finding another ledder intersections

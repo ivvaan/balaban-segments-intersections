@@ -260,13 +260,28 @@ protected:
 
   //functions for fast algorithm
   template <class SegmentsColl>
+  static void FindIntNoSentinels(SegmentsColl& segments, int4* const qb, int4* const qe, int4* l)
+  {
+    auto c = l;
+    while ((c != qb) && segments.FindCurSegIntDownWith(*c)) //first get intersections below
+      --c;
+    if ((SegmentsColl::is_line_segments && (c != l)))
+      return; //if found and segment is line or no stair above it can't be any more
+    do {
+      ++l;
+    } while ((l != qe) && segments.FindCurSegIntUpWith(*l)); // get intersections above
+  };
+
+  //functions for fast algorithm
+  template <class SegmentsColl>
   static void FindInt(SegmentsColl& segments, int4* const qb, int4* const qe, int4* l)
   {
-    auto c = segments.FindCurSegIntDownWith(l,qb);
+    auto c = segments.FindCurSegIntDownWith(l, qb);
     if ((SegmentsColl::is_line_segments && (c != l)))
       return; //if found and segment is line or no stair above it can't be any more
     segments.FindCurSegIntUpWith(++l, qe);
   };
+
 
   template <class SegmentsColl>
   void FindIntI(SegmentsColl& segments, uint4 r_index, ProgramStackRec* stack_pos) const
@@ -286,7 +301,7 @@ protected:
         else
           r = m;
       }
-      FindInt(segments, Q+qb, Qe, Q+l);
+      FindIntNoSentinels(segments, Q+qb, Qe, Q+l);
       r = qb+1; // move staircase bound to parent staircase
     };
   };
