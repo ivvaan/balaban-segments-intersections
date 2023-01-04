@@ -245,18 +245,15 @@ namespace {
   template<typename SegmentsColl>
   struct has_get_sentinel
   {
-  private:
-    template<typename SegColl> static auto test() -> decltype(std::declval<SegColl>().get_sentinel(true) == 1, std::true_type());
-
-    template<typename> static std::false_type test(...);
-
-  public:
-    static constexpr bool value = std::is_same<decltype(test<SegmentsColl>()), std::true_type>::value;
+    template<typename U, int4(U::*)(bool)> struct SFINAE {};
+    template<typename U> static char test(SFINAE<U, &U::get_sentinel>*);
+    template<typename U> static int test(...);
+    constexpr static bool value = sizeof(test<SegmentsColl>(0)) == sizeof(char);
   };
 }
 
 template< class T >
-constexpr static bool has_sentinels = has_get_sentinel<T>::value;
+constexpr bool has_sentinels = has_get_sentinel<T>::value;
 
 #define THIS_HAS_SENTINELS (has_sentinels<std::remove_pointer_t<decltype(this)> >)
 
