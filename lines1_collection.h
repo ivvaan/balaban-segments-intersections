@@ -317,7 +317,7 @@ public:
       Init(c.N, c.collection,r);
   };
 
-  int4 get_sentinel_idx(bool is_top_sentinel) {
+  int4 get_sentinel(bool is_top_sentinel) {
     return N + is_top_sentinel;
   };
 

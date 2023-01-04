@@ -31,13 +31,11 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 class CFastIntFinder : public CommonImpl
 {
 
-  constexpr static int4 bottom_step_index = 0;
-
   template<typename SegmentsColl>
-  struct has_get_sentinel_idx
+  struct has_get_sentinel
   {
   private:
-    template<typename SegColl> static auto test() -> decltype(std::declval<SegColl>().get_sentinel_idx(true) == 1, std::true_type());
+    template<typename SegColl> static auto test() -> decltype(std::declval<SegColl>().get_sentinel(true) == 1, std::true_type());
 
     template<typename> static std::false_type test(...);
 
@@ -46,9 +44,9 @@ class CFastIntFinder : public CommonImpl
   };
 
   template< class T >
-  constexpr static bool has_get_sentinel_idx_member = has_get_sentinel_idx<T>::value;
+  constexpr static bool has_sentinels = has_get_sentinel<T>::value;
   
-  template<class SegmentsColl, bool HasSentinel = has_get_sentinel_idx_member<SegmentsColl> >
+  template<class SegmentsColl, bool HasSentinels = has_sentinels<SegmentsColl> >
   struct CSentinel {
     CSentinel(SegmentsColl& coll, int4& ini) {};
   };
@@ -57,7 +55,7 @@ class CFastIntFinder : public CommonImpl
   struct CSentinel <SegmentsColl, true> {
     CSentinel(SegmentsColl& coll, int4& ini) : to_restore(ini) {
       prev_val = to_restore;
-      to_restore = coll.get_sentinel_idx(false);
+      to_restore = coll.get_sentinel(false);
     };
     ~CSentinel() {
       to_restore = prev_val;
