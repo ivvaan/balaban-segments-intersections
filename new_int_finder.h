@@ -148,6 +148,40 @@ protected:
   int4* Q = nullptr;
   int4* L = nullptr;
 
+  template<typename SegmentsColl>
+  struct has_get_sentinel
+  {
+  private:
+    template<typename SegColl> static auto test() -> decltype(std::declval<SegColl>().get_sentinel(true) == 1, std::true_type());
+
+    template<typename> static std::false_type test(...);
+
+  public:
+    static constexpr bool value = std::is_same<decltype(test<SegmentsColl>()), std::true_type>::value;
+  };
+
+  template< class T >
+  constexpr static bool has_sentinels = has_get_sentinel<T>::value;
+
+  template<class SegmentsColl, bool HasSentinels = has_sentinels<SegmentsColl> >
+  struct CSentinel {
+    CSentinel(SegmentsColl& coll, int4& ini) {};
+  };
+
+  template<class SegmentsColl>
+  struct CSentinel <SegmentsColl, true> {
+    CSentinel(SegmentsColl& coll, int4& ini) : to_restore(ini) {
+      prev_val = to_restore;
+      to_restore = coll.get_sentinel(false);
+    };
+    ~CSentinel() {
+      to_restore = prev_val;
+    };
+  private:
+    int4& to_restore;
+    int4 prev_val;
+  };
+
   void FreeMem()
   {
     MY_FREE_ARR_MACRO(SegL);
@@ -268,30 +302,33 @@ protected:
       auto new_L_pos = _L;
       segments.SetCurSegCutBE(*++_Q_pos = _L[0]);
       auto Q_tail = Q + len_of_Q;
-      for (auto cur_L = first_L; cur_L < last_L; ++cur_L)
+      auto cur_L = first_L;
+      for (CSentinel sentinel(segments , *_Q); cur_L < last_L; ++cur_L)
       {
-        auto step = _Q_pos;
-        auto cur_seg = *cur_L;
-        segments.SetCurSegCutBE(cur_seg);
-        while ((step!=_Q) && (segments.FindCurSegIntDownWith(*step)))
-          --step;
+        segments.SetCurSegCutBE(*cur_L);
+        
+        //auto step = _Q_pos;
+        //while ((step!=_Q) && (segments.FindCurSegIntDownWith(*step))) --step;
+        //if (_Q_pos == step)
 
-        if (_Q_pos == step)
-          *++_Q_pos = cur_seg;
+        if (_Q_pos == segments.FindCurSegIntDownWith(_Q_pos, _Q))
+          *++_Q_pos = *cur_L;
         else
         {
-          *new_L_pos++ = cur_seg;
+          *new_L_pos++ = *cur_L;
           *(--Q_tail) = _Q_pos-_Q;
         }
       }
-      //Q_tail = Q + len_of_Q;
       ++_Q; ++_Q_pos;
-      for (auto cur_L = new_L_pos; cur_L != _L ; )
+      if constexpr (has_sentinels<SegmentsColl>)
+        *_Q_pos = segments.get_sentinel(true);//we don't need to restore _Q_pos just place sentinel
+      for (cur_L = new_L_pos; cur_L != _L ; )
       {
-        auto c =_Q + *(Q_tail++);
-        if (c >= _Q_pos) break;
+        auto step =_Q + *(Q_tail++);
+        if (step >= _Q_pos) break;
         segments.SetCurSegCutBE(*--cur_L);
-        segments.FindCurSegIntDownWith(c, _Q_pos);
+        segments.FindCurSegIntUpWith(step, _Q_pos);
+        //while ((step != _Q_pos) && (segments.FindCurSegIntUpWith(*step))) ++step;
       }
       _Q = --_Q_pos;
       last_L = new_L_pos;

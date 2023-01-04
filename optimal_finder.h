@@ -43,17 +43,20 @@ public:
   void find_intersections(SegmentsColl &segments)
   {
     //AllocMem
-    len_of_Q = LR_len + LR_len / (inherit_each - 1) + inherit_each + 1;
-    DECL_RAII_ARR(L, LR_len);
+    len_of_Q = LR_len + LR_len / (inherit_each - 1) + inherit_each + 2;
+    DECL_RAII_ARR(L, LR_len); 
+    ++L;//to have one cell before L for sentinel
     DECL_RAII_ARR(R, LR_len);
+    ++R;//to have one cell before R for sentinel
     DECL_RAII_ARR(Q, len_of_Q);
     DECL_RAII_ARR(father_loc, len_of_Q);
     std::fill_n(father_loc, len_of_Q, undef_loc);
 
-    ProgramStackRec stack_rec(inherit_each, 2 * nTotSegm);  //need to be initialized this way 
+    constexpr int4 bottom_index = inherit_each + 1;
+    ProgramStackRec stack_rec(bottom_index, 2 * nTotSegm);  //need to be initialized this way 
     L[0] = SegmentsColl::get_segm(ENDS[0]);
     L_size = 1;
-    FindR(segments, inherit_each + 1, inherit_each, 0, 2 * nTotSegm - 1, &stack_rec, 0);
+    FindR(segments, bottom_index + 1, bottom_index, 0, 2 * nTotSegm - 1, &stack_rec, 0);
  }
 
 

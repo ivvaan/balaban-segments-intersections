@@ -30,41 +30,6 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 
 class CFastIntFinder : public CommonImpl
 {
-
-  template<typename SegmentsColl>
-  struct has_get_sentinel
-  {
-  private:
-    template<typename SegColl> static auto test() -> decltype(std::declval<SegColl>().get_sentinel(true) == 1, std::true_type());
-
-    template<typename> static std::false_type test(...);
-
-  public:
-    static constexpr bool value = std::is_same<decltype(test<SegmentsColl>()), std::true_type>::value;
-  };
-
-  template< class T >
-  constexpr static bool has_sentinels = has_get_sentinel<T>::value;
-  
-  template<class SegmentsColl, bool HasSentinels = has_sentinels<SegmentsColl> >
-  struct CSentinel {
-    CSentinel(SegmentsColl& coll, int4& ini) {};
-  };
-
-  template<class SegmentsColl>
-  struct CSentinel <SegmentsColl, true> {
-    CSentinel(SegmentsColl& coll, int4& ini) : to_restore(ini) {
-      prev_val = to_restore;
-      to_restore = coll.get_sentinel(false);
-    };
-    ~CSentinel() {
-      to_restore = prev_val;
-    };
-  private:
-    int4& to_restore;
-    int4 prev_val;
-  };
-
 public:
   using CTHIS = CFastIntFinder;
   using CIMP = CommonImpl;
@@ -81,7 +46,9 @@ public:
     //AllocMem
     len_of_Q = LR_len;
     DECL_RAII_ARR(L, LR_len);
+    ++L;//to have one cell before L for sentinel
     DECL_RAII_ARR(R, LR_len);
+    ++R;//to have one cell before R for sentinel
     DECL_RAII_ARR(Q, len_of_Q);
 
     if (to == 0) {
@@ -190,6 +157,9 @@ public:
     auto cur_seg = _R[cur_R_pos];
     auto const bot_Q = Q + QB;
     auto const top_Q = Q + QE + 1;
+    CSentinel sentinel(segments, *bot_Q);
+    if constexpr (has_sentinels<SegmentsColl>)
+      *top_Q = segments.get_sentinel(true);//we don't need to restore top_Q just place sentinel
     while ((cur_stair!= top_Q) && (cur_R_pos<Size))
     {
       if (segments.RBelow(cur_seg, *cur_stair))
@@ -244,6 +214,7 @@ public:
 
     long long n_int = 0;
     auto  _Q_pos = _Q;
+    CSentinel sentinel(segments, *_Q);
     //first segment covering current stripe we place to Q 
     //it can't intersect any of the steps(stairs) because there no stairs yet     
     segments.SetCurSegCutBE(*++_Q_pos = *new_L_pos);//we don't need SetCurSegCutBE but it is allow to speedup by y values caching 
@@ -272,6 +243,8 @@ public:
     // important to start from stair above current segm, meanwhile _Q[*Q_tail] is stair below
     ++_Q;// so we incremement _Q and _Q[*Q_tail] become stair above
     ++_Q_pos;
+    if constexpr (has_sentinels<SegmentsColl>)
+      *_Q_pos = segments.get_sentinel(true);//we don't need to restore _Q_pos just place sentinel
     while (R_pos!=R)
     {
       --R_pos;
@@ -290,6 +263,7 @@ public:
     long long n_int = 0;
     auto Q_tail = Q + len_of_Q;
     auto new_L_pos = L;
+    CSentinel sentinel(segments, *_Q);
     for (auto L_pos = L, last_L = L + L_size; L_pos < last_L; ++L_pos) {
       auto cur_seg = *L_pos;
       segments.SetCurSegCutBE(cur_seg);
@@ -305,16 +279,18 @@ public:
         // one addition per loop by incrementing _Q later.
       }
     }
-    L_size = new_L_pos - L;
-    if (_Q_pos == _Q){
+    if (_Q_pos == _Q) {
       dont_split_stripe = false;
       return 0;
     }
+    L_size = new_L_pos - L;
     Q_tail = Q + len_of_Q - 1;
     // important to start from stair above current segm, meanwhile _Q[*Q_tail] is stair below
     ++_Q;// so we incremement _Q and _Q[*Q_tail] become stair above
     ++_Q_pos;
-    for (auto L_pos=L; L_pos < new_L_pos ; ++L_pos, --Q_tail)
+    if constexpr (has_sentinels<SegmentsColl>)
+      *_Q_pos = segments.get_sentinel(true);//we don't need to restore _Q_pos just place sentinel
+    for (auto L_pos=L; L_pos != new_L_pos ; ++L_pos, --Q_tail)
     {
       segments.SetCurSegCutBE(*L_pos);
       segments.FindCurSegIntUpWith(_Q + *Q_tail, _Q_pos);
