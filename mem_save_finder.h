@@ -33,11 +33,6 @@ class CMemSaveIntFinder : public CommonImpl
 {
 public:
   using CIMP = CommonImpl;
-  using CIMP::dont_split_stripe;
-  using CIMP::prepare_ends; using CIMP::FindInt; using CIMP::FindIntI;
-  using CIMP::SegL; using CIMP::SegR; using CIMP::ENDS; using CIMP::Q;
-  using CIMP::SearchInStripNonLineSeg; using CIMP::SearchInStripLineSeg;
-
 
   template<class SegmentsColl>
   void find_intersections(SegmentsColl& segments)
@@ -160,7 +155,7 @@ public:
         if (segments.RBelow(Q[cur_stair], cur_seg)) {
           if (SegL[cur_seg] > LBoundIdx) {
             segments.SetCurSegCutEnd(cur_seg);
-            FindIntNoSentinels(segments, bot_Q, top_Q, Q+cur_stair);
+            FindInt(segments, bot_Q, top_Q, Q+cur_stair);
           }
           _L[new_size--] = cur_seg;
           cur_seg = _R[--cur_R_pos];
@@ -189,7 +184,7 @@ public:
       if (segments.RBelow(cur_seg, Q[cur_stair + 1])) {
         if (SegL[cur_seg] > LBoundIdx) {
           segments.SetCurSegCutEnd(cur_seg);
-          FindIntNoSentinels(segments, bot_Q, top_Q, Q+cur_stair);
+          FindInt(segments, bot_Q, top_Q, Q+cur_stair);
         }
         L[new_size++] = cur_seg;
         cur_seg = _R[++cur_R_pos];

@@ -34,10 +34,7 @@ class COptimalIntFinder : public CFastIntFinder
 public:
   using  CIMP = CommonImpl;
   using CFAST = CFastIntFinder;
-  using CIMP::SegL; using CIMP::SegR; using CIMP::ENDS; using CIMP::Q;
-  using CIMP::prepare_ends; 
-  using CFAST::L; using CFAST::R; using CFAST::nTotSegm; using CFAST::len_of_Q;
-
+ 
   ~COptimalIntFinder() { FreeMem(); };
   template<class SegmentsColl>
   void find_intersections(SegmentsColl &segments)

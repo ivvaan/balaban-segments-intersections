@@ -33,11 +33,7 @@ class CFastIntFinder : public CommonImpl
 public:
   using CTHIS = CFastIntFinder;
   using CIMP = CommonImpl;
-  using CIMP::dont_split_stripe;
-  using CIMP::SegL; using CIMP::SegR; using CIMP::ENDS; using CIMP::Q;
-  using CIMP::prepare_ends; using CIMP::FindInt; using CIMP::FindIntI;
-  using CIMP::SearchInStripNonLineSeg; using CIMP::SearchInStripLineSeg;
-
+ 
   ~CFastIntFinder() { unclone(); FreeMem(); };
 
   template<class SegmentsColl>
@@ -167,7 +163,12 @@ public:
         if (SegL[cur_seg]>LBoundIdx)
         {
           segments.SetCurSegCutEnd(cur_seg);
-          FindInt(segments, bot_Q, top_Q, cur_stair-1);
+          {
+            auto l = cur_stair - 1;
+            auto c = segments.FindCurSegIntDownWith(l, bot_Q);
+            if ((!SegmentsColl::is_line_segments || (c == l)))
+              segments.FindCurSegIntUpWith(cur_stair, top_Q);
+          };
         }
         _L[new_size++] = cur_seg;
         cur_seg = _R[++cur_R_pos];
