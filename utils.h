@@ -248,7 +248,7 @@ namespace {
     template<typename U, int4(U::*)(bool)> struct SFINAE {};
     template<typename U> static char test(SFINAE<U, &U::get_sentinel>*);
     template<typename U> static int test(...);
-    constexpr static bool value = sizeof(test<SegmentsColl>(0)) == sizeof(char);
+    constexpr static bool value = sizeof(test<SegmentsColl>(nullptr)) == sizeof(char);
   };
 }
 

@@ -380,6 +380,7 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
           Counter* additional_reg_obj[n_threads];
             for (int i = 0; i < n_threads - 1; i++) {
                 additional_reg_obj[i] = reg_objects + i * reg_margin;
+                additional_reg_obj[i]->Alloc(n);
             }
             CFastIntFinder fi;
             fi.prepare_ends(coll);
@@ -397,6 +398,7 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
   double _find_int(int4 seg_type, int4 n, PSeg segs, int4 alg,uint4 stat)
   {
     Counter reg;
+    reg.Alloc(n);
     switch (seg_type) {
       case line1: {
         CLine1SegmentCollection<Counter> coll(n, segs, &reg);

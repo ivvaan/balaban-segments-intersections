@@ -165,13 +165,13 @@ public:
   };
 
   auto FindCurSegIntDownWith(int4 *s_,int4 *last) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
-    while((s_!=last) && IntPointsInStripe<false>(cur_seg.x1, cur_seg.x2, collection + *s_))
+    while((THIS_HAS_SENTINELS || (s_ != last)) && IntPointsInStripe<false>(cur_seg.x1, cur_seg.x2, collection + *s_))
       --s_;
     return s_;
   };
 
   auto FindCurSegIntUpWith(int4* s_, int4* last) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
-    while ((s_ != last) && IntPointsInStripe<false>(cur_seg.x1, cur_seg.x2, collection + *s_))
+    while ((THIS_HAS_SENTINELS || (s_ != last)) && IntPointsInStripe<false>(cur_seg.x1, cur_seg.x2, collection + *s_))
       ++s_;
     return s_;
   };
@@ -203,7 +203,7 @@ public:
   void SetRegistrator(IntersectionRegistrator *r)
   {
     registrator = r;
-    r->Alloc(GetSegmNumb());
+    
   };
   IntersectionRegistrator *GetRegistrator() { return registrator; };
 

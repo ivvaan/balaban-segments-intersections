@@ -320,7 +320,7 @@ public:
   void SetRegistrator(IntersectionRegistrator* r)
   {
     registrator = r;
-    r->Alloc(GetSegmNumb());
+    
   };
 
   IntersectionRegistrator* GetRegistrator() { return registrator; };
