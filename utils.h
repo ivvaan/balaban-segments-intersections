@@ -21,10 +21,13 @@ You should have received a copy of the GNU General Public License
 along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <ostream>
-
+#include <cassert>
+#include <type_traits>
 #include <math.h>
 typedef int int4;
 typedef unsigned int uint4;
+typedef long long int8;
+typedef unsigned long long uint8;
 typedef double REAL;
 //typedef float SINGLE;
 typedef int  BOOL;
@@ -58,7 +61,8 @@ constexpr uint4 max_SVG_points = 150000;
 constexpr uint4 max_truereg_items = 20000;
 
 
-inline REAL sq(REAL x) { return x * x; }
+template< class REAL> REAL sq(REAL x) { return x * x; }
+
 
 using chostream = std::basic_ostream<char>;
 
@@ -78,12 +82,12 @@ enum _Algorithm
   mem_save = 128
 };
 
-inline int4 alg_list[] = { triv, simple_sweep, fast, optimal, fast_parallel, bentley_ottmann,fast_no_ip,mem_save };
-inline const char* alg_names[] = { "trivial","simple_sweep","fast","optimal","fast_parallel","bentley_ottmann","fast no inters points","fast 'no R'" };
+constexpr int4 alg_list[] = { triv, simple_sweep, fast, optimal, fast_parallel, bentley_ottmann,fast_no_ip,mem_save };
+constexpr const char* alg_names[] = { "trivial","simple_sweep","fast","optimal","fast_parallel","bentley_ottmann","fast no inters points","fast 'no R'" };
 
 enum _Segment
 {
-  line1 = 0, line2, arc, graph
+  line1 = 0, line2, arc, graph, intline
 };
 
 enum _Distribution
@@ -121,43 +125,36 @@ public:
   couple() {};
   couple(real xc, real yc) :x(xc), y(yc) {};
   couple(const couple& c) = default;
-  real getX() const { return x; };
-  real getY() const { return y; };
-  bool operator<(const couple<real>& v2) const
-  {
+  auto getX() const { return x; };
+  auto getY() const { return y; };
+  bool operator<(const couple<real>& v2) const {
     return ((x < v2.x) || (x == v2.x) && (y < v2.y));
   };
-  bool operator<=(const couple<real>& v2)  const
-  {
+  bool operator<=(const couple<real>& v2)  const {
     return ((x < v2.x) || (x == v2.x) && (y <= v2.y));
   };
-  bool operator>(const couple<real>& v2)  const
-  {
+  bool operator>(const couple<real>& v2)  const {
     return ((x > v2.x) || (x == v2.x) && (y > v2.y));
   };
-  couple<real> operator-() const
-  {
+  couple<real> operator-() const {
     return { -x, -y };
   };
-  real get_norm() const
-  {
+  auto get_norm() const {
     return x * x + y * y;
   }
-  real get_length() const
-  {
+  auto get_length() const {
     return sqrt(x * x + y * y);
   };
-  couple<real>& normalize()
-  {
+  couple<real>& normalize() {
     real revl = 1.0 / get_length();
     x *= revl; y *= revl;
     return *this;
   };
-  couple<real> get_normalized() const
-  {
+  couple<real> get_normalized() const {
     real revl = 1.0 / get_length();
     return { x * revl, y * revl };
   };
+
   void InitRandom(CRandomValueGen& rv)
   {
     x = rv.GetRandomDouble();
@@ -166,54 +163,95 @@ public:
 
 };
 
-
-
-template <class real> inline real operator%(const couple<real>& v1, const couple<real>& v2)
-{
+template <class real>  auto operator%(const couple<real>& v1, const couple<real>& v2) {
   return v1.x * v2.y - v2.x * v1.y;
 }
 
-template <class real> inline couple<real> operator%(real   r, const couple<real>& t)
-{
+template <class real>  couple<real> operator%(real   r, const couple<real>& t) {
   return { -t.y * r, t.x * r };
 }
 
-template <class real> inline couple<real> operator%(const couple<real>& t, real r)
-{
+template <class real>  couple<real> operator%(const couple<real>& t, real r) {
   return { t.y * r, -t.x * r };
 }
 
-template <class real> inline couple<real> operator*(real   r, const couple<real>& t)
-{
+template <class real>  couple<real> operator*(real   r, const couple<real>& t) {
   return { t.x * r, t.y * r };
 }
 
-template <class real> inline couple<real> operator*(const couple<real>& t, real r)
-{
+template <class real>  couple<real> operator*(const couple<real>& t, real r) {
   return { t.x * r, t.y * r };
 }
 
-template <class real> inline real operator*(const couple<real>& t, const couple<real>& v)
-{
+template <class real>  auto operator*(const couple<real>& t, const couple<real>& v) {
   return t.x * v.x + t.y * v.y;
 }
 
-template <class real> inline couple<real> operator+(const couple<real>& v1, const couple<real>& v2)
-{
+template <class real>  couple<real> operator+(const couple<real>& v1, const couple<real>& v2) {
   return { v1.x + v2.x,v1.y + v2.y };
 }
 
-template <class real> inline couple<real> operator-(const couple<real>& v1, const couple<real>& v2)
-{
+template <class real>  couple<real> operator-(const couple<real>& v1, const couple<real>& v2) {
   return { v1.x - v2.x,v1.y - v2.y };
 }
 
 template<class out, class real>
-out& operator <<(out& o, const couple<real>& v)
-{
+out& operator <<(out& o, const couple<real>& v) {
   //return o << "x=" << v.x << ",y=" << v.y;
   return o << "[" << v.x << "," << v.y << "]";
 }
+
+
+struct TIntegerVect {
+  int4 x = 0;
+  int4 y = 0;
+  TIntegerVect() {};
+  TIntegerVect(int4 xc, int4 yc) :x(xc), y(yc) {};
+  TIntegerVect(const TIntegerVect& c) = default;
+  auto getX() const { return x; };
+  auto getY() const { return y; };
+  bool operator<(const TIntegerVect& v2) const {
+    return ((x < v2.x) || (x == v2.x) && (y < v2.y));
+  };
+  bool operator<=(const TIntegerVect& v2)  const {
+    return ((x < v2.x) || (x == v2.x) && (y <= v2.y));
+  };
+  bool operator>(const TIntegerVect& v2)  const {
+    return ((x > v2.x) || (x == v2.x) && (y > v2.y));
+  };
+  TIntegerVect operator-() const {
+    return { -x, -y };
+  };
+  auto get_norm() const {
+    return ((int8)x) * ((int8)x) + ((int8)y) * ((int8)y);
+  }
+  void InitRandom(CRandomValueGen& rv)
+  {
+    x = rv.GetRandomDouble() * INT_MAX;
+    y = rv.GetRandomDouble() * INT_MAX;
+  };
+
+  template <class real>
+  void from_real(const couple<real>& v, const couple<real>& x_transf, const couple<real>& y_transf) {
+    x = (v.x + x_transf.y) * x_transf.x + 0.5;
+    y = (v.y + y_transf.y) * y_transf.x + 0.5;
+  };
+
+  template <class real>
+  void from_real(const couple<real>& v, real x_scale, real y_scale) {
+    x = v.x * x_scale + 0.5;
+    y = v.y * y_scale + 0.5;
+  };
+
+};
+
+int8 operator%(const TIntegerVect& v1, const TIntegerVect& v2);
+
+int8 operator*(const TIntegerVect& v1, const TIntegerVect& v2);
+
+TIntegerVect operator+(const TIntegerVect& v1, const TIntegerVect& v2);
+
+TIntegerVect operator-(const TIntegerVect& v1, const TIntegerVect& v2);
 
 
 
@@ -256,6 +294,5 @@ template< class T >
 constexpr bool has_sentinels = has_get_sentinel<T>::value;
 
 #define THIS_HAS_SENTINELS (has_sentinels<std::remove_pointer_t<decltype(this)> >)
-
 
 #endif

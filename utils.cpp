@@ -83,4 +83,20 @@ bool CRandomValueGen::RandomChoose()
   return q>r;
   }
 
+int8 operator%(const TIntegerVect& v1, const TIntegerVect& v2) {
+  return ((int8)v1.x) * ((int8)v2.y) - ((int8)v2.x) * ((int8)v1.y);
+}
+
+int8 operator*(const TIntegerVect& v1, const TIntegerVect& v2) {
+  return((int8)v1.x) * ((int8)v2.x) + ((int8)v2.y) * ((int8)v1.y);
+}
+
+TIntegerVect operator+(const TIntegerVect& v1, const TIntegerVect& v2) {
+  return { v1.x + v2.x,v1.y + v2.y };
+}
+
+TIntegerVect operator-(const TIntegerVect& v1, const TIntegerVect& v2) {
+  return { v1.x - v2.x,v1.y - v2.y };
+}
+
 

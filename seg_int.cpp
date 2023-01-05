@@ -288,7 +288,7 @@ int main(int argc, char* argv[])
   bool use_counters = false;
   char rpar[]="-r";
   int4 impl = _Implementation::impl_old + _Implementation::impl_new;
-  const char *ss = "Llag", *sd = "rlmspc",*sr="pPcr";
+  const char *ss = "Llagi", *sd = "rlmspc",*sr="pPcr";
   const char *alg_names[] = { "trivial","simple_sweep","fast","optimal","fast_parallel","bentley_ottmann","fast no inters points","fast 'no R'" };
   uint4 reg_stat = 2;
   const char* fname = nullptr;
@@ -324,6 +324,7 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
  S=L: line segments representation r=b+a*t,0<=t<=1; b,a - vectors
  S=a: arcs
  S=g: graph: test example is simple circle of N vertices and N edges
+ S=i: same as L but vectors a and b have integer coords
 -iI: implementation
  I=1: 'old' function pointers segment collection interface
  I=2: 'new' template based segment collection interface
@@ -393,6 +394,7 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
             case 'l':seg_type = line2; break;
             case 'a':seg_type = arc; break;
             case 'g':seg_type = graph; break;
+            case 'i':seg_type = intline; break;
             default:
             {
               printf("some error in -s param. l used instead.\n");

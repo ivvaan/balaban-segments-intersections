@@ -24,7 +24,8 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #define _USE_MATH_DEFINES
 #include "math.h"
 #include <cstddef>
-
+#include <intrin.h>
+#pragma intrinsic(_mul128)
 
 
 class TLineSegment1
@@ -262,3 +263,86 @@ public:
   //for optimal alg only
   int4 IntInside(REAL b, REAL e, TArcSegment *s1, TArcSegment *s2);
 
+  struct TIntegerSegment
+  {
+    constexpr static int4 is_line = 1;
+    TIntegerSegment() :org(), shift() {};
+    TIntegerSegment(const TIntegerVect& p1, const TIntegerVect& p2) :org(p1), shift(p2 - p1) {};
+    // int4 parnum,intpar;
+    TIntegerVect org;
+    TIntegerVect shift;
+    //TIntegerVect cash_pt;
+    void Refine()
+    {
+      if ((shift.x < 0) || ((shift.x == 0) && (shift.y < 0)))
+      {
+        org = org + shift;
+        shift = -shift;
+      }
+    };
+    void Init(TIntegerSegment& s) { org = s.org; shift = s.shift; };
+    void Init(const TLineSegment1& s, const TPlaneVect& x_transf, const TPlaneVect& y_transf) {
+      org.from_real(s.org, x_transf, y_transf);
+      shift.from_real(s.shift, x_transf.x, y_transf.x);
+    };
+    TIntegerVect BegPoint() {
+      return org;
+    };
+    TIntegerVect EndPoint() {
+      return org + shift;
+    };
+    auto PointX(bool is_last) {
+      return is_last ? org.x + shift.x : org.x;
+    };
+    void BegPoint(int4& x, int4& y)  {
+      x = org.x; y = org.y;
+    };
+    void EndPoint(int4& x, int4& y)
+    {
+      x = org.x + shift.x; y = org.y + shift.y;
+    };
+    auto point_pos(const TIntegerVect& v) const { //return negative if segment placed under point v
+      return (v - org) % shift;
+    };
+    bool under(const TIntegerVect& v) const { //segment placed under point v
+      return (v - org) % shift <= 0;
+    };
+    bool exact_under(const TIntegerVect& v) const { //segment placed under point v
+      return (v - org) % shift < 0;
+    };
+    bool upper(const TIntegerVect& v) {
+      return (v - org) % shift >= 0;
+    };
+    bool exact_upper(const TIntegerVect& v) {
+      return (v - org) % shift > 0;
+    };
+    void write_SVG(int4 id, chostream* SVG_text) {
+      if (SVG_text) {
+        auto bp = BegPoint();
+        auto ep = EndPoint();
+        *SVG_text << "<line id='seg" << id;
+        *SVG_text << "' x1='" << bp.x;
+        *SVG_text << "' y1='" << bp.y;
+        *SVG_text << "' x2='" << ep.x;
+        *SVG_text << "' y2='" << ep.y;
+        *SVG_text << "' class='line1'/>\n";
+      }
+
+    };
+
+    auto YAtX_Numerator(int4 X) {
+      return (int8)org.y * (int8)shift.x + (int8)(X - org.x) * (int8)shift.y;
+    };
+ 
+ /*   uint4 below(const TIntegerSegment& s, int4 X) {
+      __int64 prod_lo1, prod_hi1, prod_lo2, prod_hi2;
+      prod_lo1 = _mul128(s.shift.x, org.y * shift.x + (X - org.x) * shift.y, &prod_hi1);
+      prod_lo2 = _mul128(shift.x, s.org.y * s.shift.x + (X - s.org.x) * s.shift.y, &prod_hi2);
+      if (prod_hi1 != prod_hi2)
+        return (prod_hi1 < prod_hi2)+1;
+      if (prod_lo1 != prod_lo2)
+        return (prod_lo1 < prod_lo2)+1;
+      return 0;
+    };*/
+
+  };

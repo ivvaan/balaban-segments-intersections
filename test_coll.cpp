@@ -27,6 +27,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include "lines2_collection.h"
 #include "arcs_collection.h"
 #include "graph_collection.h"
+#include "int_lines_coll.h"
 
 #include "new_int_finder.h"
 #include "fast_finder.h"
@@ -75,6 +76,7 @@ PSeg create_test_collection(int4 seg_type, int4 n, int4 distr, REAL par, CRandom
   switch (seg_type)
   {
   case line1:
+  case intline:
   {
     TLineSegment1* Colls = new TLineSegment1[n + sentinels];
     if (seg_ptr_coll_ptr != nullptr)for (i = 0; i < n; i++)colls[i] = Colls + i;
@@ -404,9 +406,13 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
         CLine1SegmentCollection<Counter> coll(n, segs, &reg);
         return find_int(n, coll, alg, stat);
       };
+      case intline: {
+        CIntegerSegmentCollection<Counter> coll(n, segs, &reg);
+        return find_int(n, coll, alg, stat);
+      };
       case line2: {
-        CLine2SegmentCollection<Counter> coll(n, segs, &reg);
-        return find_int(n, coll, alg, stat); 
+          CLine2SegmentCollection<Counter> coll(n, segs, &reg);
+          return find_int(n, coll, alg, stat); 
       };
       case arc:{
         CArcSegmentCollection<Counter>  coll(n, segs, &reg);
