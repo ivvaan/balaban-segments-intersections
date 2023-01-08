@@ -163,7 +163,15 @@ public:
     auto db = s1.b - s2.b;
     if ((da * MAX(s1.x1, s2.x1) - db > 0) ^ (da * MIN(s1.x2, s2.x2) - db < 0)) return false;
     auto x = db / da;
-    registrator->register_pair_and_point(cur_seg_idx, s_, TPlaneVect(x, s1.YAtX(x)));
+    if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) != 0)
+    {
+      auto x = db / da;
+      registrator->register_pair_and_point(cur_seg_idx, s_, TPlaneVect(x, s1.YAtX(x)));
+    }
+    else
+    {
+      registrator->register_pair(cur_seg_idx, s_);
+    }
     return true;
 
   }
