@@ -26,6 +26,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <cstddef>
 #include <intrin.h>
 #pragma intrinsic(_mul128)
+#pragma intrinsic(_umul128)
 
 
 class TLineSegment1
@@ -64,17 +65,11 @@ public:
   {
     x = org.x + shift.x; y = org.y + shift.y;
   };
-  bool under(const TPlaneVect &v) //segment placed under point v
-  {
-    REAL res = (v - org) % shift;
-    //   if (fabs(res)==0.0) throw 1;
-    return (res <= 0);
+  bool under(const TPlaneVect &v){ //segment placed under point v
+    return (v - org) % shift <= 0;
   };
-  bool upper(TPlaneVect &v)
-  {
-    REAL res = (v - org) % shift;
-    //   if (fabs(res)==0.0) throw 1;
-    return (res>0);
+  bool upper(TPlaneVect &v){
+    return (v - org) % shift > 0;
   };
   REAL YAtX(REAL X)
   {
@@ -283,7 +278,25 @@ public:
     void Init(TIntegerSegment& s) { org = s.org; shift = s.shift; };
     void Init(const TLineSegment1& s, const TPlaneVect& x_transf, const TPlaneVect& y_transf) {
       org.from_real(s.org, x_transf, y_transf);
-      shift.from_real(s.shift, x_transf.x, y_transf.x);
+      shift= TIntegerVect(s.org + s.shift, x_transf, y_transf) - org;
+      Refine();
+      //assert((shift.x > 0)||((shift.x==0)&&(shift.y>0)));
+#ifdef PRINT_SEG_AND_INT
+      if (org.x == 4) {
+        org = { 2, 3 };
+        shift = { 1, -1 };
+      }
+     /* org = 10 * org;
+      shift = 10 * shift;
+      if (shift.x == 20 && shift.y == 10)
+      {
+        org = {20,5};
+        shift = { 10,5 };
+      }*/
+        //shift = shift + TIntegerVect(2, 1);
+      if (print_at_lineseg1_init)
+        printf("[%i,%i,%i,%i],\n", org.x, org.y, org.x + shift.x, org.y + shift.y);
+#endif
     };
     TIntegerVect BegPoint() {
       return org;
@@ -331,7 +344,10 @@ public:
     };
 
     auto YAtX_Numerator(int4 X) {
-      return (int8)org.y * (int8)shift.x + (int8)(X - org.x) * (int8)shift.y;
+      assert(X >= org.x);
+      auto res = (int8)org.y * (int8)shift.x + (int8)(X - org.x) * (int8)shift.y;
+      assert(res >= 0);
+      return res;
     };
  
  /*   uint4 below(const TIntegerSegment& s, int4 X) {

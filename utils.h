@@ -46,7 +46,7 @@ typedef int  BOOL;
 
 //#define register
 #ifndef NDEBUG
-//#define PRINT_SEG_AND_INT
+#define PRINT_SEG_AND_INT
 extern bool print_at_lineseg1_init;
 #endif
 
@@ -90,9 +90,12 @@ enum _Segment
   line1 = 0, line2, arc, graph, intline
 };
 
+constexpr uint4 full_int_range = 0x40000000;
+constexpr uint4 degenerate_range = 0x4;
+
 enum _Distribution
 {
-  random = 0, parallel, mixed, small, param_defined, circul
+  random = 0, parallel, mixed, small, param_defined, circul, degenerate
 };
 
 enum _Registrator
@@ -207,6 +210,9 @@ struct TIntegerVect {
   int4 y = 0;
   TIntegerVect() {};
   TIntegerVect(int4 xc, int4 yc) :x(xc), y(yc) {};
+  template <class real>
+  TIntegerVect(const couple<real>& v, const couple<real>& x_transf, const couple<real>& y_transf) :
+    x((v.x + x_transf.y) * x_transf.x + 0.5),  y((v.y + y_transf.y) * y_transf.x + 0.5){};
   TIntegerVect(const TIntegerVect& c) = default;
   auto getX() const { return x; };
   auto getY() const { return y; };
@@ -253,6 +259,9 @@ TIntegerVect operator+(const TIntegerVect& v1, const TIntegerVect& v2);
 
 TIntegerVect operator-(const TIntegerVect& v1, const TIntegerVect& v2);
 
+TIntegerVect operator*(int4 r, const TIntegerVect& t);
+
+TIntegerVect operator*(const TIntegerVect& t, int4 r);
 
 
 typedef couple<REAL> TPlaneVect;

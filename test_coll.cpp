@@ -401,13 +401,15 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
   {
     Counter reg;
     reg.Alloc(n);
+    uint4 range = (seg_type < 0) ? degenerate_range : full_int_range;
+    seg_type = abs(seg_type);
     switch (seg_type) {
       case line1: {
         CLine1SegmentCollection<Counter> coll(n, segs, &reg);
         return find_int(n, coll, alg, stat);
       };
       case intline: {
-        CIntegerSegmentCollection<Counter> coll(n, segs, &reg);
+        CIntegerSegmentCollection<Counter> coll(n, segs, &reg, range);
         return find_int(n, coll, alg, stat);
       };
       case line2: {

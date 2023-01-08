@@ -99,4 +99,11 @@ TIntegerVect operator-(const TIntegerVect& v1, const TIntegerVect& v2) {
   return { v1.x - v2.x,v1.y - v2.y };
 }
 
+TIntegerVect operator*(int4 r, const TIntegerVect& t) {
+  return { t.x * r, t.y * r };
+}
+
+TIntegerVect operator*(const TIntegerVect& t, int4 r) {
+  return { t.x * r, t.y * r };
+}
 

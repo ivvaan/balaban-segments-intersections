@@ -288,7 +288,7 @@ int main(int argc, char* argv[])
   bool use_counters = false;
   char rpar[]="-r";
   int4 impl = _Implementation::impl_old + _Implementation::impl_new;
-  const char *ss = "Llagi", *sd = "rlmspc",*sr="pPcr";
+  const char *ss = "Llagi", *sd = "rlmspcd",*sr="pPcr";
   const char *alg_names[] = { "trivial","simple_sweep","fast","optimal","fast_parallel","bentley_ottmann","fast no inters points","fast 'no R'" };
   uint4 reg_stat = 2;
   const char* fname = nullptr;
@@ -342,6 +342,8 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
  D=distr_param: random segment with  length multiplied by distr_param
  D=c: segments ends are on the opposite sides of unit circul, each
   segment intesect each
+ D=d: appled only to integer segments; same as "r" but rounded to small integer range
+   creating a lot of degeneracies
 -rR: type of registrator used in new implementation and type of result statistic
  R=c: total intersection counting registrator; total count statistic
  R=p: total intersection counting and per segment intersection counting registrator; 
@@ -413,6 +415,7 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
             case 's':distr_type = small; break;
             case 'p':distr_type = param_defined; break;
             case 'c':distr_type = circul; break;
+            case 'd':distr_type = degenerate; break;
             default:
             {
               printf("some error in -distr_type param. r used instead.\n");
@@ -494,17 +497,23 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
     reg_stat = _Registrator::just_count;
     }
 
+ 
+
   if (!print_less)printf("actual params is: -a%i -s%c -d%c -r%c -i%i -n%i -S%i -p%f -e%f\n", alg, ss[seg_type], sd[distr_type],sr[reg_stat], impl, n, random_seed, distr_param,ICT);
-  //search_problem(n);
-  //return 0;
   PSeg *seg_ptr_coll = nullptr;
   PSeg seg_coll;
   CRandomValueGen rv(random_seed);
-
+  int4 new_seg_type = seg_type;
+  if (distr_type == degenerate) {
+    new_seg_type = -seg_type;//use negative values to show degenerate distr
+    distr_type = _Distribution::random;
+  }
   if(impl&_Implementation::impl_old)
     seg_coll = create_test_collection(seg_type, n, distr_type, distr_param,rv, &seg_ptr_coll);
   else
     seg_coll = create_test_collection(seg_type, n, distr_type, distr_param,rv, nullptr);
+
+
 
   bool dont_need_ip = (alg & fast_no_ip) != 0;
   if (impl&_Implementation::impl_old)
@@ -524,8 +533,7 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
       svgf << "</svg>\n" << insert_pos;
       svgf.close();
     }
-
-    perform_tests(use_counters, _Implementation::impl_new, alg, seg_type, distr_type, distr_param, print_less, rtime_printout, dont_need_ip, n, seg_coll, seg_ptr_coll, reg_stat);
+    perform_tests(use_counters, _Implementation::impl_new, alg, new_seg_type, distr_type, distr_param, print_less, rtime_printout, dont_need_ip, n, seg_coll, seg_ptr_coll, reg_stat);
   }
 
   

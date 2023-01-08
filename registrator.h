@@ -45,10 +45,9 @@ public:
   static constexpr uint4 reg_type = _RegistrationType::count;
   void register_pair(uint4 s1, uint4 s2) noexcept {
 #ifdef PRINT_SEG_AND_INT
-    if (s1 < s2)
-      printf("alt int %i %i\n", s1, s2);
-    else
-      printf("alt int %i %i\n", s2, s1);
+    if (s1 > s2)
+      std::swap(s1, s2);
+    printf("alt int %i %i\n", s1, s2);
 
 #endif 
 
