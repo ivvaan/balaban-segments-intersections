@@ -40,7 +40,6 @@ public:
     return pt >> 1;
   };
 
-  //TPlaneVect
   uint4  GetSegmNumb() { return N; };
   inline void SetCurStripe(uint4 left, uint4 right)
   {
@@ -51,13 +50,13 @@ public:
   inline void SetCurStripeLeft(uint4 left) { B = GetX(left); };
   void SetCurPoint(uint4 pt)
   {
-    cur_point = is_last(pt)?
-      collection[get_segm(pt)].EndPoint():
+    cur_point = is_last(pt) ?
+      collection[get_segm(pt)].EndPoint() :
       collection[get_segm(pt)].BegPoint();
   };
   void SetCurPointAtBeg(uint4 s)
   {
-    cur_point=collection[s].BegPoint();
+    cur_point = collection[s].BegPoint();
   };
   void SetCurPointAtEnd(uint4 s)
   {
@@ -112,32 +111,34 @@ public:
 
   bool LBelow(int4 s_1, int4 s_2) const //retuns if s1 below s2 at current vertical line
   {
-    auto &s1 = collection[s_1];
-    auto &s2 = collection[s_2];
+    auto& s1 = collection[s_1];
+    auto& s2 = collection[s_2];
     return s1.YAtX_Numerator(B) * s2.shift.x < s2.YAtX_Numerator(B)* s1.shift.x;
   };
 
   bool RBelow(int4 s_1, int4 s_2) const //retuns if s1 below s2 at current vertical line
   {
-    auto &s1 = collection[s_1];
-    auto &s2 = collection[s_2];
+    auto& s1 = collection[s_1];
+    auto& s2 = collection[s_2];
     return s1.YAtX_Numerator(E) * s2.shift.x < s2.YAtX_Numerator(E)* s1.shift.x;
   };
 
+  template <bool do_register = true>
   bool FindIntWith(REAL x1, REAL x2, uint4 s_)
   {
-    auto &s2 = cur_seg;
-    auto &s1 = collection[s_];
+    auto& s2 = cur_seg;
+    auto& s1 = collection[s_];
     TPlaneVect delt = s2.org - s1.org;
     REAL prod = s1.shift % s2.shift;
-    auto mul = s1.shift%delt;
-    if ((mul>0) ^ (mul + prod>0))
+    auto mul = s1.shift % delt;
+    if ((mul > 0) ^ (mul + prod > 0))
     {
       mul /= prod;
-      auto xc = s2.org.x - mul*s2.shift.x;
-      if (((xc <= x1) || (xc>x2))) return false;
+      auto xc = s2.org.x - mul * s2.shift.x;
+      if (((xc <= x1) || (xc > x2))) return false;
+      if (!do_register) return true;
       if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) != 0)
-        registrator->register_pair_and_point(cur_seg_idx, s_, TPlaneVect(xc, s2.org.y - mul * s2.shift.y));
+        registrator->register_pair_and_point(cur_seg_idx, s_, { xc, s2.org.y - mul * s2.shift.y });
       else
         registrator->register_pair(cur_seg_idx, s_);
       return true;
@@ -151,7 +152,7 @@ public:
     auto& s1 = cur_seg;
     auto& s2 = collection[s_];
     auto delt = s2.org - s1.org;
-    if ((s1.shift.x < delt.x)||(s2.shift.x < -delt.x))
+    if ((s1.shift.x < delt.x) || (s2.shift.x < -delt.x))
       return false;
     REAL prod = s1.shift % s2.shift, mul;
     if (((mul = s1.shift % delt) > 0) ^ (mul + prod > 0))
@@ -187,7 +188,7 @@ public:
   bool FindCurSegIntDownWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
   {
     if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0)
-      return UnderActiveEnd(s_)? false : (registrator->register_pair(cur_seg_idx, s_),true);
+      return UnderActiveEnd(s_) ? false : (registrator->register_pair(cur_seg_idx, s_), true);
 
     return FindIntWith(curB, curE, s_);
   };
@@ -197,10 +198,10 @@ public:
     if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0) {
       auto r = registrator;
       auto cs = cur_seg_idx;
-      
+
       if (is_chopped) {
         REAL Y = active_end.y;
-        while ((THIS_HAS_SENTINELS||(s_!= last)) && (Y < chopped_Y[*s_])) {
+        while ((THIS_HAS_SENTINELS || (s_ != last)) && (Y < chopped_Y[*s_])) {
           r->register_pair(cs, *s_);
           --s_;
         }
@@ -212,7 +213,7 @@ public:
         }
       return s_;
     }
-      
+
     while ((THIS_HAS_SENTINELS || (s_ != last)) && FindIntWith(curB, curE, *s_))
       --s_;
     return s_;
@@ -243,23 +244,25 @@ public:
     return FindIntWith(curB, curE, s_);
   };
 
-  bool IsIntersectsCurSegDown(int4 s_) const//check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
-  {
-    return !UnderActiveEnd(s_);
+  bool IsIntersectsCurSegDown(int4 s_) { //check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
+    if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0)
+      return !UnderActiveEnd(s_);
+    return FindIntWith<false>(curB, curE, s_);
   };
 
-  bool IsIntersectsCurSegUp(int4 s_) const//check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
-  {
-    return UnderActiveEnd(s_);
+  bool IsIntersectsCurSegUp(int4 s_) { //check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
+    if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0)
+      return UnderActiveEnd(s_);
+    return FindIntWith<false>(curB, curE, s_);
   };
 
   bool UnderCurPoint(int4 s_) const { return collection[s_].under(cur_point); };//returns true if s is under current point 
   bool UnderActiveEnd(int4 s_) const { return collection[s_].under(active_end); };//returns true if s is under current point 
 
-  void PrepareEndpointsSortedList(uint4 *epoints)// endpoints allocated by caller and must contain space for at least 2*GetSegmNumb() points 
+  void PrepareEndpointsSortedList(uint4* epoints)// endpoints allocated by caller and must contain space for at least 2*GetSegmNumb() points 
   {
     auto NN = N * 2;
-    for (uint4 i = 0; i < NN; ++i)  epoints[i] = i*2;
+    for (uint4 i = 0; i < NN; ++i)  epoints[i] = i * 2;
 
 
     for (uint4 i = 0; i < N; ++i) {
@@ -272,8 +275,8 @@ public:
 
     std::sort(epoints, epoints + NN,
       [x = reinterpret_cast<REAL*>(collection)](uint4 pt1, uint4 pt2) {
-        return ((x[pt1] < x[pt2]) || ((x[pt1] == x[pt2]) && (pt1 < pt2)));
-      }
+      return ((x[pt1] < x[pt2]) || ((x[pt1] == x[pt2]) && (pt1 < pt2)));
+    }
     );
     for (uint4 i = 0; i < N; ++i) {
       collection[i].shift.x -= collection[i].org.x;
@@ -300,10 +303,10 @@ public:
     */
   };
 
-  void clone(CLine1SegmentCollection &c, IntersectionRegistrator *r)
+  void clone(CLine1SegmentCollection& c, IntersectionRegistrator* r)
   {
-      clone_of = &c;
-      Init(c.N, c.collection,r);
+    clone_of = &c;
+    Init(c.N, c.collection, r);
   };
 
   int4 get_sentinel(bool is_top_sentinel) {
@@ -311,32 +314,30 @@ public:
   };
 
   void unclone() { if (clone_of == nullptr)return; collection = nullptr; clone_of = nullptr; };
-  void SortAt(uint4 pt, uint4 n, int4 *L)
+  void SortAt(uint4 pt, uint4 n, int4* L)
   {
     SetCurStripeLeft(pt);
     std::sort(L, L + n, [this](int4 s1, int4 s2) {return LBelow(s1, s2); });
   };
 
-  void SetRegistrator(IntersectionRegistrator* r)
-  {
+  void SetRegistrator(IntersectionRegistrator* r)  {
     registrator = r;
-    
   };
 
   IntersectionRegistrator* GetRegistrator() { return registrator; };
 
-  void Init(uint4 n, void * c, IntersectionRegistrator *r)
-  {
+  void set_seg2end_arr(uint4* SegL, uint4* SegR) {};
+
+  void Init(uint4 n, void* c, IntersectionRegistrator* r)  {
     N = n;
     collection = reinterpret_cast<TLineSegment1*>(c);
     SetRegistrator(r);
-
   };
 
-  CLine1SegmentCollection(uint4 n, void* c, IntersectionRegistrator *r)
+  CLine1SegmentCollection(uint4 n, void* c, IntersectionRegistrator* r)
   {
     Init(n, c, r);
-    chopped_Y = new REAL[N+2];
+    chopped_Y = new REAL[N + 2];
     if constexpr (THIS_HAS_SENTINELS) {
       chopped_Y[get_sentinel(false)] = std::numeric_limits<REAL>::min();
       chopped_Y[get_sentinel(true)] = std::numeric_limits<REAL>::max();
@@ -344,7 +345,7 @@ public:
   }
 
   CLine1SegmentCollection() {};
- 
+
   CLine1SegmentCollection(CLine1SegmentCollection& coll, IntersectionRegistrator* r)
   {
     clone(coll, r);
@@ -359,7 +360,7 @@ public:
   }
 
 
- 
+
   void coll_to_SVG(chostream* SVG_stream) {
     if (!SVG_stream)return;
     int4 n = MIN(max_SVG_items, N);
@@ -380,10 +381,10 @@ private:
 
   TLineSegment1 cur_seg;
   TLineSegment1* collection = nullptr;
-  IntersectionRegistrator *registrator = nullptr;
+  IntersectionRegistrator* registrator = nullptr;
   REAL* chopped_Y = nullptr;
-  CLine1SegmentCollection *clone_of = nullptr;
-  uint4 N=0;
+  CLine1SegmentCollection* clone_of = nullptr;
+  uint4 N = 0;
   REAL B, E, curB, curE;
   TPlaneVect cur_point, active_end;
 

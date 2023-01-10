@@ -131,6 +131,7 @@ public:
           if (nsegm_on_vline > max_segm_on_vline)
             max_segm_on_vline = nsegm_on_vline;
         }
+      segments.set_seg2end_arr(SegL, SegR);
       LR_len = max_segm_on_vline+ 2;//+2 for sentinels to have some space
       nTotSegm = N;
           
