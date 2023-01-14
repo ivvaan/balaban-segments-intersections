@@ -28,37 +28,32 @@ class CLine2SegmentCollection
 public:
   static constexpr bool is_line_segments = true;
 
-  static inline bool is_last(uint4 pt)
+  static bool is_last(uint4 pt)
   {
     return pt & 2;
   };
-  static inline uint4 get_segm(uint4 pt)
+  static uint4 get_segm(uint4 pt)
   {
     return pt >> 2;
   };
 
   //TPlaneVect
   uint4  GetSegmNumb() const { return N; };
-  inline void SetCurStripe(uint4 left, uint4 right)
+  void SetCurStripe(uint4 left, uint4 right)
   {
     B = GetX(left);
     E = GetX(right);
   };
-  inline void SetCurStripeRight(uint4 right) { E = GetX(right); };
-  inline void SetCurStripeLeft(uint4 left) { B = GetX(left); };
-  void SetCurPoint(uint4 pt)
-  {
-    cur_point = is_last(pt) ?
-      collection[get_segm(pt)].EndPoint() :
-      collection[get_segm(pt)].BegPoint();
-  };
-  void SetCurPointAtBeg(uint4 s)
+  void SetCurStripeRight(uint4 right) { E = GetX(right); };
+  void SetCurStripeLeft(uint4 left) { B = GetX(left); };
+
+  void SetCurSegAndPoint(uint4 s)
   {
     cur_point = collection[s].BegPoint();
-  };
-  void SetCurPointAtEnd(uint4 s)
-  {
-    cur_point = collection[s].EndPoint();
+    SetCurSeg(s);
+    if constexpr ((IntersectionRegistrator::reg_type & _RegistrationType::point) == 0)
+      active_end = cur_seg.EndPoint();
+
   };
 
   void SetCurSeg(uint4 s)
@@ -91,15 +86,6 @@ public:
     if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0)
       active_end = cur_seg.BegPoint();
   };
-
-  void SetCurSegAE(uint4 s)
-  {
-    SetCurSeg(s);
-    if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0)
-      active_end = cur_seg.EndPoint();
-  };
-
-
 
   bool LBelow(int4 s_1, int4 s_2) const //retuns if s1 below s2 at current vertical line
   {
@@ -316,7 +302,7 @@ public:
   };
 
 private:
-  inline auto GetX(uint4 pt) const { return ends[pt]; };
+  auto GetX(uint4 pt) const { return ends[pt]; };
   //{ return is_last(pt) ? collection[get_segm(pt)].x2 :collection[get_segm(pt)].x1; };
 
 

@@ -37,64 +37,62 @@ class CGraphSegmentCollection
 public:
   static constexpr bool is_line_segments = true;
 
-  static inline bool is_last(uint4 pt)
+  static bool is_last(uint4 pt)
   {
     return pt & 1;
   };
-  static inline uint4 get_segm(uint4 pt)
+  static uint4 get_segm(uint4 pt)
   {
     return pt >> 1;
   };
-  static inline uint4 get_first_pt(uint4 s)
+  static uint4 get_first_pt(uint4 s)
   {
     return s << 1;
   };
-  static inline uint4 get_last_pt(uint4 s)
+  static uint4 get_last_pt(uint4 s)
   {
     return (s << 1) + 1;
   };
-  static inline uint4 get_other_pt(uint4 pt)
+  static uint4 get_other_pt(uint4 pt)
   {
     return pt ^ 1;
   };
- inline uint4 get_first_idx(uint4 s) const
+ uint4 get_first_idx(uint4 s) const
   {
     return vertex_idx[get_first_pt(s)];
   };
- inline uint4 get_last_idx(uint4 s) const
+ uint4 get_last_idx(uint4 s) const
   {
     return vertex_idx[get_last_pt(s)];
   };
- inline uint4 get_other_idx(uint4 pt) const
+ uint4 get_other_idx(uint4 pt) const
   {
     return vertex_idx[get_other_pt(pt)];
   };
 
   //TPlaneVect
   uint4  GetSegmNumb() const { return nEdges; };
-  inline void SetCurStripe(uint4 left, uint4 right)
+  void SetCurStripe(uint4 left, uint4 right)
   {
 
     SetCurStripeLeft(left);
     SetCurStripeRight(right);
   };
-  inline void SetCurStripeLeft(uint4 left) { ptB = left, idxB = vertex_idx[left]; B = vertices[idxB].x; };
-  inline void SetCurStripeRight(uint4 right) { ptE = right, idxE = vertex_idx[right]; E = vertices[idxE].x; };
-  inline void SetCurPoint(uint4 pt)
+  void SetCurStripeLeft(uint4 left) { ptB = left, idxB = vertex_idx[left]; B = vertices[idxB].x; };
+  void SetCurStripeRight(uint4 right) { ptE = right, idxE = vertex_idx[right]; E = vertices[idxE].x; };
+  void SetCurPoint(uint4 pt)
   {
     cur_pt = pt;
     cur_pt_idx = vertex_idx[pt];
     cur_point = vertices[cur_pt_idx];
   };
-  inline void SetCurPointAtBeg(uint4 s)
+  void SetCurSegAndPoint(uint4 s)
   {
     SetCurPoint(get_first_pt(s));
+    SetCurSeg(s);
 //    collection[s].BegPoint(cur_point.x, cur_point.y);
   };
-  void SetCurPointAtEnd(uint4 s)
-  {
-    SetCurPoint(get_last_pt(s));
-  };
+
   void SetCurSegCutBE(uint4 s)
   {
     SetCurSeg(s);
@@ -121,11 +119,6 @@ public:
     cur_seg = TLineSegment1(vertices[cur_seg_beg_idx],vertices[cur_seg_end_idx]);
     curB = cur_seg.org.x;
     curE = cur_seg.org.x + cur_seg.shift.x;
-  };
-
-  void SetCurSegAE(uint4 s)
-  {
-    SetCurSeg(s);
   };
 
   bool LBelow(int4 s_1, int4 s_2) const //retuns if s1 below s2 at current vertical line
@@ -381,7 +374,7 @@ public:
 
 
 private:
-  inline auto GetX(uint4 pt) const
+  auto GetX(uint4 pt) const
   {
     return vertices[vertex_idx[pt]].x;
   };

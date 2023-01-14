@@ -31,37 +31,39 @@ class CLine1SegmentCollection
 public:
   static constexpr bool is_line_segments = true;
 
-  static inline bool is_last(uint4 pt)
+  static bool is_last(uint4 pt)
   {
     return pt & 1;
   };
-  static inline uint4 get_segm(uint4 pt)
+
+  static uint4 get_segm(uint4 pt)
   {
     return pt >> 1;
   };
 
   uint4  GetSegmNumb() { return N; };
-  inline void SetCurStripe(uint4 left, uint4 right)
+  void SetCurStripe(uint4 left, uint4 right)
   {
     B = GetX(left);
     E = GetX(right);
   };
-  inline void SetCurStripeRight(uint4 right) { E = GetX(right); };
-  inline void SetCurStripeLeft(uint4 left) { B = GetX(left); };
+  void SetCurStripeRight(uint4 right) { E = GetX(right); };
+  void SetCurStripeLeft(uint4 left) { B = GetX(left); };
   void SetCurPoint(uint4 pt)
   {
     cur_point = is_last(pt) ?
       collection[get_segm(pt)].EndPoint() :
       collection[get_segm(pt)].BegPoint();
   };
-  void SetCurPointAtBeg(uint4 s)
+  void SetCurSegAndPoint(uint4 s)
   {
     cur_point = collection[s].BegPoint();
+    SetCurSeg(s);
+    if constexpr ((IntersectionRegistrator::reg_type & _RegistrationType::point) == 0)
+      active_end = cur_seg.EndPoint();
+
   };
-  void SetCurPointAtEnd(uint4 s)
-  {
-    cur_point = collection[s].EndPoint();
-  };
+
   void SetCurSeg(uint4 s)
   {
     cur_seg_idx = s;
@@ -100,13 +102,6 @@ public:
     curE = MIN(E, curE);
     if constexpr ((IntersectionRegistrator::reg_type & _RegistrationType::point) == 0)
       active_end = cur_seg.BegPoint();
-  };
-
-  void SetCurSegAE(uint4 s)
-  {
-    SetCurSeg(s);
-    if constexpr ((IntersectionRegistrator::reg_type & _RegistrationType::point) == 0)
-      active_end = cur_seg.EndPoint();
   };
 
   bool LBelow(int4 s_1, int4 s_2) const //retuns if s1 below s2 at current vertical line
@@ -371,7 +366,7 @@ public:
 
 
 private:
-  inline auto GetX(uint4 pt) const
+  auto GetX(uint4 pt) const
   {
     return is_last(pt) ? collection[get_segm(pt)].org.x + collection[get_segm(pt)].shift.x : collection[get_segm(pt)].org.x;
   };

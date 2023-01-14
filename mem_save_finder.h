@@ -99,12 +99,11 @@ public:
       }
       else // if startpoint - insert
       {
-        segments.SetCurPointAtBeg(sn);
+        segments.SetCurSegAndPoint(sn);
         for (i = Size - 1; (i > -1) && (!segments.UnderCurPoint(L[i])); --i)
           L[i + 1] = L[i];
         L[i + 1] = sn;
         Size++;
-        segments.SetCurSegAE(sn);
         FindIntI(segments, SegR[sn], stack_pos); // get internal intersections
       }
 
@@ -125,13 +124,12 @@ public:
       }
       else // if startpoint - insert
       {
-        segments.SetCurPointAtBeg(sn);
+        segments.SetCurSegAndPoint(sn);
         for (i = LR_len - Size; (i != LR_len) && (segments.UnderCurPoint(L[i])); ++i)
           L[i - 1] = L[i];
         L[i - 1] = sn;
         ++Size;
 
-        segments.SetCurSegAE(sn);
         FindIntI(segments, SegR[sn], stack_pos); // get internal intersections
       }
     }

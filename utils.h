@@ -139,6 +139,21 @@ public:
   {
     return { -x, -y };
   };
+
+  couple<real>& operator/=(REAL r) {
+    x /= r;
+    y /= r;
+    return *this; 
+  };
+
+  void rotate_prod(REAL r) {
+    auto t = -y * r;
+    y = x * r;
+    x = t;
+  }
+
+  
+
   real get_norm() const
   {
     return x * x + y * y;
