@@ -210,7 +210,7 @@ public:
     auto Size = L_size;
     auto _L = from_begin ? L : L + (LR_len - Size);
     int4  new_L_size = 0,_Q_pos=0;
-    auto Q_tail = Q + len_of_Q;
+    auto Q_tail = GetQTail();
     long long n_int=0;
     for (decltype(Size) cur_L_pos = 0; cur_L_pos != Size; cur_L_pos++)
     {
@@ -246,7 +246,7 @@ public:
       L_size = new_L_size;
       return 0;
     }
-    Q_tail = Q + len_of_Q;
+    Q_tail = GetQTail();
     int4 loc;
     _L = L;
     // important to start from stair above current segm, meanwhile _Q[loc] is stair below

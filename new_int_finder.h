@@ -147,6 +147,7 @@ protected:
   uint4* SegL = nullptr, * SegR = nullptr, * ENDS = nullptr;
   int4* Q = nullptr;
   int4* L = nullptr;
+
   template<class SegmentsColl, bool HasSentinels = has_sentinels<SegmentsColl> >
   struct CSentinel {
     CSentinel(SegmentsColl& coll, int4& ini) {};
@@ -165,6 +166,10 @@ protected:
     int4& to_restore;
     int4 prev_val;
   };
+
+  auto GetQTail() {
+    return Q + len_of_Q;
+  }
 
   void FreeMem()
   {
@@ -285,11 +290,13 @@ protected:
     auto last_L = _L + L_size;
     auto first_L = _L + 1;
     auto _Q_pos = _Q;
+    auto T_pos = GetQTail();
     do
     {
       auto new_L_pos = _L;
+      _Q_pos = _Q;
       segments.SetCurSegCutBE(*++_Q_pos = _L[0]);
-      auto Q_tail = Q + len_of_Q;
+      auto Q_tail = T_pos;
       auto cur_L = first_L;
       for (CSentinel sentinel(segments , *_Q); cur_L < last_L; ++cur_L)
       {
@@ -304,24 +311,28 @@ protected:
         else
         {
           *new_L_pos++ = *cur_L;
-          *(--Q_tail) = _Q_pos-_Q;
+          *--Q_tail = _Q_pos-_Q;
         }
       }
+      if (new_L_pos == _L)// L is empty
+        return;
+      *--Q_tail = _Q_pos - _Q;//place a guard for the loop below
       ++_Q; ++_Q_pos;
       if constexpr (has_sentinels<SegmentsColl>)
         *_Q_pos = segments.get_sentinel(true);//we don't need to restore _Q_pos just place sentinel
-      for (cur_L = new_L_pos; cur_L != _L ; )
+      
+      Q_tail = T_pos;
+      auto cur_Q = _Q + *--Q_tail;
+      for (cur_L = _L ; cur_Q != _Q_pos; ++cur_L)
       {
-        auto step =_Q + *(Q_tail++);
-        if (step >= _Q_pos) break;
-        segments.SetCurSegCutBE(*--cur_L);
-        segments.FindCurSegIntUpWith(step, _Q_pos);
-        //while ((step != _Q_pos) && (segments.FindCurSegIntUpWith(*step))) ++step;
+        segments.SetCurSegCutBE(*cur_L);
+        segments.FindCurSegIntUpWith(cur_Q, _Q_pos);
+        cur_Q = _Q + *--Q_tail;
       }
       _Q = --_Q_pos;
       last_L = new_L_pos;
-    } while (last_L > first_L);
-    if (last_L == first_L)
+    } while (last_L > first_L);//L contains >1 segment
+//    if (last_L == first_L)
       *++_Q = _L[0];
   };
 

@@ -41,9 +41,9 @@ public:
   {
     //AllocMem
     len_of_Q = LR_len;
-    DECL_RAII_ARR(L, LR_len);
+    DECL_RAII_ARR(L, LR_len+1);
     ++L;//to have one cell before L for sentinel
-    DECL_RAII_ARR(R, LR_len);
+    DECL_RAII_ARR(R, LR_len+1);
     ++R;//to have one cell before R for sentinel
     DECL_RAII_ARR(Q, len_of_Q);
 
@@ -196,7 +196,7 @@ public:
   {
     auto R_pos = R;
     auto new_L_pos = L;
-    auto Q_tail = Q + len_of_Q;
+    auto Q_tail = GetQTail();
     assert(Q_tail > _Q + L_size);
     auto const last_L = L + L_size;
  //at first, place all lowest segments not covering current stripe to R (and implicitly L)
@@ -217,9 +217,9 @@ public:
     //first segment covering current stripe we place to Q 
     //it can't intersect any of the steps(stairs) because there no stairs yet     
     segments.SetCurSegCutBE(*++_Q_pos = *new_L_pos);//we don't need SetCurSegCutBE but it is allow to speedup by y values caching 
-    auto cur_L = new_L_pos + 1;
-    for (CSentinel sentinel(segments, *_Q); cur_L < last_L; ++cur_L) {
-      auto cur_seg = *cur_L;
+    auto cur = new_L_pos + 1;
+    for (CSentinel sentinel(segments, *_Q); cur < last_L; ++cur) {
+      auto cur_seg = *cur;
       segments.SetCurSegCutBE(cur_seg);
       if (segments.FindCurSegIntDownWith(*_Q_pos)) {//segment  intersects upper ladder stair
           // finding another ledder intersections
@@ -240,18 +240,28 @@ public:
       // one addition per loop by incrementing _Q later.
     }
     L_size = new_L_pos-L;
+    if (L_size == 0) {
+      dont_split_stripe = false;
+      return _Q_pos - _Q;
+    }
+
+    *--Q_tail = _Q_pos - _Q;//place a guard for the loop below
+
     // important to start from stair above current segm, meanwhile _Q[*Q_tail] is stair below
     ++_Q;// so we incremement _Q and _Q[*Q_tail] become stair above
     ++_Q_pos;
-    if constexpr (has_sentinels<SegmentsColl>)
+
+    if constexpr (has_sentinels<SegmentsColl>)//placing sentinel if collection supports
       *_Q_pos = segments.get_sentinel(true);//we don't need to restore _Q_pos just place sentinel
-    while (R_pos!=R)
+    
+    Q_tail = GetQTail() - 1;
+    cur = R;
+    for (auto cur_Q = _Q + *Q_tail; cur_Q != _Q_pos; ++cur)
     {
-      --R_pos;
-      segments.SetCurSegCutBeg(*R_pos);
-      segments.FindCurSegIntUpWith(_Q + *Q_tail, _Q_pos);
-      ++Q_tail;
-    } 
+      segments.SetCurSegCutBE(*cur);
+      segments.FindCurSegIntUpWith(cur_Q, _Q_pos);
+      cur_Q = _Q + *--Q_tail;
+    }
     dont_split_stripe = n_int > L_size;
     return _Q_pos-_Q;
   };
@@ -261,7 +271,7 @@ public:
   {
     auto  _Q_pos = _Q;
     long long n_int = 0;
-    auto Q_tail = Q + len_of_Q;
+    auto Q_tail = GetQTail();
     auto new_L_pos = L;
     CSentinel sentinel(segments, *_Q);
     for (auto L_pos = L, last_L = L + L_size; L_pos < last_L; ++L_pos) {
@@ -284,16 +294,24 @@ public:
       return 0;
     }
     L_size = new_L_pos - L;
-    Q_tail = Q + len_of_Q - 1;
+    if (L_size == 0) {
+      dont_split_stripe = false;
+      return _Q_pos - _Q;
+    }
+    *--Q_tail = _Q_pos - _Q;//place a guard for the loop below
+
     // important to start from stair above current segm, meanwhile _Q[*Q_tail] is stair below
     ++_Q;// so we incremement _Q and _Q[*Q_tail] become stair above
     ++_Q_pos;
     if constexpr (has_sentinels<SegmentsColl>)
       *_Q_pos = segments.get_sentinel(true);//we don't need to restore _Q_pos just place sentinel
-    for (auto L_pos=L; L_pos != new_L_pos ; ++L_pos, --Q_tail)
+    
+    Q_tail = GetQTail() - 1;
+    for (auto L_pos=L, cur_Q =_Q + *Q_tail; cur_Q != _Q_pos; ++L_pos)
     {
       segments.SetCurSegCutBE(*L_pos);
-      segments.FindCurSegIntUpWith(_Q + *Q_tail, _Q_pos);
+      segments.FindCurSegIntUpWith(cur_Q, _Q_pos);
+      cur_Q = _Q + *--Q_tail;
     }
     dont_split_stripe = n_int > L_size;
     return _Q_pos-_Q;

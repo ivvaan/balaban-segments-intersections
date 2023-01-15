@@ -41,9 +41,9 @@ public:
   {
     //AllocMem
     len_of_Q = LR_len + LR_len / (inherit_each - 1) + inherit_each + 2;
-    DECL_RAII_ARR(L, LR_len); 
+    DECL_RAII_ARR(L, LR_len+1); 
     ++L;//to have one cell before L for sentinel
-    DECL_RAII_ARR(R, LR_len);
+    DECL_RAII_ARR(R, LR_len+1);
     ++R;//to have one cell before R for sentinel
     DECL_RAII_ARR(Q, len_of_Q);
     DECL_RAII_ARR(father_loc, len_of_Q);
