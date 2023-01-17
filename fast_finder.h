@@ -239,12 +239,8 @@ public:
       // one addition per loop by incrementing _Q later.
     }
     L_size = new_L_pos-L;
-    if (L_size == 0) {
-      dont_split_stripe = false;
-      return _Q_pos - _Q;
-    }
-
-    *--Q_tail = _Q_pos - _Q;//place a guard for the loop below
+    int4 Q_size=_Q_pos - _Q;
+    *--Q_tail = Q_size;//place a guard for the loop below
 
     // important to start from stair above current segm, meanwhile _Q[*Q_tail] is stair below
     ++_Q;// so we incremement _Q and _Q[*Q_tail] become stair above
@@ -255,14 +251,13 @@ public:
     
     Q_tail = GetQTail() - 1;
     cur = R;
-    for (auto cur_Q = _Q + *Q_tail; cur_Q != _Q_pos; ++cur)
+    for (auto Q_idx = *Q_tail; Q_idx != Q_size; Q_idx = *--Q_tail, ++cur)
     {
       segments.SetCurSegCutBE(*cur);
-      segments.FindCurSegIntUpWith(cur_Q, _Q_pos);
-      cur_Q = _Q + *--Q_tail;
+      segments.FindCurSegIntUpWith(_Q + Q_idx, _Q_pos);
     }
     dont_split_stripe = n_int > L_size;
-    return _Q_pos-_Q;
+    return Q_size;
   };
 
   template<class SegmentsColl>
@@ -293,11 +288,8 @@ public:
       return 0;
     }
     L_size = new_L_pos - L;
-    if (L_size == 0) {
-      dont_split_stripe = false;
-      return _Q_pos - _Q;
-    }
-    *--Q_tail = _Q_pos - _Q;//place a guard for the loop below
+    int4 Q_size = _Q_pos - _Q;
+    *--Q_tail = Q_size;//place a guard for the loop below
 
     // important to start from stair above current segm, meanwhile _Q[*Q_tail] is stair below
     ++_Q;// so we incremement _Q and _Q[*Q_tail] become stair above
@@ -306,14 +298,14 @@ public:
       *_Q_pos = segments.get_sentinel(true);//we don't need to restore _Q_pos just place sentinel
     
     Q_tail = GetQTail() - 1;
-    for (auto L_pos=L, cur_Q =_Q + *Q_tail; cur_Q != _Q_pos; ++L_pos)
+    auto L_pos = L;
+    for (auto Q_idx =*Q_tail; Q_idx != Q_size; Q_idx = *--Q_tail, ++L_pos)
     {
       segments.SetCurSegCutBE(*L_pos);
-      segments.FindCurSegIntUpWith(cur_Q, _Q_pos);
-      cur_Q = _Q + *--Q_tail;
+      segments.FindCurSegIntUpWith(_Q + Q_idx, _Q_pos);
     }
     dont_split_stripe = n_int > L_size;
-    return _Q_pos-_Q;
+    return Q_size;
   };
 
 
