@@ -218,9 +218,9 @@ protected:
       i_f.Merge(segments, interval_left_index, ladder_start_index, Q_pos);
       return;
     } while (false);
-    //if L or Q empty cut into 8 parts
-    constexpr const int4 divide_into = 8;
-    max_call -= 6;
+    //if L or Q empty cut into 16 parts
+    constexpr const int4 divide_into = 16;
+    max_call -= 8;
     double step = MAX(1.0, static_cast<double>(interval_right_index - interval_left_index) / divide_into);
     double rb = 0.25 + interval_left_index;
     uint4 right_bound = (rb += step);
@@ -358,7 +358,7 @@ protected:
 
 
 uint4 get_max_call(uint4 N) {
-    uint4 max_call = 8;
+    uint4 max_call = 24;
     for (; N; N >>= 1) max_call += 2;
     return max_call;
 };

@@ -65,10 +65,12 @@ public:
   void SetCurSegCutBE(uint4 s)
   {
     SetCurSeg(s);
-    cur_seg.x1 = MAX(cur_seg.x1, B);
+    
     cur_seg.x2 = MIN(cur_seg.x2, E);
     if constexpr ((IntersectionRegistrator::reg_type & _RegistrationType::point) == 0)
       active_end = cur_seg.EndPoint();
+    else
+      cur_seg.x1 = MAX(cur_seg.x1, B);
   };
 
   void SetCurSegCutBeg(uint4 s)
@@ -82,9 +84,10 @@ public:
   void SetCurSegCutEnd(uint4 s)
   {
     SetCurSeg(s);
-    cur_seg.x2 = MIN(cur_seg.x2, E);
     if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0)
       active_end = cur_seg.BegPoint();
+    else
+      cur_seg.x2 = MIN(cur_seg.x2, E);
   };
 
   bool LBelow(int4 s_1, int4 s_2) const //retuns if s1 below s2 at current vertical line
