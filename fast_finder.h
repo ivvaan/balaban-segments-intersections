@@ -163,10 +163,9 @@ public:
         {
           segments.SetCurSegCutEnd(cur_seg);
           {
-            auto l = cur_stair - 1;
-            auto c = segments.FindCurSegIntDownWith(l, bot_Q);
-            if ((!SegmentsColl::is_line_segments || (c == l)))
-              segments.FindCurSegIntUpWith(cur_stair, top_Q);
+            auto c = segments.FindCurSegIntUpWith(cur_stair, top_Q); 
+            if ((!SegmentsColl::is_line_segments || (c == cur_stair)))
+              segments.FindCurSegIntDownWith(cur_stair-1, bot_Q);
           };
         }
         _L[new_size++] = cur_seg;

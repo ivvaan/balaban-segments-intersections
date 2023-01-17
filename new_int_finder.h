@@ -131,7 +131,7 @@ public:
           if (nsegm_on_vline > max_segm_on_vline)
             max_segm_on_vline = nsegm_on_vline;
         }
-      LR_len = max_segm_on_vline+ 2;//+2 for sentinels to have some space
+      LR_len = max_segm_on_vline + 3;//+3 for sentinels(guards) to have some space
       nTotSegm = N;
           
     };
@@ -223,15 +223,14 @@ protected:
     max_call -= 6;
     double step = MAX(1.0, static_cast<double>(interval_right_index - interval_left_index) / divide_into);
     double rb = 0.25 + interval_left_index;
-    uint4 right_bound = interval_left_index;
-    while (true) {
-      auto left_bound = right_bound;
-      right_bound = rb += step;
-      FindR(i_f, segments, ladder_start_index, left_bound, right_bound, stack_pos, 0, max_call);
-      if (right_bound == interval_right_index)
-        return;
+    uint4 right_bound = (rb += step);
+    FindR(i_f, segments, ladder_start_index, interval_left_index, right_bound, stack_pos, 0, max_call);
+    do {
       i_f.InsDel(segments, right_bound, stack_pos);
-    };
+      auto left_bound = right_bound;
+      right_bound = (rb += step);
+      FindR(i_f, segments, ladder_start_index, left_bound, right_bound, stack_pos, 0, max_call);
+    } while (right_bound!= interval_right_index);
   };
 
   template <class IntersectionFinder, class SegmentsColl>
