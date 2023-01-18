@@ -294,7 +294,7 @@ private:
       segments.SetCurSegCutBE(L[i]);
       n_int +=FindInt(segments,father_last_step, step_index, location[i]);//location[i] should contain the location of the segment L[i]
     }
-    dont_split_stripe = n_int > new_L_size;
+    dont_cut_stripe = n_int > new_L_size + cut_margin;
     _step_index = step_index;
     L_size = new_L_size;
 
@@ -330,7 +330,7 @@ private:
         father_first_step = ladder_start_index + inherit_offset;
       }
     }
-    if (dont_split_stripe && (call_numb < _max_call)) //if found a lot of intersections repeat optFindR
+    if (dont_cut_stripe && (call_numb < _max_call)) //if found a lot of intersections repeat optFindR
       FindR(segments,father_first_step, stack_rec.Q_pos, interval_left_index, interval_right_index, stack_pos, call_numb + 1,_max_call);
     else //cut stripe 
     {

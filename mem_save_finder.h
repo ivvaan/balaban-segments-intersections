@@ -42,11 +42,12 @@ public:
     DECL_RAII_ARR(L, LR_len);
     DECL_RAII_ARR(Q, len_of_Q);
 
-    ProgramStackRec stack_rec(-1, 2 * nTotSegm); //need to be initialized this way
     L[0] = SegmentsColl::get_segm(ENDS[0]);
     from_begin = true;
     L_size = 1;
-    FindR(*this, segments, -1, 0, 2 * nTotSegm - 1, &stack_rec, 0, get_max_call(2 * nTotSegm));
+    constexpr int4 bottom_index = 0;
+    ProgramStackRec stack_rec(bottom_index, 2 * nTotSegm); //need to be initialized this way
+    FindR(*this, segments, bottom_index, 0, 2 * nTotSegm - 1, &stack_rec, 0/*, get_max_call(2 * nTotSegm)*/);
   }
 
   template<class SegmentsColl>
@@ -242,7 +243,7 @@ public:
     from_begin = true;
     if (_Q_pos == 0)
     {
-      dont_split_stripe = false;
+      dont_cut_stripe = false;
       L_size = new_L_size;
       return 0;
     }
@@ -260,8 +261,8 @@ public:
         while ((cur_Q < last_Q) && (segments.FindCurSegIntUpWith(*cur_Q)))++cur_Q;
         n_int+= cur_Q - ini_Q;
       }
-//    dont_split_stripe = location != _step_index;
-    dont_split_stripe = n_int>new_L_size;
+//    dont_cut_stripe = location != _step_index;
+    dont_cut_stripe = n_int > new_L_size + cut_margin;
     L_size = new_L_size;
     return _Q_pos;
   };

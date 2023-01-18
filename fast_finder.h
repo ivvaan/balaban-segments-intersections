@@ -60,7 +60,7 @@ public:
 
     constexpr int4 bottom_index = 0;
     ProgramStackRec stack_rec(bottom_index, 2 * nTotSegm); //need to be initialized this way
-    FindR(*this, segments, bottom_index, from, to, &stack_rec, 0, get_max_call(to-from));
+    FindR(*this, segments, bottom_index, from, to, &stack_rec, 0/*, get_max_call(to - from)*/);
   }
 
  template<template <class> class SegmentsColl, class CIntRegistrator >
@@ -207,7 +207,7 @@ public:
             // one addition per loop by incrementing _Q later.
     }
     if (new_L_pos == last_L){
-      dont_split_stripe = false;
+      dont_cut_stripe = false;
       return 0;
     }
 
@@ -256,7 +256,7 @@ public:
       segments.SetCurSegCutBE(*cur);
       segments.FindCurSegIntUpWith(_Q + Q_idx, _Q_pos);
     }
-    dont_split_stripe = n_int > L_size;
+    dont_cut_stripe = n_int > L_size + cut_margin;
     return Q_size;
   };
 
@@ -284,7 +284,7 @@ public:
       }
     }
     if (_Q_pos == _Q) {
-      dont_split_stripe = false;
+      dont_cut_stripe = false;
       return 0;
     }
     L_size = new_L_pos - L;
@@ -304,7 +304,7 @@ public:
       segments.SetCurSegCutBE(*L_pos);
       segments.FindCurSegIntUpWith(_Q + Q_idx, _Q_pos);
     }
-    dont_split_stripe = n_int > L_size;
+    dont_cut_stripe = n_int > L_size;
     return Q_size;
   };
 
