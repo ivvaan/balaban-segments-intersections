@@ -263,21 +263,20 @@ protected:
   {
     while (stack_pos->right_bound <= r_index)
       stack_pos = stack_pos->prev; // go from bottom to top and find staircase to start
-    auto r = stack_pos->Q_pos + 1;
-    int4 l, m, qb;
+    int4  m, len;
+    int4 *Qb,  *Ql, *Qe = Q + (stack_pos->Q_pos + 1);
     for (stack_pos = stack_pos->prev; stack_pos != nullptr; stack_pos = stack_pos->prev) {
-      l = qb = stack_pos->Q_pos;
-      auto Qe = Q + r;
-      while (r > l + 1) // binary search
+      Qb = Ql = Q + stack_pos->Q_pos;
+      len = Qe - Qb;
+      while (len > 1) // binary search
       {
-        m = (r + l) / 2; // 
-        if (segments.UnderCurPoint(Q[m]))
-          l = m;
-        else
-          r = m;
+        m = len / 2; //
+        if(segments.UnderCurPoint(Ql[m]))
+          Ql += m;
+        len -= m;
       }
-      FindInt(segments, Q+qb, Qe, Q+l);
-      r = qb+1; // move staircase bound to parent staircase
+      FindInt(segments, Qb, Qe, Ql);
+      Qe = Qb+1; // move staircase bound to parent staircase
     };
   };
 
