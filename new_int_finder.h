@@ -218,15 +218,17 @@ protected:
       return;
     } while (false);
     //if L or Q empty cut into 16 parts
-    constexpr const int4 divide_into = 16;
-    double step = MAX(1.0, static_cast<double>(interval_right_index - interval_left_index) / divide_into);
-    double rb = 0.25 + interval_left_index;
-    uint4 right_bound = (rb += step);
+    constexpr const uint4 divide_pow = 4;
+    constexpr const uint4 divide_into = 1 << divide_pow;//16
+    auto step = interval_right_index - interval_left_index;
+    step = MAX(step, divide_into);
+    auto rb = interval_left_index << divide_pow;//* divide_into
+    uint4 right_bound = (rb += step) >> divide_pow; // / divide_into;
     FindR(i_f, segments, ladder_start_index, interval_left_index, right_bound, stack_pos, 0);
     do {
       i_f.InsDel(segments, right_bound, stack_pos);
       auto left_bound = right_bound;
-      right_bound = (rb += step);
+      right_bound = (rb += step) >> divide_pow; // / divide_into;
       FindR(i_f, segments, ladder_start_index, left_bound, right_bound, stack_pos, 0);
     } while (right_bound!= interval_right_index);
   };
