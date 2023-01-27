@@ -180,7 +180,25 @@ protected:
   };
 
   template <class IntersectionFinder, class SegmentsColl>
-  static  void _FindR(IntersectionFinder& i_f, SegmentsColl& segments, int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec* stack_pos, int4 call_numb)
+  static void SISFindR(IntersectionFinder& i_f, SegmentsColl& segments, int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec* stack_pos)
+  {
+    auto ENDS = i_f.ENDS;
+    for (auto i = interval_left_index + 1; i != interval_right_index; ++i) {
+      if (i_f.L_size > 1) {
+        segments.SetCurStripe(ENDS[i - 1], ENDS[i]);
+        i_f.SearchInStrip(segments, ladder_start_index);
+      }
+      i_f.InsDel(segments, i, stack_pos);
+    }
+    //the stripe right bound needs to be installed correctly even if i_f.L_size <= 1
+    segments.SetCurStripe(ENDS[interval_right_index - 1], ENDS[interval_right_index]);
+    if (i_f.L_size > 1)i_f.SearchInStrip(segments, ladder_start_index);
+    return;
+  }
+
+
+  template <class IntersectionFinder, class SegmentsColl>
+  static void FindRNoChecks(IntersectionFinder& i_f, SegmentsColl& segments, int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec* stack_pos)
   {
     do {
       if (i_f.L_size == 0)break;
@@ -189,27 +207,15 @@ protected:
       Q_pos += ladder_start_index;
       ProgramStackRec stack_rec(Q_pos, interval_right_index, stack_pos);
       if (i_f.dont_cut_stripe) { //if found a lot of intersections repeat FindR
-        _FindR(i_f, segments, Q_pos, interval_left_index, interval_right_index, &stack_rec, call_numb + 1);
+        FindRNoChecks(i_f, segments, Q_pos, interval_left_index, interval_right_index, &stack_rec);
         i_f.Merge(segments, interval_left_index, ladder_start_index, Q_pos);
         return;
       }
-      uint4 m = (interval_left_index + interval_right_index) >> 1;
-      if ((interval_left_index + 4 > interval_right_index)|| (call_numb > 1)&& (i_f.L_size != 0)) {
+      uint4 m = (interval_left_index + interval_right_index) / 2;
         // if L contains a lot of segments then cut on two parts
-        FindR(i_f, segments, Q_pos, interval_left_index, m, &stack_rec, 0);
-        i_f.InsDel(segments, m, &stack_rec);
-        FindR(i_f, segments, Q_pos, m, interval_right_index, &stack_rec, 0);
-      } else {// if L contains not so many segments than cut on four parts (works faster for some segment distributions)
-        uint4 q = (interval_left_index + m) >> 1;
-        FindR(i_f, segments, Q_pos, interval_left_index, q, &stack_rec, 0);
-        i_f.InsDel(segments, q, &stack_rec);
-        FindR(i_f, segments, Q_pos, q, m, &stack_rec, 0);
-        i_f.InsDel(segments, m, &stack_rec);
-        q = (interval_right_index + m) >> 1;
-        FindR(i_f, segments, Q_pos, m, q, &stack_rec, 0);
-        i_f.InsDel(segments, q, &stack_rec);
-        FindR(i_f, segments, Q_pos, q, interval_right_index, &stack_rec, 0);
-      }
+      FindR(i_f, segments, Q_pos, interval_left_index, m, &stack_rec);
+      i_f.InsDel(segments, m, &stack_rec);
+      FindR(i_f, segments, Q_pos, m, interval_right_index, &stack_rec);
         //actually works without this line, but it simplifies segment collection class
       //protocol
       segments.SetCurStripeLeft(i_f.ENDS[interval_left_index]);
@@ -221,29 +227,38 @@ protected:
     constexpr const uint4 divide_pow = 4;
     constexpr const uint4 divide_into = 1 << divide_pow;//16
     auto step = interval_right_index - interval_left_index;
-    step = MAX(step, divide_into);
-    auto rb = interval_left_index << divide_pow;//* divide_into
-    uint4 right_bound = (rb += step) >> divide_pow; // / divide_into;
-    FindR(i_f, segments, ladder_start_index, interval_left_index, right_bound, stack_pos, 0);
+    if (step <= divide_into) {
+      return SISFindR(i_f, segments, ladder_start_index, interval_left_index, interval_right_index, stack_pos);
+    }
+    step = MAX(step, divide_into*6);
+    auto rb = step + (interval_left_index << divide_pow);//* divide_into
+    auto left_bound= interval_left_index;
+    auto right_bound = rb >> divide_pow; // / divide_into;
+    auto ENDS = i_f.ENDS;
+    auto stripe_right = ENDS[left_bound];
     do {
+      auto stripe_left = stripe_right;
+      stripe_right = ENDS[right_bound];
+      segments.SetCurStripe(stripe_left, stripe_right);
+      FindRNoChecks(i_f, segments, ladder_start_index, left_bound, right_bound, stack_pos);
       i_f.InsDel(segments, right_bound, stack_pos);
-      auto left_bound = right_bound;
+      left_bound = right_bound;
       right_bound = (rb += step) >> divide_pow; // / divide_into;
-      FindR(i_f, segments, ladder_start_index, left_bound, right_bound, stack_pos, 0);
-    } while (right_bound!= interval_right_index);
+    } while (right_bound < interval_right_index);
+    FindR(i_f, segments, ladder_start_index, left_bound, interval_right_index, stack_pos);
   };
 
   template <class IntersectionFinder, class SegmentsColl>
-  static  void FindR(IntersectionFinder& i_f, SegmentsColl& segments, int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec* stack_pos, int4 call_numb)
+  static void FindR(IntersectionFinder& i_f, SegmentsColl& segments, int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec* stack_pos)
   {
     segments.SetCurStripe(i_f.ENDS[interval_left_index], i_f.ENDS[interval_right_index]);
     if (interval_right_index - interval_left_index == 1) {
-      if (i_f.L_size > 1)
+      if (i_f.L_size > 1) {
         i_f.SearchInStrip(segments, ladder_start_index);
+      }
       return;
-    }
-    _FindR(i_f, segments, ladder_start_index, interval_left_index, interval_right_index, stack_pos, call_numb);
-
+    } 
+    FindRNoChecks(i_f, segments, ladder_start_index, interval_left_index, interval_right_index, stack_pos);
   }
 
   //functions for fast algorithm

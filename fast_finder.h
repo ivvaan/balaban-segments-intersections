@@ -60,7 +60,7 @@ public:
 
     constexpr int4 bottom_index = 0;
     ProgramStackRec stack_rec(bottom_index, 2 * nTotSegm); //need to be initialized this way
-    FindR(*this, segments, bottom_index, from, to, &stack_rec, 0/*, get_max_call(to - from)*/);
+    FindR(*this, segments, bottom_index, from, to, &stack_rec/*, 0, get_max_call(to - from)*/);
   }
 
  template<template <class> class SegmentsColl, class CIntRegistrator >
@@ -114,31 +114,31 @@ public:
   template<class SegmentsColl>
   void InsDel(SegmentsColl &segments, uint4 end_index, ProgramStackRec * stack_pos)
   {
-    int4 Size = L_size;
     int4 i;
     auto sn = SegmentsColl::get_segm(ENDS[end_index]);
     if (SegmentsColl::is_last(ENDS[end_index])) // if endpoint - delete
     {
-      i = --Size;
-      auto cur = L[i];
+      i = --L_size;
+      auto _L = L;
+      auto cur = _L[i];
       while (cur != sn)
       {
         --i;
         auto buf = cur;
-        cur = L[i];
-        L[i] = buf;
+        cur = _L[i];
+        _L[i] = buf;
       }
     }
     else// if startpoint - insert
     {
       segments.SetCurSegAndPoint(sn);
-      for (i = Size - 1; (i > -1) && (!segments.UnderCurPoint(L[i])); --i)
-        L[i + 1] = L[i];
-      L[i + 1] = sn;
-      Size++;
+      auto _L = L + 1;
+      for (i = L_size - 1; (i != -1) && (!segments.UnderCurPoint(L[i])); --i)
+        _L[i] = L[i];
+      _L[i] = sn;
+      ++L_size;
       FindIntI(segments, SegR[sn], stack_pos);// get internal intersections
     }
-    L_size = Size;
   }
 
   template<class SegmentsColl>

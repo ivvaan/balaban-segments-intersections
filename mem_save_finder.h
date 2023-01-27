@@ -47,7 +47,7 @@ public:
     L_size = 1;
     constexpr int4 bottom_index = 0;
     ProgramStackRec stack_rec(bottom_index, 2 * nTotSegm); //need to be initialized this way
-    FindR(*this, segments, bottom_index, 0, 2 * nTotSegm - 1, &stack_rec, 0/*, get_max_call(2 * nTotSegm)*/);
+    FindR(*this, segments, bottom_index, 0, 2 * nTotSegm - 1, &stack_rec/*, 0, get_max_call(2 * nTotSegm)*/);
   }
 
   template<class SegmentsColl>
