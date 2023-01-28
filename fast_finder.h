@@ -114,28 +114,27 @@ public:
   template<class SegmentsColl>
   void InsDel(SegmentsColl &segments, uint4 end_index, ProgramStackRec * stack_pos)
   {
-    int4 i;
     auto sn = SegmentsColl::get_segm(ENDS[end_index]);
     if (SegmentsColl::is_last(ENDS[end_index])) // if endpoint - delete
     {
-      i = --L_size;
-      auto _L = L;
-      auto cur = _L[i];
+      auto _L = L+(--L_size);
+      auto cur = *_L;
       while (cur != sn)
       {
-        --i;
+        --_L;
         auto buf = cur;
-        cur = _L[i];
-        _L[i] = buf;
+        cur = *_L;
+        *_L = buf;
       }
     }
     else// if startpoint - insert
     {
       segments.SetCurSegAndPoint(sn);
-      auto _L = L + 1;
-      for (i = L_size - 1; (i != -1) && (!segments.UnderCurPoint(L[i])); --i)
-        _L[i] = L[i];
-      _L[i] = sn;
+      auto i = L_size;
+      auto L_ = L;
+      for (auto _L = L_ - 1; (i != 0) && (!segments.UnderCurPoint(_L[i])); --i)
+        L_[i] = _L[i];
+      L_[i] = sn;
       ++L_size;
       FindIntI(segments, SegR[sn], stack_pos);// get internal intersections
     }
