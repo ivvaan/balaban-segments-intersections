@@ -49,19 +49,15 @@ public:
   };
   void SetCurStripeRight(uint4 right) { E = GetX(right); };
   void SetCurStripeLeft(uint4 left) { B = GetX(left); };
-  void SetCurPoint(uint4 pt)
-  {
-    cur_point = is_last(pt) ?
-      collection[get_segm(pt)].EndPoint() :
-      collection[get_segm(pt)].BegPoint();
+  void SetCurPoint(uint4 s){
+    cur_point = collection[s].BegPoint();
   };
-  void SetCurSegAndPoint(uint4 s)
-  {
+
+  void SetCurSegAndPoint(uint4 s) {
     cur_point = collection[s].BegPoint();
     SetCurSeg(s);
     if constexpr ((IntersectionRegistrator::reg_type & _RegistrationType::point) == 0)
       active_end = cur_seg.EndPoint();
-
   };
 
   void SetCurSeg(uint4 s)

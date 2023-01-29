@@ -184,11 +184,24 @@ protected:
   {
     auto ENDS = i_f.ENDS;
     for (auto i = interval_left_index + 1; i != interval_right_index; ++i) {
+      auto pt = ENDS[i];
       if (i_f.L_size > 1) {
-        segments.SetCurStripe(ENDS[i - 1], ENDS[i]);
+        segments.SetCurStripe(ENDS[i - 1], pt);
         i_f.SearchInStrip(segments, ladder_start_index);
       }
-      i_f.InsDel(segments, i, stack_pos);
+      else
+      {
+        //simplified InsDel to speedup on s distribution
+        if (SegmentsColl::is_last(pt)) {//just remove last segment from L
+          i_f.L_size = 0;
+          continue;
+        }
+        if ((i_f.L_size == 0) && (stack_pos->prev == nullptr)) {//add first segment to L
+          i_f.InitLByLeftEnd<SegmentsColl>(pt);
+          continue;
+        }
+      }
+      i_f.InsDel(segments, pt, stack_pos);
     }
     //the stripe right bound needs to be installed correctly even if i_f.L_size <= 1
     segments.SetCurStripe(ENDS[interval_right_index - 1], ENDS[interval_right_index]);
@@ -200,6 +213,7 @@ protected:
   template <class IntersectionFinder, class SegmentsColl>
   static void FindRNoChecks(IntersectionFinder& i_f, SegmentsColl& segments, int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec* stack_pos)
   {
+    auto ENDS = i_f.ENDS;
     do {
       if (i_f.L_size == 0)break;
       auto Q_pos = i_f.Split(segments, i_f.Q + ladder_start_index, interval_right_index);
@@ -214,7 +228,7 @@ protected:
       uint4 m = (interval_left_index + interval_right_index) / 2;
         // if L contains a lot of segments then cut on two parts
       FindR(i_f, segments, Q_pos, interval_left_index, m, &stack_rec);
-      i_f.InsDel(segments, m, &stack_rec);
+      i_f.InsDel(segments, ENDS[m], &stack_rec);
       FindR(i_f, segments, Q_pos, m, interval_right_index, &stack_rec);
         //actually works without this line, but it simplifies segment collection class
       //protocol
@@ -234,14 +248,13 @@ protected:
     auto rb = step + (interval_left_index << divide_pow);//* divide_into
     auto left_bound= interval_left_index;
     auto right_bound = rb >> divide_pow; // / divide_into;
-    auto ENDS = i_f.ENDS;
     auto stripe_right = ENDS[left_bound];
     do {
       auto stripe_left = stripe_right;
       stripe_right = ENDS[right_bound];
       segments.SetCurStripe(stripe_left, stripe_right);
       FindRNoChecks(i_f, segments, ladder_start_index, left_bound, right_bound, stack_pos);
-      i_f.InsDel(segments, right_bound, stack_pos);
+      i_f.InsDel(segments, stripe_right, stack_pos);
       left_bound = right_bound;
       right_bound = (rb += step) >> divide_pow; // / divide_into;
     } while (right_bound < interval_right_index);

@@ -35,6 +35,13 @@ public:
   using CIMP = CommonImpl;
 
   template<class SegmentsColl>
+  void InitLByLeftEnd(uint4 pt) {
+    L[0] = SegmentsColl::get_segm(pt);
+    L_size = 1;
+    from_begin = true;
+  }
+
+  template<class SegmentsColl>
   void find_intersections(SegmentsColl& segments)
   {
  // AllocMem
@@ -42,9 +49,7 @@ public:
     DECL_RAII_ARR(L, LR_len);
     DECL_RAII_ARR(Q, len_of_Q);
 
-    L[0] = SegmentsColl::get_segm(ENDS[0]);
-    from_begin = true;
-    L_size = 1;
+    InitLByLeftEnd<SegmentsColl>(ENDS[0]);
     constexpr int4 bottom_index = 0;
     ProgramStackRec stack_rec(bottom_index, 2 * nTotSegm); //need to be initialized this way
     FindR(*this, segments, bottom_index, 0, 2 * nTotSegm - 1, &stack_rec/*, 0, get_max_call(2 * nTotSegm)*/);
@@ -80,14 +85,14 @@ public:
   };
 
   template<class SegmentsColl>
-  void InsDel(SegmentsColl& segments, uint4 end_index, ProgramStackRec* stack_pos)
+  void InsDel(SegmentsColl& segments, uint4 pt, ProgramStackRec* stack_pos)
   {
     int4 Size = L_size;
     int4 i;
-    auto sn = SegmentsColl::get_segm(ENDS[end_index]);
+    auto sn = SegmentsColl::get_segm(pt);
     if (from_begin)
     {
-      if (SegmentsColl::is_last(ENDS[end_index])) // if endpoint - delete
+      if (SegmentsColl::is_last(pt)) // if endpoint - delete
       {
         i = --Size;
         auto cur = L[i];
@@ -111,7 +116,7 @@ public:
     }
     else
     {
-      if (SegmentsColl::is_last(ENDS[end_index])) // if endpoint - delete
+      if (SegmentsColl::is_last(pt)) // if endpoint - delete
       {
         i = LR_len - Size;
         --Size;

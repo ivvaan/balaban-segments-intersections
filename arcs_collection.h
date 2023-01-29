@@ -46,14 +46,11 @@ public:
   };
   void SetCurStripeRight(uint4 right) { E = GetX(right); };
   void SetCurStripeLeft(uint4 left) { B = GetX(left); };
-  void SetCurPoint(uint4 pt)
-  {
-    if (is_last(pt))
-      collection[get_segm(pt)].EndPoint(cur_point.x, cur_point.y);
-    else
-      collection[get_segm(pt)].BegPoint(cur_point.x, cur_point.y);
+
+  void SetCurPoint(uint4 s) {
+    collection[s].BegPoint(cur_point.x, cur_point.y);
   };
- 
+
   void SetCurSegAndPoint(uint4 s)  {
     collection[s].BegPoint(cur_point.x, cur_point.y);
     SetCurSeg(s);

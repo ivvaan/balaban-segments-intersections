@@ -90,7 +90,6 @@ public:
   {
     SetCurPoint(get_first_pt(s));
     SetCurSeg(s);
-//    collection[s].BegPoint(cur_point.x, cur_point.y);
   };
 
   void SetCurSegCutBE(uint4 s)

@@ -37,6 +37,12 @@ public:
   ~CFastIntFinder() { unclone(); FreeMem(); };
 
   template<class SegmentsColl>
+  void InitLByLeftEnd(uint4 pt) {
+    L[0] = SegmentsColl::get_segm(pt);
+    L_size = 1;
+  }
+
+  template<class SegmentsColl>
   void find_intersections(SegmentsColl  &segments,uint4 from=0,uint4 to=0)
   {
     //AllocMem
@@ -52,8 +58,7 @@ public:
       to = 2 * nTotSegm - 1;
     }
     if (from == 0) {
-      L[0] = SegmentsColl::get_segm(ENDS[0]);
-      L_size = 1;
+      InitLByLeftEnd<SegmentsColl>(ENDS[0]);
     }
     else
       L_size = CalcLAt(segments, from);
@@ -112,10 +117,10 @@ public:
   };
 
   template<class SegmentsColl>
-  void InsDel(SegmentsColl &segments, uint4 end_index, ProgramStackRec * stack_pos)
+  void InsDel(SegmentsColl &segments, uint4 pt, ProgramStackRec * stack_pos)
   {
-    auto sn = SegmentsColl::get_segm(ENDS[end_index]);
-    if (SegmentsColl::is_last(ENDS[end_index])) // if endpoint - delete
+    auto sn = SegmentsColl::get_segm(pt);
+    if (SegmentsColl::is_last(pt)) // if endpoint - delete
     {
       auto _L = L+(--L_size);
       auto cur = *_L;
@@ -129,14 +134,17 @@ public:
     }
     else// if startpoint - insert
     {
-      segments.SetCurSegAndPoint(sn);
-      auto i = L_size;
+      if (stack_pos->prev) {
+        segments.SetCurSegAndPoint(sn);
+        FindIntI(segments, SegR[sn], stack_pos);// get internal intersections
+      }
+      else
+        segments.SetCurPoint(sn);
+      auto i = L_size++;
       auto L_ = L;
       for (auto _L = L_ - 1; (i != 0) && (!segments.UnderCurPoint(_L[i])); --i)
         L_[i] = _L[i];
       L_[i] = sn;
-      ++L_size;
-      FindIntI(segments, SegR[sn], stack_pos);// get internal intersections
     }
   }
 

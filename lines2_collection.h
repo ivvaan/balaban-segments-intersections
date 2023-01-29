@@ -47,13 +47,15 @@ public:
   void SetCurStripeRight(uint4 right) { E = GetX(right); };
   void SetCurStripeLeft(uint4 left) { B = GetX(left); };
 
-  void SetCurSegAndPoint(uint4 s)
-  {
+  void SetCurPoint(uint4 s) {
+    cur_point = collection[s].BegPoint();
+  };
+
+  void SetCurSegAndPoint(uint4 s) {
     cur_point = collection[s].BegPoint();
     SetCurSeg(s);
     if constexpr ((IntersectionRegistrator::reg_type & _RegistrationType::point) == 0)
       active_end = cur_seg.EndPoint();
-
   };
 
   void SetCurSeg(uint4 s)
