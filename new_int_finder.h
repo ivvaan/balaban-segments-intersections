@@ -196,8 +196,9 @@ protected:
           i_f.L_size = 0;
           continue;
         }
-        if ((i_f.L_size == 0) && (stack_pos->prev == nullptr)) {//add first segment to L
-          i_f.InitLByLeftEnd<SegmentsColl>(pt);
+        if ((i_f.L_size == 0)&&(stack_pos->prev==nullptr)) {//add to L first segment
+          i_f.L[0] = SegmentsColl::get_segm(pt);
+          i_f.L_size = 1;
           continue;
         }
       }

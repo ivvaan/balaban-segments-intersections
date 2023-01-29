@@ -35,13 +35,6 @@ public:
   using CIMP = CommonImpl;
 
   template<class SegmentsColl>
-  void InitLByLeftEnd(uint4 pt) {
-    L[0] = SegmentsColl::get_segm(pt);
-    L_size = 1;
-    from_begin = true;
-  }
-
-  template<class SegmentsColl>
   void find_intersections(SegmentsColl& segments)
   {
  // AllocMem
@@ -49,7 +42,9 @@ public:
     DECL_RAII_ARR(L, LR_len);
     DECL_RAII_ARR(Q, len_of_Q);
 
-    InitLByLeftEnd<SegmentsColl>(ENDS[0]);
+    L[0]=SegmentsColl::get_segm(ENDS[0]);
+    L_size = 1;
+    from_begin = true;
     constexpr int4 bottom_index = 0;
     ProgramStackRec stack_rec(bottom_index, 2 * nTotSegm); //need to be initialized this way
     FindR(*this, segments, bottom_index, 0, 2 * nTotSegm - 1, &stack_rec/*, 0, get_max_call(2 * nTotSegm)*/);
@@ -87,14 +82,13 @@ public:
   template<class SegmentsColl>
   void InsDel(SegmentsColl& segments, uint4 pt, ProgramStackRec* stack_pos)
   {
-    int4 Size = L_size;
     int4 i;
     auto sn = SegmentsColl::get_segm(pt);
     if (from_begin)
     {
       if (SegmentsColl::is_last(pt)) // if endpoint - delete
       {
-        i = --Size;
+        i = --L_size;
         auto cur = L[i];
         while (cur != sn) {
           --i;
@@ -106,10 +100,10 @@ public:
       else // if startpoint - insert
       {
         segments.SetCurSegAndPoint(sn);
-        for (i = Size - 1; (i > -1) && (!segments.UnderCurPoint(L[i])); --i)
+        for (i = L_size - 1; (i > -1) && (!segments.UnderCurPoint(L[i])); --i)
           L[i + 1] = L[i];
         L[i + 1] = sn;
-        Size++;
+        ++L_size;
         FindIntI(segments, SegR[sn], stack_pos); // get internal intersections
       }
 
@@ -118,8 +112,12 @@ public:
     {
       if (SegmentsColl::is_last(pt)) // if endpoint - delete
       {
-        i = LR_len - Size;
-        --Size;
+        i = LR_len - L_size;
+        --L_size;
+        if (L_size == 0) { 
+          from_begin = true; 
+          return;
+        }
         auto cur = L[i];
         while (cur != sn) {
           ++i;
@@ -131,15 +129,14 @@ public:
       else // if startpoint - insert
       {
         segments.SetCurSegAndPoint(sn);
-        for (i = LR_len - Size; (i != LR_len) && (segments.UnderCurPoint(L[i])); ++i)
+        for (i = LR_len - L_size; (i != LR_len) && (segments.UnderCurPoint(L[i])); ++i)
           L[i - 1] = L[i];
         L[i - 1] = sn;
-        ++Size;
+        ++L_size;
 
         FindIntI(segments, SegR[sn], stack_pos); // get internal intersections
       }
     }
-    L_size = Size;
   };
 
   template<class SegmentsColl>

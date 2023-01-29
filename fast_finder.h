@@ -37,12 +37,6 @@ public:
   ~CFastIntFinder() { unclone(); FreeMem(); };
 
   template<class SegmentsColl>
-  void InitLByLeftEnd(uint4 pt) {
-    L[0] = SegmentsColl::get_segm(pt);
-    L_size = 1;
-  }
-
-  template<class SegmentsColl>
   void find_intersections(SegmentsColl  &segments,uint4 from=0,uint4 to=0)
   {
     //AllocMem
@@ -58,7 +52,8 @@ public:
       to = 2 * nTotSegm - 1;
     }
     if (from == 0) {
-      InitLByLeftEnd<SegmentsColl>(ENDS[0]);
+      L[0]=SegmentsColl::get_segm(ENDS[0]);
+      L_size = 1;
     }
     else
       L_size = CalcLAt(segments, from);
@@ -138,8 +133,9 @@ public:
         segments.SetCurSegAndPoint(sn);
         FindIntI(segments, SegR[sn], stack_pos);// get internal intersections
       }
-      else
+      else {
         segments.SetCurPoint(sn);
+      }
       auto i = L_size++;
       auto L_ = L;
       for (auto _L = L_ - 1; (i != 0) && (!segments.UnderCurPoint(_L[i])); --i)
