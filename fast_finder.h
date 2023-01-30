@@ -210,7 +210,6 @@ public:
             // one addition per loop by incrementing _Q later.
     }
     if (new_L_pos == last_L){
-      dont_cut_stripe = false;
       return 0;
     }
 
@@ -257,6 +256,8 @@ public:
     for (auto Q_idx = *Q_tail; Q_idx != Q_size; Q_idx = *--Q_tail, ++cur)
     {
       segments.SetCurSegCutBE(*cur);
+//      auto Q_loc = _Q + Q_idx;
+//      n_int += segments.FindCurSegIntUpWith(Q_loc, _Q_pos) - Q_loc;
       segments.FindCurSegIntUpWith(_Q + Q_idx, _Q_pos);
     }
     dont_cut_stripe = n_int > L_size + cut_margin;
@@ -287,7 +288,6 @@ public:
       }
     }
     if (_Q_pos == _Q) {
-      dont_cut_stripe = false;
       return 0;
     }
     L_size = new_L_pos - L;
@@ -307,7 +307,7 @@ public:
       segments.SetCurSegCutBE(*L_pos);
       segments.FindCurSegIntUpWith(_Q + Q_idx, _Q_pos);
     }
-    dont_cut_stripe = n_int > L_size;
+    dont_cut_stripe = n_int > L_size + cut_margin;
     return Q_size;
   };
 

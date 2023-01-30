@@ -243,10 +243,7 @@ public:
       }
     }
     from_begin = true;
-    if (_Q_pos == 0)
-    {
-      dont_cut_stripe = false;
-      L_size = new_L_size;
+    if (_Q_pos == 0) {
       return 0;
     }
     Q_tail = GetQTail();
