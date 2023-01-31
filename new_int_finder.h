@@ -220,7 +220,6 @@ protected:
         return;
       }
       uint4 m = (interval_left_index + interval_right_index) / 2;
-        // if L contains a lot of segments then cut on two parts
       _FindR(i_f, segments, Q_pos, interval_left_index, m, &stack_rec);
       i_f.InsDel(segments, ENDS[m], &stack_rec);
       _FindR(i_f, segments, Q_pos, m, interval_right_index, &stack_rec);
