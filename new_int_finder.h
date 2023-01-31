@@ -233,14 +233,17 @@ protected:
     } while (false);
     //if L or Q empty cut into 16 parts
     constexpr const uint4 divide_pow = 4;
-    constexpr const uint4 divide_into = 1 << divide_pow;//4
-    constexpr const uint4 min_size = 16;//
+//    constexpr const uint4 divide_into = 1 << divide_pow;//16
+    constexpr const uint4 min_size = 128;//must be >= 1<<(divide_pow+1)
+//    constexpr const uint4 min_step = 12;
 
     auto step = interval_right_index - interval_left_index;
+
     if (step <= min_size) {
       return SISFindR(i_f, segments, ladder_start_index, interval_left_index, interval_right_index, stack_pos);
     }
-    step = MAX(step, divide_into*6);
+
+    //step = MAX(step, (1 << divide_pow)*min_step);
     auto rb = step + (interval_left_index << divide_pow);//* divide_into
     auto left_bound= interval_left_index;
     auto right_bound = rb >> divide_pow; // / divide_into;
@@ -254,10 +257,10 @@ protected:
       stripe_left = stripe_right;
       right_bound = (rb += step) >> divide_pow; // / divide_into;
     } while (right_bound < interval_right_index);
-    _FindR(i_f, segments, ladder_start_index, left_bound, interval_right_index, stack_pos);
-    //assert(interval_right_index - left_bound > 1);
-    //segments.SetCurStripe(stripe_left, ENDS[interval_right_index]);
-    //FindRNoChecks(i_f, segments, ladder_start_index, left_bound, interval_right_index, stack_pos);
+    //_FindR(i_f, segments, ladder_start_index, left_bound, interval_right_index, stack_pos);
+    assert(interval_right_index - left_bound > 1);
+    segments.SetCurStripe(stripe_left, ENDS[interval_right_index]);
+    FindRNoChecks(i_f, segments, ladder_start_index, left_bound, interval_right_index, stack_pos);
   };
 
   template <class IntersectionFinder, class SegmentsColl>
