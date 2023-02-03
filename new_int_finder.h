@@ -275,9 +275,9 @@ protected:
     FindRNoChecks(i_f, segments, ladder_start_index, interval_left_index, interval_right_index, stack_pos);
   }
 
-  static uint4 GetDivPow(uint4 l, double avr_segm_on_vline) {
+  uint4 GetDivPow(uint4 l) {
     int4 res = 0;
-    for (uint4 target = 2.0 * l / MAX(avr_segm_on_vline, 8.0);target; target >>= 1)
+    for (uint4 target = 2.0*l / MAX(avr_segm_on_vline, 8.0);target; target >>= 1)
       ++res;
     return MAX(res,4);
   };
@@ -287,7 +287,7 @@ protected:
   {
     auto ENDS = i_f.ENDS;
     long long step = interval_right_index - interval_left_index;
-    uint4 divide_pow = GetDivPow(step, i_f.avr_segm_on_vline);
+    uint4 divide_pow = i_f.GetDivPow(step);
     long long rb = step + (((long long)interval_left_index) << divide_pow);
     uint4 left_bound = interval_left_index;
     uint4 right_bound = rb >> divide_pow; 

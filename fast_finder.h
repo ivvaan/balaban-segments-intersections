@@ -47,9 +47,11 @@ public:
     ++R;//to have one cell before R for sentinel
     DECL_RAII_ARR(Q, len_of_Q);
 
+    bool not_parallel = false;
     if (to == 0) {
       from = 0;
       to = 2 * nTotSegm - 1;
+      not_parallel = true;
     }
     if (from == 0) {
       L[0]=SegmentsColl::get_segm(ENDS[0]);
@@ -60,7 +62,10 @@ public:
 
     constexpr int4 bottom_index = 0;
     ProgramStackRec stack_rec(bottom_index, 2 * nTotSegm); //need to be initialized this way
-    FindR(*this, segments, bottom_index, from, to, &stack_rec/*, 0, get_max_call(to - from)*/);
+    if(not_parallel)
+      FindR(*this, segments, bottom_index, from, to, &stack_rec/*, 0, get_max_call(to - from)*/);
+    else
+      _FindR(*this, segments, bottom_index, from, to, &stack_rec/*, 0, get_max_call(to - from)*/);
   }
 
  template<template <class> class SegmentsColl, class CIntRegistrator >
