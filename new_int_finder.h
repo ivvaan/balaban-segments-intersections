@@ -220,9 +220,9 @@ protected:
         return;
       }
       uint4 m = (interval_left_index + interval_right_index) / 2;
-      _FindR(i_f, segments, Q_pos, interval_left_index, m, &stack_rec);
+      FindR(i_f, segments, Q_pos, interval_left_index, m, &stack_rec);
       i_f.InsDel(segments, ENDS[m], &stack_rec);
-      _FindR(i_f, segments, Q_pos, m, interval_right_index, &stack_rec);
+      FindR(i_f, segments, Q_pos, m, interval_right_index, &stack_rec);
    
 //actually works without SetCurStripeLeft, but it simplifies segment collection class protocol
       segments.SetCurStripeLeft(ENDS[interval_left_index]);
@@ -263,7 +263,7 @@ protected:
   };
 
   template <class IntersectionFinder, class SegmentsColl>
-  static void _FindR(IntersectionFinder& i_f, SegmentsColl& segments, int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec* stack_pos)
+  static void FindR(IntersectionFinder& i_f, SegmentsColl& segments, int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec* stack_pos)
   {
     segments.SetCurStripe(i_f.ENDS[interval_left_index], i_f.ENDS[interval_right_index]);
     if (interval_right_index - interval_left_index == 1) {
@@ -283,7 +283,7 @@ protected:
   };
 
   template <class IntersectionFinder, class SegmentsColl>
-  static void FindR(IntersectionFinder& i_f, SegmentsColl& segments, int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec* stack_pos)
+  static void InitialCutting(IntersectionFinder& i_f, SegmentsColl& segments, int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec* stack_pos)
   {
     auto ENDS = i_f.ENDS;
     long long step = interval_right_index - interval_left_index;

@@ -62,10 +62,11 @@ public:
 
     constexpr int4 bottom_index = 0;
     ProgramStackRec stack_rec(bottom_index, 2 * nTotSegm); //need to be initialized this way
-    if(not_parallel)
-      FindR(*this, segments, bottom_index, from, to, &stack_rec/*, 0, get_max_call(to - from)*/);
-    else
-      _FindR(*this, segments, bottom_index, from, to, &stack_rec/*, 0, get_max_call(to - from)*/);
+    if (avr_segm_on_vline < 35)
+      return SISFindR(*this, segments, bottom_index, from, to, &stack_rec);
+    if (not_parallel) 
+      return InitialCutting(*this, segments, bottom_index, from, to, &stack_rec/*, 0, get_max_call(to - from)*/);
+    FindR(*this, segments, bottom_index, from, to, &stack_rec/*, 0, get_max_call(to - from)*/);
   }
 
  template<template <class> class SegmentsColl, class CIntRegistrator >
@@ -339,6 +340,7 @@ public:
       SegL = master->SegL;
       SegR = master->SegR;
       ENDS = master->ENDS;
+      avr_segm_on_vline = master->avr_segm_on_vline;
       clone_of = master;
   };
 
