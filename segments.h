@@ -47,43 +47,43 @@ public:
   };
   void Init(const TLineSegment1 &s) { org = s.org; shift = s.shift; };
   void InitRandom(CRandomValueGen &rv, int4 seg_n, int4 type, REAL par);
-  TPlaneVect BegPoint()
+  TPlaneVect BegPoint() const
   {
     return org;
   };
-  TPlaneVect EndPoint()
+  TPlaneVect EndPoint() const
   {
     return org + shift;
   };
-  void BegPoint(REAL &x, REAL &y)
+  void BegPoint(REAL &x, REAL &y) const
   {
     x = org.x; y = org.y;
   };
-  void EndPoint(REAL &x, REAL &y)
+  void EndPoint(REAL &x, REAL &y) const
   {
     x = org.x + shift.x; y = org.y + shift.y;
   };
-  bool under(const TPlaneVect &v) //segment placed under point v
+  bool under(const TPlaneVect &v) const//segment placed under point v
   {
     REAL res = (v - org) % shift;
     //   if (fabs(res)==0.0) throw 1;
     return (res <= 0);
   };
-  bool upper(TPlaneVect &v)
+  bool upper(TPlaneVect &v) const
   {
     REAL res = (v - org) % shift;
     //   if (fabs(res)==0.0) throw 1;
     return (res>0);
   };
-  REAL YAtX(REAL X)
+  REAL YAtX(REAL X) const
   {
     return org.y + shift.y*(X - org.x) / shift.x;
   };   
-  REAL YAtX_Numerator(REAL X)
+  REAL YAtX_Numerator(REAL X) const
   {
     return shift.x * org.y + shift.y * (X - org.x);
   };
-  void write_SVG(int4 id,chostream *SVG_text) {
+  void write_SVG(int4 id,chostream *SVG_text) const {
     if (SVG_text) {
       auto bp = BegPoint();
       auto ep = EndPoint();
@@ -121,35 +121,35 @@ public:
   };
 
 
-  TPlaneVect BegPoint()
+  TPlaneVect BegPoint() const
   {
     return TPlaneVect(x1, a*x1 + b);
   };
-  TPlaneVect EndPoint()
+  TPlaneVect EndPoint() const
   {
     return TPlaneVect(x2, a*x2 + b);
   };
-  void BegPoint(REAL &x, REAL &y)
+  void BegPoint(REAL &x, REAL &y) const
   {
     x = x1; y = a*x1 + b;
   };
-  void EndPoint(REAL &x, REAL &y)
+  void EndPoint(REAL &x, REAL &y) const
   {
     x = x2; y = a*x2 + b;
   };
-  bool under(const TPlaneVect &v)
+  bool under(const TPlaneVect &v) const
   {
     return v.y >= (v.x*a + b);
   };
-  bool upper(const TPlaneVect &v)
+  bool upper(const TPlaneVect &v) const
   {
     return v.y<(v.x*a + b);
   };
-  REAL YAtX(REAL X)
+  REAL YAtX(REAL X) const
   {
     return a*X + b;
   };
-  void write_SVG(int4 id,chostream* SVG_text) {
+  void write_SVG(int4 id,chostream* SVG_text) const {
     if (SVG_text) {
       auto bp = BegPoint();
       auto ep = EndPoint();
@@ -185,39 +185,39 @@ public:
   void InitRandom(CRandomValueGen &rv, int4 seg_n, int4 type, REAL par);
 
 
-  TPlaneVect BegPoint()
+  TPlaneVect BegPoint() const 
   {
     if (is_upper)
       return TPlaneVect(x1, org.y + sqrt(r2 - sq(x1 - org.x)));
     else
       return TPlaneVect(x1, org.y - sqrt(r2 - sq(x1 - org.x)));
   };
-  TPlaneVect EndPoint()
+  TPlaneVect EndPoint() const
   {
     if (is_upper)
       return TPlaneVect(x2, org.y + sqrt(r2 - sq(x2 - org.x)));
     else
       return TPlaneVect(x2, org.y - sqrt(r2 - sq(x2 - org.x)));
   };
-  TPlaneVect PointAtX(REAL x)
+  TPlaneVect PointAtX(REAL x) const
   {
     if (is_upper)
       return TPlaneVect(x, org.y + sqrt(r2 - sq(x - org.x)));
     else
       return TPlaneVect(x, org.y - sqrt(r2 - sq(x - org.x)));
   };
-  REAL YAtX(REAL X)
+  REAL YAtX(REAL X) const
   {
     if (is_upper)
       return org.y + sqrt(r2 - sq(X - org.x));
     else
       return org.y - sqrt(r2 - sq(X - org.x));
   };
-  void BegPoint(REAL& x, REAL& y)
+  void BegPoint(REAL& x, REAL& y) const
   {
     x = x1; y = is_upper ? org.y + sqrt(r2 - sq(x1 - org.x)) : org.y - sqrt(r2 - sq(x1 - org.x));
   };
-  void EndPoint(REAL &x, REAL &y)
+  void EndPoint(REAL &x, REAL &y) const
   {
     x = x2; y = is_upper ? org.y + sqrt(r2 - sq(x2 - org.x)) : org.y - sqrt(r2 - sq(x2 - org.x));
   };
@@ -231,15 +231,15 @@ public:
       return (v.y>org.y) && ((v - org).get_norm()>r2);
     return (v.y>org.y) || ((v - org).get_norm()<r2);*/ 
   };
-  bool upper(const TPlaneVect& v)
+  bool upper(const TPlaneVect& v) const
   {
     return !under(v);
   };
-  bool IsTheSamePart(const TPlaneVect &v)
+  bool IsTheSamePart(const TPlaneVect &v) const
   {
     return (!is_upper) ^ (v.y > org.y);
   };
-  void write_SVG(int4 id, chostream* SVG_text) {
+  void write_SVG(int4 id, chostream* SVG_text) const {
     if (SVG_text) {
       auto bp = BegPoint();
       auto ep = EndPoint();
