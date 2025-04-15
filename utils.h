@@ -24,6 +24,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <cassert>
 #include <type_traits>
 #include <math.h>
+#include <intrin.h>
 typedef int int4;
 typedef unsigned int uint4;
 typedef long long int8;
@@ -204,6 +205,17 @@ out& operator <<(out& o, const couple<real>& v) {
   return o << "[" << v.x << "," << v.y << "]";
 }
 
+typedef couple<REAL> TPlaneVect;
+
+struct transf1D {
+  REAL shift = 0.0;
+  REAL scale = 1.0;
+  REAL operator()(REAL v) const {
+    return (v + shift) * scale;
+  };
+  REAL doscale(REAL v) const { return v * scale; };
+};
+
 
 struct TIntegerVect {
   int4 x = 0;
@@ -211,8 +223,10 @@ struct TIntegerVect {
   TIntegerVect() {};
   TIntegerVect(int4 xc, int4 yc) :x(xc), y(yc) {};
   template <class real>
-  TIntegerVect(const couple<real>& v, const couple<real>& x_transf, const couple<real>& y_transf) :
-    x((v.x + x_transf.y) * x_transf.x + 0.5),  y((v.y + y_transf.y) * y_transf.x + 0.5){};
+  TIntegerVect(const couple<real>& v, const transf1D& x_transf, const transf1D& y_transf) :
+    x(x_transf(v.x) + 0.5),  
+    y(y_transf(v.y) + 0.5)
+  {};
   TIntegerVect(const TIntegerVect& c) = default;
   auto getX() const { return x; };
   auto getY() const { return y; };
@@ -238,9 +252,9 @@ struct TIntegerVect {
   };
 
   template <class real>
-  void from_real(const couple<real>& v, const couple<real>& x_transf, const couple<real>& y_transf) {
-    x = (v.x + x_transf.y) * x_transf.x + 0.5;
-    y = (v.y + y_transf.y) * y_transf.x + 0.5;
+  void from_real(const couple<real>& v, const transf1D& x_transf, const transf1D& y_transf) {
+    x = x_transf(v.x) + 0.5;
+    y = y_transf(v.y) + 0.5;
   };
 
   template <class real>
@@ -264,16 +278,17 @@ TIntegerVect operator*(int4 r, const TIntegerVect& t);
 TIntegerVect operator*(const TIntegerVect& t, int4 r);
 
 
-typedef couple<REAL> TPlaneVect;
+
 
 struct minmaxrect { 
-  TPlaneVect ld, rt; 
-  minmaxrect get_scaled(REAL factor) {
+  TPlaneVect ld, rt; // left down, right top coners
+  minmaxrect get_scaled(REAL factor) {// enlage rectangle into factor times 
     auto fp = 0.5 * (1. + factor);
     auto fm = 0.5 * (1. - factor);
     return { fp * ld + fm * rt , fp * rt + fm * ld };
   };
 };
+
 template<class SegArr>
 minmaxrect get_mmrect01(SegArr c[], int4 N) {
   REAL xmin = 0, ymin = 0, xmax = 1, ymax = 1;
@@ -287,6 +302,28 @@ minmaxrect get_mmrect01(SegArr c[], int4 N) {
   }
   return { {xmin,ymin},{xmax,ymax} };
 };
+
+template <class T>
+minmaxrect get_minmax(int4 n, T c[])
+{
+  TPlaneVect bp = c[0].BegPoint();
+  TPlaneVect ep = c[0].EndPoint();
+  REAL xmin = bp.x;
+  REAL xmax = ep.x;
+  REAL ymin = MIN(bp.y, ep.y);
+  REAL ymax = MAX(bp.y, ep.y);
+  for (int4 i = 1; i < n; ++i) {
+    bp = c[i].BegPoint();
+    ep = c[i].EndPoint();
+    xmin = MIN(xmin, bp.x);
+    xmax = MAX(xmax, ep.x);
+    ymin = std::min({ ymin,bp.y,ep.y });
+    ymax = std::max({ ymax,bp.y,ep.y });
+  }
+
+  return { {xmin,ymin},{xmax,ymax} };
+};
+
 
 namespace {
   template<typename SegmentsColl>
@@ -303,5 +340,40 @@ template< class T >
 constexpr bool has_sentinels = has_get_sentinel<T>::value;
 
 #define THIS_HAS_SENTINELS (has_sentinels<std::remove_pointer_t<decltype(this)> >)
+
+std::strong_ordering comp_prod(int64_t a, int64_t b, int64_t c, int64_t d);
+
+struct prod64 {// represents product a*b
+  int64_t a, b;
+
+  auto operator<=>(const prod64& other) const {
+    return comp_prod(a, b, other.a, other.b);
+  };
+};
+
+struct frac64 {// represents proper fraction num/denum (denum>0)
+  int64_t num, denum;
+
+  auto operator<=>(const frac64& other) const {
+    assert((denum > 0) && (other.denum > 0));
+    return comp_prod(num, other.denum, other.num, denum);
+  };
+};
+
+// denum can be passed to the constructor negative (more slower)
+struct div64 :public frac64 {// represents division num/denum 
+  div64(int64_t n, int64_t d) {
+    if (d < 0) {
+      num = -n;
+      denum = -d;
+    }
+    else
+    {
+      num = n;
+      denum = d;
+    }
+  };
+};
+
 
 #endif

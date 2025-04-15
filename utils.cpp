@@ -22,6 +22,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include "utils.h"
 
 #include <random>
+#include <intrin.h>
 
 
 #ifdef PRINT_SEG_AND_INT
@@ -107,3 +108,13 @@ TIntegerVect operator*(const TIntegerVect& t, int4 r) {
   return { t.x * r, t.y * r };
 }
 
+std::strong_ordering comp_prod(int64_t a, int64_t b, int64_t c, int64_t d) {
+  int64_t hi1, hi2;
+  uint64_t lo1 = _mul128(a, b, &hi1); // product1 = (hi1, lo1)
+  uint64_t lo2 = _mul128(c, d, &hi2); // product2 = (hi2, lo2)
+
+  if (hi1 != hi2)
+    return hi1 <=> hi2;
+
+  return lo1 <=> lo2;
+}

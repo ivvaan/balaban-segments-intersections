@@ -41,26 +41,6 @@ constexpr int4 n_threads = 6;
 
 // creating and deleting collections
 PSeg first_segment_ptr = NULL;
-template <class T>
-minmaxrect get_minmax(int4 n, T c[])
-{
-  TPlaneVect bp = c[0].BegPoint();
-  TPlaneVect ep = c[0].EndPoint();
-  REAL xmin = bp.x;
-  REAL xmax = ep.x;
-  REAL ymin = MIN(bp.y, ep.y);
-  REAL ymax = MAX(bp.y, ep.y);
-  for (int4 i = 1; i < n; ++i) {
-    bp = c[i].BegPoint();
-    ep = c[i].EndPoint();
-    xmin = MIN(xmin, bp.x);
-    xmax = MAX(xmax, ep.x);
-    ymin = std::min({ ymin,bp.y,ep.y });
-    ymax = std::max({ ymax,bp.y,ep.y });
-  }
-
-  return { {xmin,ymin},{xmax,ymax} };
-};
 
 
 

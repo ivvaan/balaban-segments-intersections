@@ -276,7 +276,7 @@ public:
       }
     };
     void Init(TIntegerSegment& s) { org = s.org; shift = s.shift; };
-    void Init(const TLineSegment1& s, const TPlaneVect& x_transf, const TPlaneVect& y_transf) {
+    void Init(const TLineSegment1& s, const transf1D& x_transf, const transf1D& y_transf) {
       org.from_real(s.org, x_transf, y_transf);
       shift= TIntegerVect(s.org + s.shift, x_transf, y_transf) - org;
       Refine();
