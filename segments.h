@@ -181,7 +181,7 @@ public:
   void InitRandom(CRandomValueGen &rv, int4 seg_n, int4 type, REAL par);
 
 
-  TPlaneVect BegPoint()
+  TPlaneVect BegPoint() 
   {
     if (is_upper)
       return TPlaneVect(x1, org.y + sqrt(r2 - sq(x1 - org.x)));
@@ -317,14 +317,14 @@ public:
     auto point_pos(const TIntegerVect& v) const { //return negative if segment placed under point v
       return (v - org) % shift;
     };
-    bool under(const TIntegerVect& v) const { //segment placed under point v
-      return (v - org) % shift <= 0;
+    auto under(const TIntegerVect& v) const { //segment placed under point v
+      return (v - org) % shift <=> 0;
     };
     bool exact_under(const TIntegerVect& v) const { //segment placed under point v
       return (v - org) % shift < 0;
     };
-    bool upper(const TIntegerVect& v) {
-      return (v - org) % shift >= 0;
+    auto upper(const TIntegerVect& v) {
+      return 0 <=>(v - org) % shift;
     };
     bool exact_upper(const TIntegerVect& v) {
       return (v - org) % shift > 0;
