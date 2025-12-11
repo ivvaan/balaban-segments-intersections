@@ -328,7 +328,7 @@ public:
     Init(n, c, r);
     chopped_Y = new REAL[N + 2];
     if constexpr (THIS_HAS_SENTINELS) {
-      chopped_Y[get_sentinel(false)] = std::numeric_limits<REAL>::min();
+      chopped_Y[get_sentinel(false)] = std::numeric_limits<REAL>::lowest();
       chopped_Y[get_sentinel(true)] = std::numeric_limits<REAL>::max();
     }
   }
@@ -338,8 +338,11 @@ public:
   CLine1SegmentCollection(CLine1SegmentCollection& coll, IntersectionRegistrator* r)
   {
     clone(coll, r);
-    chopped_Y = new REAL[N + 1];
-    chopped_Y[N] = std::numeric_limits<REAL>::min();
+    chopped_Y = new REAL[N + 2];
+    if constexpr (THIS_HAS_SENTINELS) {
+        chopped_Y[get_sentinel(false)] = std::numeric_limits<REAL>::lowest();
+        chopped_Y[get_sentinel(true)] = std::numeric_limits<REAL>::max();
+    }
   }
 
   ~CLine1SegmentCollection()
