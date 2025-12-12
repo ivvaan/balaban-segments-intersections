@@ -403,13 +403,10 @@ protected:
     {
       auto sn = L_[i];
       segments.SetCurSegCutBE(sn);
-      if (segments.FindCurSegIntDownWith(_L[i])) {
-        L_[i] = _L[i];
-        uint4 j = i - 1;
-        for (; (j) && (segments.FindCurSegIntDownWith(_L[j])); --j)
+      uint4 j = i;
+      for (; (j) && (segments.FindCurSegIntDownWith(_L[j])); --j)
           L_[j] = _L[j];
-        L_[j] = sn;
-      }
+      L_[j] = sn;
     }
   }
 
