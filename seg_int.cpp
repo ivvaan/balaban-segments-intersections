@@ -225,14 +225,14 @@ void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr
   else
     if (!print_less)printf("\nnew implementation testing... ************************************************\n");
 
-    if ((impl == impl_old)&& (seg_type == graph)) { if (!print_less)printf("old implementation can't deal with graph segments\n"); return; }
+    if ((impl == impl_old)&& (seg_type == _Segment::graph)) { if (!print_less)printf("old implementation can't deal with graph segments\n"); return; }
     for (int4 a = sizeof(alg_list) / sizeof(alg_list[0]) - 1; a>-1; a--)
       //for (int4 a = 0;a<sizeof(alg_list) / sizeof(alg_list[0]); a++)
     {
       if (alg&alg_list[a])
       {
         exec_time[a]=-1;
-        if ((alg_list[a] == fast_no_ip) && (seg_type == arc)) { if (!print_less)printf("fast no inters. points algorithm can handle only line segments\n"); continue; }
+        if ((alg_list[a] == fast_no_ip) && (seg_type == _Segment::arc)) { if (!print_less)printf("fast no inters. points algorithm can handle only line segments\n"); continue; }
         if ((alg_list[a] == bentley_ottmann) && (impl == impl_new)) { if (!print_less)printf("new implementation does't support segments functions for Bentley & Ottman algorithm\n"); continue; }
         if ((alg_list[a] == fast_no_ip) && (impl == impl_new)) { if (!print_less)printf("new implementation does't support segments functions for no inters. points algorithm \n"); continue; }
         if (impl == impl_old)
@@ -339,7 +339,7 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
   the less parallel 'long' and longer 'short' segments
  D=s: short segments: random segment with  length multiplied by distr_param/N
  D=distr_param: random segment with  length multiplied by distr_param
- D=c: segments ends are on the opposite sides of unit circul, each
+ D=c: segments ends are on the opposite sides of unit circle, each
   segment intesect each
 -rR: type of registrator used in new implementation and type of result statistic
  R=c: total intersection counting registrator; total count statistic
@@ -389,14 +389,14 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
           {
             switch (argv[i][2])
             {
-            case 'L':seg_type = line1; break;
-            case 'l':seg_type = line2; break;
-            case 'a':seg_type = arc; break;
-            case 'g':seg_type = graph; break;
+            case 'L':seg_type = _Segment::line1; break;
+            case 'l':seg_type = _Segment::line2; break;
+            case 'a':seg_type = _Segment::arc; break;
+            case 'g':seg_type = _Segment::graph; break;
             default:
             {
               printf("some error in -s param. l used instead.\n");
-              seg_type = line2;
+              seg_type = _Segment::line2;
             }
             };
           };
@@ -405,16 +405,16 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
           {
             switch (argv[i][2])
             {
-            case 'r':distr_type = random; break;
-            case 'l':distr_type = parallel; break;
-            case 'm':distr_type = mixed; break;
-            case 's':distr_type = small; break;
-            case 'p':distr_type = param_defined; break;
-            case 'c':distr_type = circul; break;
+            case 'r':distr_type = _Distribution::random; break;
+            case 'l':distr_type = _Distribution::parallel; break;
+            case 'm':distr_type = _Distribution::mixed; break;
+            case 's':distr_type = _Distribution::small; break;
+            case 'p':distr_type = _Distribution::param_defined; break;
+            case 'c':distr_type = _Distribution::circle; break;
             default:
             {
               printf("some error in -distr_type param. r used instead.\n");
-              distr_type = random;
+              distr_type = _Distribution::random;
             }
             };
           };
@@ -486,7 +486,7 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
           }
       }
   }
-  if((seg_type==graph)&&(distr_type!=random)) {printf("-sg  is compartible only with -dr!\n"); if (wait) { printf("\npress 'Enter' to continue"); getchar(); } return 0;}
+  if((seg_type== _Segment::graph)&&(distr_type!= _Distribution::random)) {printf("-sg  is compartible only with -dr!\n"); if (wait) { printf("\npress 'Enter' to continue"); getchar(); } return 0;}
   if ((reg_stat == _Registrator::store_pairs_and_ints_just_count_stat) && (n > max_truereg_items)) {
     printf("Too many segments (and possible intersections!) for true registration! Just counting used instead.\n"); 
     reg_stat = _Registrator::just_count;

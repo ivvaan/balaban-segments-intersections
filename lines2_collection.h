@@ -26,7 +26,15 @@ template<class IntersectionRegistrator>
 class CLine2SegmentCollection
 {
 public:
-  static constexpr bool is_line_segments = true;
+  using this_T = CLine2SegmentCollection;
+  static constexpr _Coll_flag_state get_coll_flag(_Coll_flags flag) {
+    if (flag == _Coll_flags::line_segments)
+      return _Coll_flag_state::state_true;
+
+    return _Coll_flag_state::state_unimplemented;
+  }
+
+  //static constexpr bool is_line_segments = true;
 
   static bool is_last(uint4 pt)
   {

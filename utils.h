@@ -88,7 +88,7 @@ enum _Segment
 
 enum _Distribution
 {
-  random = 0, parallel, mixed, small, param_defined, circul
+  random = 0, parallel, mixed, small, param_defined, circle
 };
 
 enum _Registrator
@@ -99,6 +99,18 @@ enum _Registrator
   store_pairs_and_ints_just_count_stat = 3
 };
 
+enum class _Coll_flag_state
+{
+    state_false = 0,
+    state_true = 1,
+    state_unimplemented = 2
+};
+
+enum class _Coll_flags
+{
+  line_segments,
+  needs_SetCurSegCutBE_at_start
+};
 
 class CRandomValueGen
 {

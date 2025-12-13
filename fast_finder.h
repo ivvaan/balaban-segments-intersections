@@ -31,8 +31,8 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 class CFastIntFinder : public CommonImpl
 {
 public:
-  using CTHIS = CFastIntFinder;
-  using CIMP = CommonImpl;
+  using this_T = CFastIntFinder;
+  using imp_T = CommonImpl;
  
   ~CFastIntFinder() { unclone(); FreeMem(); };
 
@@ -74,9 +74,9 @@ public:
   {
     using namespace std;
     vector<thread> wrk_threads;
-    auto thread_func = [](CTHIS *master, SegmentsColl<CIntRegistrator> *segments, uint4 from, uint4 to, CIntRegistrator* add_reg) {
+    auto thread_func = [](this_T *master, SegmentsColl<CIntRegistrator> *segments, uint4 from, uint4 to, CIntRegistrator* add_reg) {
       SegmentsColl<CIntRegistrator> coll(*segments, add_reg);
-      CTHIS(master).find_intersections(coll, from, to);
+      this_T(master).find_intersections(coll, from, to);
     };
     auto n = segments.GetSegmNumb();
 
@@ -96,7 +96,7 @@ public:
   template<class SegmentsColl>
   void SearchInStrip(SegmentsColl &segments, int4 qp)
   {
-    if constexpr(SegmentsColl::is_line_segments)
+    if constexpr(SegmentsColl::get_coll_flag(_Coll_flags::line_segments)==_Coll_flag_state::state_true)
     {
       //For line segments we can do more efficient insertion sorting using intersection check as comparison.
       //If s1<s2 at the left bound then s1 intersects s2 inside the stripe means s1>s2 at the right bound of the stripe.
@@ -173,7 +173,8 @@ public:
           segments.SetCurSegCutEnd(cur_seg);
           {
             auto c = segments.FindCurSegIntUpWith(cur_stair, top_Q); 
-            if ((!SegmentsColl::is_line_segments || (c == cur_stair)))
+            constexpr bool non_line_seg = (SegmentsColl::get_coll_flag(_Coll_flags::line_segments) != _Coll_flag_state::state_true);
+            if (non_line_seg || (c == cur_stair))
               segments.FindCurSegIntDownWith(cur_stair-1, bot_Q);
           };
         }
@@ -222,8 +223,10 @@ public:
     long long n_int = 0;
     auto  _Q_pos = _Q;
     //first segment covering current stripe we place to Q 
-    //it can't intersect any of the steps(stairs) because there no stairs yet     
-    segments.SetCurSegCutBE(*++_Q_pos = *new_L_pos);//we don't need SetCurSegCutBE but it is allow to speedup by y values caching 
+    //it can't intersect any of the steps(stairs) because there no stairs yet 
+    *++_Q_pos = *new_L_pos;
+    if constexpr (SegmentsColl::get_coll_flag(_Coll_flags::needs_SetCurSegCutBE_at_start) == _Coll_flag_state::state_true)
+      segments.SetCurSegCutBE(*new_L_pos);//we don't need SetCurSegCutBE in all cases, only for Y caching collections 
     auto cur = new_L_pos + 1;
     for (CSentinel sentinel(segments, *_Q); cur < last_L; ++cur) {
       auto cur_seg = *cur;
@@ -321,7 +324,7 @@ public:
   template<class SegmentsColl>
   int4 Split(SegmentsColl& segments, int4* _Q, uint4 RBoundIdx)
   {
-    if constexpr (SegmentsColl::is_line_segments)
+    if constexpr (SegmentsColl::get_coll_flag(_Coll_flags::line_segments)==_Coll_flag_state::state_true)
       return Split4LineSeg(segments, _Q, RBoundIdx);
     return Split4NonLineSeg(segments, _Q, RBoundIdx);
   };
@@ -330,9 +333,9 @@ public:
 
   protected:
   int4 *R = nullptr;
-  CTHIS* clone_of = nullptr;
+  this_T* clone_of = nullptr;
  
-  void clone(CTHIS* master)
+  void clone(this_T* master)
   {
       nTotSegm = master->nTotSegm;
       LR_len = master->LR_len;
@@ -355,7 +358,7 @@ public:
   };
 
 
-  CFastIntFinder(CTHIS* master) {
+  CFastIntFinder(this_T* master) {
     clone(master);
   };
  

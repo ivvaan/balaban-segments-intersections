@@ -22,9 +22,9 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 
 void TLineSegment1::InitRandom(CRandomValueGen &rv, int4 seg_n, int4 type, REAL par)
 {
-  if (circul == type)
+  if (_Distribution::circle == type)
   {
-    //Segments ends are on the opposite sides of unit circul, each segment intesect each
+    //Segments ends are on the opposite sides of unit circle, each segment intesect each
     double angle = 1.0 / 16.0 + 3.*M_PI*rv.GetRandomDouble() / 8.0;
     org.x = 1. - cos(angle);
     org.y = 1. - sin(angle);
@@ -44,9 +44,9 @@ void TLineSegment1::InitRandom(CRandomValueGen &rv, int4 seg_n, int4 type, REAL 
   shift.y = rv.GetRandomDouble() - org.y;
   Refine();
   shift.x += 1e-6; //to be sure the segment non vertical
-  if (parallel == type)
+  if (_Distribution::parallel == type)
     shift.y *= par;
-  if (mixed == type)
+  if (_Distribution::mixed == type)
   {
     org.y = org.y + 0.5*(1.0 - par)*shift.y;
     shift.y *= par;
@@ -57,7 +57,7 @@ void TLineSegment1::InitRandom(CRandomValueGen &rv, int4 seg_n, int4 type, REAL 
     }
 
   }
-  if (type>mixed)
+  if (type> _Distribution::mixed)
   {
     org = org + 0.5*(1.0 - par)*shift;
     shift = par*shift;
@@ -295,9 +295,9 @@ int4 IntInside(REAL b, REAL e, TArcSegment* s1, TArcSegment* s2)
 
 void TArcSegment::InitRandom(CRandomValueGen &rv, int4 seg_n, int4 type, REAL par)
 {
-  if (circul == type)
+  if (_Distribution::circle == type)
   {
-    //Segments ends are on the opposite sides of unit circul, each segment intesect each
+    //Segments ends are on the opposite sides of unit circle, each segment intesect each
     double angle = 1.0 / 16.0 + 3. * M_PI * rv.GetRandomDouble() / 8.0;
     org.x = 0.5*(cos(angle)+1);
     org.y = 0.5 * (sin(angle)+1);
@@ -317,7 +317,7 @@ void TArcSegment::InitRandom(CRandomValueGen &rv, int4 seg_n, int4 type, REAL pa
 
   
   TLineSegment1 seg;
-  double delta = type > mixed ? 0.001 * par : 0.001;
+  double delta = type > _Distribution::mixed ? 0.001 * par : 0.001;
   do
   seg.InitRandom(rv, 0, type, par);
   while (seg.shift.x<delta); //excluding too vertical case they have big radius

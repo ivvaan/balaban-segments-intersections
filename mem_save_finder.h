@@ -32,7 +32,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 class CMemSaveIntFinder : public CommonImpl 
 {
 public:
-  using CIMP = CommonImpl;
+  using imp_T = CommonImpl;
 
   template<class SegmentsColl>
   void find_intersections(SegmentsColl& segments)
@@ -54,7 +54,7 @@ public:
   void SearchInStrip(SegmentsColl& segments, int4 qp)
   {
     auto _L = from_begin ? L : L + (LR_len - L_size);
-    if constexpr (SegmentsColl::is_line_segments)
+    if constexpr (SegmentsColl::get_coll_flag(_Coll_flags::line_segments)==_Coll_flag_state::state_true)
     {
       //For line segments we can do more efficient insertion sorting using intersection check as comparison.
       //If s1<s2 at the left bound then s1 intersects s2 inside the stripe means s1>s2 at the right bound of the stripe.
@@ -239,7 +239,11 @@ public:
         //place segment in L
         L[new_L_size++] = cur_seg;
         //storing segment position in Q_tail
-        *(--Q_tail) = SegmentsColl::is_line_segments ? INT_MAX : _Q_pos;
+        if constexpr (SegmentsColl::get_coll_flag(_Coll_flags::line_segments) == _Coll_flag_state::state_true)
+          *(--Q_tail) = INT_MAX;
+        else
+          *(--Q_tail) = _Q_pos;
+       // *(--Q_tail) = SegmentsColl::get_coll_flag(line_segments)==_Coll_flag_state::state_true ? INT_MAX : _Q_pos;
       }
     }
     from_begin = true;

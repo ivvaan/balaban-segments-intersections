@@ -32,7 +32,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 class COptimalIntFinder : public CFastIntFinder
 {
 public:
-  using  CIMP = CommonImpl;
+  using  imp_T = CommonImpl;
   using CFAST = CFastIntFinder;
  
   ~COptimalIntFinder() { FreeMem(); };
@@ -88,7 +88,10 @@ private:
         if (!segments.IsIntersectsCurSegDown(Q[c])) break;
       c--;
     }
-    if (SegmentsColl::is_line_segments && (c != l))
+
+    constexpr bool line_seg = (SegmentsColl::get_coll_flag(_Coll_flags::line_segments) == _Coll_flag_state::state_true);
+
+    if (line_seg && (c != l))
       return l-c;
     ++c; ++l;
     while (l <= qe)

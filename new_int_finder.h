@@ -313,7 +313,10 @@ protected:
     auto c = l;
     while ((c != qb) && segments.FindCurSegIntDownWith(*c)) //first get intersections below
       --c;
-    if ((SegmentsColl::is_line_segments && (c != l)))
+
+    constexpr bool line_seg = (SegmentsColl::get_coll_flag(_Coll_flags::line_segments) == _Coll_flag_state::state_true);
+
+    if ((line_seg && (c != l)))
       return; //if found and segment is line or no stair above it can't be any more
     do {
       ++l;
@@ -398,7 +401,8 @@ protected:
   void SearchInStripLineSeg(SegmentsColl& segments, int4* L_) {
     auto Size = L_size;
     auto _L = L_ - 1;
-    segments.SetCurSegCutBE(L_[0]);
+    if constexpr(SegmentsColl::get_coll_flag(_Coll_flags::needs_SetCurSegCutBE_at_start) == _Coll_flag_state::state_true)
+      segments.SetCurSegCutBE(L_[0]);
     for (uint4 i = 1; i < Size; i++)
     {
       auto sn = L_[i];

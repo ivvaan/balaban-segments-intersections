@@ -26,7 +26,15 @@ template<class IntersectionRegistrator>
 class CArcSegmentCollection
 {
 public:
-  static constexpr bool is_line_segments = false;
+  using this_T = CArcSegmentCollection;
+  static constexpr _Coll_flag_state get_coll_flag(_Coll_flags flag) {
+    if (flag == _Coll_flags::line_segments)
+      return _Coll_flag_state::state_false;
+   
+    return _Coll_flag_state::state_unimplemented;
+  }
+
+  //static constexpr bool is_line_segments = false;
 
   static bool is_last(uint4 pt)
   {
