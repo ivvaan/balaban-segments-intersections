@@ -402,13 +402,11 @@ protected:
     auto Size = L_size;
     auto _L = L_ - 1;
     if constexpr(SegmentsColl::get_coll_flag(_Coll_flags::needs_SetCurSegCutBE_at_start) == _Coll_flag_state::state_true)
-      segments.SetCurSegCutBE(L_[0]);
-    for (uint4 i = 1; i < Size; i++)
-    {
+      segments.SetCurSegCutBE(L_[0]);//we don't need SetCurSegCutBE in all cases, only for Y caching collections 
+    for (uint4 i = 1, j; i < Size; i++){
       auto sn = L_[i];
       segments.SetCurSegCutBE(sn);
-      uint4 j = i;
-      for (; (j) && (segments.FindCurSegIntDownWith(_L[j])); --j)
+      for (j = i; (j) && (segments.FindCurSegIntDownWith(_L[j])); --j)
           L_[j] = _L[j];
       L_[j] = sn;
     }
