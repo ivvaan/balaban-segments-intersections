@@ -399,19 +399,15 @@ protected:
 
   template<class SegmentsColl>
   void SearchInStripLineSeg(SegmentsColl& segments, int4* L_) {
-    auto Size = L_size;
-    auto _L = L_ - 1;
-    if constexpr(SegmentsColl::get_coll_flag(_Coll_flags::needs_SetCurSegCutBE_at_start) == _Coll_flag_state::state_true)
-      segments.SetCurSegCutBE(L_[0]);//we don't need SetCurSegCutBE in all cases, only for Y caching collections 
-    for (uint4 i = 1, j; i < Size; i++){
-      auto sn = L_[i];
-      segments.SetCurSegCutBE(sn);
-      for (j = i; (j) && (segments.FindCurSegIntDownWith(_L[j])); --j)
-          L_[j] = _L[j];
-      L_[j] = sn;
+    auto last = L_ + L_size;
+    if constexpr (has_sentinels<SegmentsColl>) 
+      *last= segments.get_sentinel(true);
+    for (int4 *pn, *sn = last - 1; sn != L_; ) {
+      pn = sn--;
+      segments.SetCurSegCutBE(*sn);
+      auto pos = segments.FindCurSegIntUpWith(pn, last);
+      std::rotate(sn, pn, pos);
     }
-  }
-
 };
 
 
