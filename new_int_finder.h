@@ -402,7 +402,10 @@ protected:
     auto last = L_ + L_size;
     if constexpr (has_sentinels<SegmentsColl>) 
       *last= segments.get_sentinel(true);
-    for (decltype(L_) next, cur = last - 1; cur != L_; ) {// insertion sort from last to first
+    decltype(last) cur = last - 1, next;
+    if constexpr (SegmentsColl::get_coll_flag(_Coll_flags::needs_SetCurSegCutBE_at_start) == _Coll_flag_state::state_true)
+      segments.SetCurSegCutBE(*cur);//we don't need SetCurSegCutBE in all cases, only for Y caching collections 
+    while (cur != L_) {// insertion sort from last to first
       next = cur--;
       segments.SetCurSegCutBE(*cur);
       auto no_int = segments.FindCurSegIntUpWith(next, last);
