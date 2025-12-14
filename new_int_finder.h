@@ -402,12 +402,14 @@ protected:
     auto last = L_ + L_size;
     if constexpr (has_sentinels<SegmentsColl>) 
       *last= segments.get_sentinel(true);
-    for (int4 *pn, *sn = last - 1; sn != L_; ) {
-      pn = sn--;
-      segments.SetCurSegCutBE(*sn);
-      auto pos = segments.FindCurSegIntUpWith(pn, last);
-      std::rotate(sn, pn, pos);
+    for (decltype(L_) next, cur = last - 1; cur != L_; ) {// insertion sort from last to first
+      next = cur--;
+      segments.SetCurSegCutBE(*cur);
+      auto no_int = segments.FindCurSegIntUpWith(next, last);
+      std::rotate(cur, next, no_int);
     }
+  }
+
 };
 
 
