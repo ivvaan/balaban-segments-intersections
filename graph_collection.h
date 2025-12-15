@@ -88,15 +88,15 @@ public:
   };
   void SetCurStripeLeft(uint4 left) { ptB = left, idxB = vertex_idx[left]; B = vertices[idxB].x; };
   void SetCurStripeRight(uint4 right) { ptE = right, idxE = vertex_idx[right]; E = vertices[idxE].x; };
-  void SetCurPoint(uint4 pt)
+  void SetCurPoint(uint4 s)
   {
-    cur_pt = pt;
-    cur_pt_idx = vertex_idx[pt];
+    cur_pt = get_first_pt(s);
+    cur_pt_idx = vertex_idx[cur_pt];
     cur_point = vertices[cur_pt_idx];
   };
   void SetCurSegAndPoint(uint4 s)
   {
-    SetCurPoint(get_first_pt(s));
+    SetCurPoint(s);
     SetCurSeg(s);
   };
 

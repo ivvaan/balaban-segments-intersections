@@ -276,6 +276,7 @@ protected:
   }
 
   uint4 GetDivPow(uint4 l) {
+    if (l < 64) return 2;
     int4 res = 0;
     for (uint4 target = 2.0*l / MAX(avr_segm_on_vline, 8.0);target; target >>= 1)
       ++res;
