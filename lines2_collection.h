@@ -123,14 +123,12 @@ public:
     if (x1 >= x2)return false;
     auto da = s2.a - s1.a;
     auto db = s1.b - s2.b;
-    if ((da * x1 - db > 0) ^ (da * x2 - db < 0)) return false;
-    if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) != 0)
-    {
+    if ((da * x1 > db) ^ (da * x2 < db)) return false;
+    if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) != 0){
       auto x = db / da;
       registrator->register_pair_and_point(cur_seg_idx, s_, { x,s1.YAtX(x) });
     }
-    else
-    {
+    else{
       registrator->register_pair(cur_seg_idx, s_);
     }
     return true;
@@ -142,7 +140,7 @@ public:
     auto& s2 = cur_seg;
     auto da = s2.a - s1.a;
     auto db = s1.b - s2.b;
-    if ((da * MAX(s1.x1, s2.x1) - db > 0) ^ (da * MIN(s1.x2, s2.x2) - db < 0)) return false;
+    if ((da * s2.x1 > db) ^ (da * MIN(s1.x2, s2.x2) < db)) return false;
     if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) != 0)
     {
       auto x = db / da;
