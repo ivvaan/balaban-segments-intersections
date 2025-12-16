@@ -112,34 +112,30 @@ public:
   };
 
   template<class SegmentsColl>
-  void InsDel(SegmentsColl &segments, uint4 end_index, ProgramStackRec * stack_pos)
+  void InsDel(SegmentsColl& segments, uint4 pt, ProgramStackRec* stack_pos)
   {
-    int4 Size = L_size;
-    int4 i;
-    auto sn = SegmentsColl::get_segm(ENDS[end_index]);
-    if (SegmentsColl::is_last(ENDS[end_index])) // if endpoint - delete
+    auto sn = SegmentsColl::get_segm(pt);
+    if (SegmentsColl::is_last(pt)) // if endpoint - delete
     {
-      i = --Size;
-      auto cur = L[i];
-      while (cur != sn)
-      {
-        --i;
-        auto buf = cur;
-        cur = L[i];
-        L[i] = buf;
-      }
+      auto last = L + (--L_size);
+      for (auto cur = *last; cur != sn;)
+        std::swap(*--last, cur);
     }
     else// if startpoint - insert
     {
-      segments.SetCurPointAtBeg(sn);
-      for (i = Size - 1; (i > -1) && (!segments.UnderCurPoint(L[i])); --i)
-        L[i + 1] = L[i];
-      L[i + 1] = sn;
-      Size++;
-      segments.SetCurSegAE(sn);
-      FindIntI(segments, SegR[sn], stack_pos);// get internal intersections
+      if (stack_pos->prev) {
+        segments.SetCurSegAndPoint(sn);
+        FindIntI(segments, SegR[sn], stack_pos);// get internal intersections
+      }
+      else {
+        segments.SetCurPointAtBeg(sn);//sets collection current point at the begin of the segment sn
+      }
+      auto i = L_size++;
+      auto L_ = L;
+      for (auto _L = L_ - 1; (i != 0) && (!segments.UnderCurPoint(_L[i])); --i)
+        L_[i] = _L[i];
+      L_[i] = sn;
     }
-    L_size = Size;
   }
 
   template<class SegmentsColl>

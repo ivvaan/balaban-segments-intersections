@@ -123,8 +123,9 @@ public:
     curE = cur_seg.org.x + cur_seg.shift.x;
   };
 
-  void SetCurSegAE(uint4 s)
+  void SetCurSegAndPoint(uint4 s)
   {
+    SetCurPointAtBeg(s);
     SetCurSeg(s);
   };
 

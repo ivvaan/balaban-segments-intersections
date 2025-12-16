@@ -79,63 +79,57 @@ public:
   };
 
   template<class SegmentsColl>
-  void InsDel(SegmentsColl& segments, uint4 end_index, ProgramStackRec* stack_pos)
+  void InsDel(SegmentsColl& segments, uint4 pt, ProgramStackRec* stack_pos)
   {
-    int4 Size = L_size;
     int4 i;
-    auto sn = SegmentsColl::get_segm(ENDS[end_index]);
+    auto sn = SegmentsColl::get_segm(pt);
     if (from_begin)
     {
-      if (SegmentsColl::is_last(ENDS[end_index])) // if endpoint - delete
+      if (SegmentsColl::is_last(pt)) // if endpoint - delete
       {
-        i = --Size;
-        auto cur = L[i];
-        while (cur != sn) {
-          --i;
-          auto buf = cur;
-          cur = L[i];
-          L[i] = buf;
-        }
+        auto last = L + (--L_size);
+        for (auto cur = *last; cur != sn;)
+          std::swap(*--last, cur);
       }
       else // if startpoint - insert
       {
-        segments.SetCurPointAtBeg(sn);
-        for (i = Size - 1; (i > -1) && (!segments.UnderCurPoint(L[i])); --i)
+        //segments.SetCurPointAtBeg(sn);
+        segments.SetCurSegAndPoint(sn);
+        for (i = L_size - 1; (i > -1) && (!segments.UnderCurPoint(L[i])); --i)
           L[i + 1] = L[i];
         L[i + 1] = sn;
-        Size++;
-        segments.SetCurSegAE(sn);
+        ++L_size;
+        //segments.SetCurSegAE(sn);
         FindIntI(segments, SegR[sn], stack_pos); // get internal intersections
       }
 
     }
     else
     {
-      if (SegmentsColl::is_last(ENDS[end_index])) // if endpoint - delete
+      if (SegmentsColl::is_last(pt)) // if endpoint - delete
       {
-        i = LR_len - Size;
-        --Size;
-        auto cur = L[i];
-        while (cur != sn) {
-          ++i;
-          auto buf = cur;
-          cur = L[i];
-          L[i] = buf;
+        if (L_size < 2) {
+          L_size = 0;
+          from_begin = true;
+          return;
         }
+        auto last = L + LR_len - L_size--;
+        for (auto cur = *last; cur != sn;)
+          std::swap(*++last, cur);
       }
       else // if startpoint - insert
       {
-        segments.SetCurPointAtBeg(sn);
-        for (i = LR_len - Size; (i != LR_len) && (segments.UnderCurPoint(L[i])); ++i)
+        //segments.SetCurPointAtBeg(sn);
+        segments.SetCurSegAndPoint(sn);
+        for (i = LR_len - L_size; (i != LR_len) && (segments.UnderCurPoint(L[i])); ++i)
           L[i - 1] = L[i];
         L[i - 1] = sn;
-        ++Size;
+        ++L_size;
+        //segments.SetCurSegAE(sn);
 
-        segments.SetCurSegAE(sn);
         FindIntI(segments, SegR[sn], stack_pos); // get internal intersections
       }
     }
-    L_size = Size;
   };
 
   template<class SegmentsColl>

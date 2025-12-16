@@ -102,8 +102,9 @@ public:
       active_end = cur_seg.BegPoint();
   };
 
-  void SetCurSegAE(uint4 s)
+  void SetCurSegAndPoint(uint4 s)
   {
+    SetCurPointAtEnd(s);
     SetCurSeg(s);
     if constexpr ((IntersectionRegistrator::reg_type & _RegistrationType::point) == 0)
       active_end = cur_seg.EndPoint();

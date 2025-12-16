@@ -92,13 +92,13 @@ public:
       active_end = cur_seg.BegPoint();
   };
 
-  void SetCurSegAE(uint4 s)
+  void SetCurSegAndPoint(uint4 s)
   {
+    SetCurPointAtEnd(s);
     SetCurSeg(s);
-    if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0)
+    if constexpr ((IntersectionRegistrator::reg_type & _RegistrationType::point) == 0)
       active_end = cur_seg.EndPoint();
   };
-
 
 
   bool LBelow(int4 s_1, int4 s_2) const //retuns if s1 below s2 at current vertical line

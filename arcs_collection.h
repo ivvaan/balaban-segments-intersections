@@ -85,8 +85,9 @@ public:
     cur_seg.x2 = MIN(cur_seg.x2, E);
   };
 
-  void SetCurSegAE(uint4 s)
+  void SetCurSegAndPoint(uint4 s)
   {
+    SetCurPointAtEnd(s);
     SetCurSeg(s);
   };
 
