@@ -88,14 +88,9 @@ public:
     {
       if (SegmentsColl::is_last(pt)) // if endpoint - delete
       {
-        i = --L_size;
-        auto cur = L[i];
-        while (cur != sn) {
-          --i;
-          auto buf = cur;
-          cur = L[i];
-          L[i] = buf;
-        }
+        auto last = L + (--L_size);
+        for (auto cur = *last; cur != sn;)
+          std::swap(*--last, cur);
       }
       else // if startpoint - insert
       {
@@ -112,19 +107,14 @@ public:
     {
       if (SegmentsColl::is_last(pt)) // if endpoint - delete
       {
-        i = LR_len - L_size;
-        --L_size;
-        if (L_size == 0) { 
-          from_begin = true; 
+        if (L_size < 2) {
+          L_size = 0;
+          from_begin = true;
           return;
         }
-        auto cur = L[i];
-        while (cur != sn) {
-          ++i;
-          auto buf = cur;
-          cur = L[i];
-          L[i] = buf;
-        }
+        auto last = L + LR_len - L_size--;
+        for (auto cur = *last; cur != sn;)
+          std::swap(*++last, cur);
       }
       else // if startpoint - insert
       {

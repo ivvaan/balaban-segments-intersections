@@ -123,15 +123,9 @@ public:
     auto sn = SegmentsColl::get_segm(pt);
     if (SegmentsColl::is_last(pt)) // if endpoint - delete
     {
-      auto _L = L+(--L_size);
-      auto cur = *_L;
-      while (cur != sn)
-      {
-        --_L;
-        auto buf = cur;
-        cur = *_L;
-        *_L = buf;
-      }
+      auto last = L + (--L_size);
+      for (auto cur = *last; cur != sn;)
+        std::swap(*--last, cur);
     }
     else// if startpoint - insert
     {
