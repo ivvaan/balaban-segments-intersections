@@ -96,7 +96,8 @@ enum _Registrator
   per_segm_reg_just_count_stat = 0,
   per_segm_reg_max_per_segm_stat = 1,
   just_count = 2,
-  store_pairs_and_ints_just_count_stat = 3
+  store_pairs_and_ints_just_count_stat = 3,
+  just_count_require_intersections = 4
 };
 
 enum class _Coll_flag_state

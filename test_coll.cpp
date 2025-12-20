@@ -225,7 +225,7 @@ class SegmentFunctions
 
   };
 
-const int4 reg_obj_margin = 2 + std::hardware_constructive_interference_size / sizeof(double);// for reg objects to be in different CPU cache lines
+const int4 reg_obj_margin = (std::hardware_constructive_interference_size + sizeof(double) - 1) / sizeof(double);// for reg objects to be in different CPU cache lines
 double reg_objects[reg_obj_margin*n_threads];
 
 double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double* counters, bool dont_need_ip )
@@ -375,7 +375,7 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
             break;
         case fast_parallel: {
           constexpr uint4 cache_line_size = std::hardware_constructive_interference_size;
-          constexpr uint4 reg_margin = 2 + cache_line_size / sizeof(Counter);// for reg objects to be in different CPU cache lines
+          constexpr uint4 reg_margin = (cache_line_size + sizeof(Counter) - 1) / sizeof(Counter);// for reg objects to be in different CPU cache lines
           Counter reg_objects[reg_margin * n_threads];
           Counter* additional_reg_obj[n_threads];
             for (int i = 0; i < n_threads - 1; i++) {
@@ -457,7 +457,10 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
 
   find_intersections_func get_find_intersections_func(uint4 reg_type)
   {
+    
     if (reg_type == _Registrator::just_count)return _find_int<SimpleCounter>;
+    if (reg_type == _Registrator::just_count_require_intersections)
+      return _find_int<SimpleCounter2>;
     if (reg_type == _Registrator::store_pairs_and_ints_just_count_stat)
       return _find_int<TrueRegistrator>;
     return _find_int<PerSegmCounter>;

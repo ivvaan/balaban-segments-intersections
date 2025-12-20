@@ -288,7 +288,7 @@ int main(int argc, char* argv[])
   bool use_counters = false;
   char rpar[]="-r";
   int4 impl = _Implementation::impl_old + _Implementation::impl_new;
-  const char *ss = "Llag", *sd = "rlmspc",*sr="pPcr";
+  const char *ss = "Llag", *sd = "rlmspc",*sr="pPcrC";
   const char *alg_names[] = { "trivial","simple_sweep","fast","optimal","fast_parallel","bentley_ottmann","fast no inters points","fast 'no R'" };
   uint4 reg_stat = 2;
   const char* fname = nullptr;
@@ -343,6 +343,7 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
   segment intesect each
 -rR: type of registrator used in new implementation and type of result statistic
  R=c: total intersection counting registrator; total count statistic
+ R=C: total intersection counting registrator; total count statistic, but it pretend it register intersection points
  R=p: total intersection counting and per segment intersection counting registrator; 
   total count statistic
  R=P: total intersection counting and per segment intersection counting registrator; 
@@ -424,6 +425,7 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
             switch (argv[i][2])
             {
             case 'c':reg_stat = _Registrator::just_count; break;
+            case 'C':reg_stat = _Registrator::just_count_require_intersections; break;
             case 'p':reg_stat = _Registrator::per_segm_reg_just_count_stat; break;
             case 'P':reg_stat = _Registrator::per_segm_reg_max_per_segm_stat; break;
             case 'r':reg_stat = _Registrator::store_pairs_and_ints_just_count_stat; break;

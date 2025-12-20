@@ -43,6 +43,8 @@ class JustCountingRegistrator
   double counter = 0;
 public:
   static constexpr uint4 reg_type = _RegistrationType::count;
+  //static constexpr uint4 reg_type = _RegistrationType::count + _RegistrationType::segments + _RegistrationType::point;
+
   void register_pair(uint4 s1, uint4 s2) noexcept {
 #ifdef PRINT_SEG_AND_INT
     if (s1 < s2)
@@ -57,6 +59,33 @@ public:
   void register_pair_and_point(uint4 s1, uint4 s2, const ipoint& p) { register_pair(s1, s2); };
  
   void combine_reg_data(uint4 n_threads, JustCountingRegistrator* additional_reg_obj[])
+  {
+    for (int i = 0; i < n_threads - 1; i++)
+      counter += additional_reg_obj[i]->counter;
+  };
+  void Alloc(uint4 _N) {};
+
+  // to return some statistics about registered intersections;
+  double get_stat(uint4 stat_type = 0) { return counter; };
+
+  void write_SVG(uint4 alg, chostream* SVG_text) {};
+
+};
+
+template <class ipoint>
+class JustCountingRegistrator2
+{
+  double counter = 0;
+public:
+  //this registrator pretend it register intersection point, but just count;
+  static constexpr uint4 reg_type = _RegistrationType::count + _RegistrationType::segments + _RegistrationType::point;
+
+  void register_pair(uint4 s1, uint4 s2) noexcept {
+    ++counter;
+  };
+  void register_pair_and_point(uint4 s1, uint4 s2, const ipoint& p) { register_pair(s1, s2); };
+
+  void combine_reg_data(uint4 n_threads, JustCountingRegistrator2* additional_reg_obj[])
   {
     for (int i = 0; i < n_threads - 1; i++)
       counter += additional_reg_obj[i]->counter;
@@ -208,7 +237,8 @@ public:
 };
 
 
-using SimpleCounter=JustCountingRegistrator<TPlaneVect> ;
+using SimpleCounter = JustCountingRegistrator<TPlaneVect>;
+using SimpleCounter2 = JustCountingRegistrator2<TPlaneVect>;
 using PerSegmCounter=PerSegmCountingRegistrator<TPlaneVect> ;
 using TrueRegistrator = PairAndPointRegistrator<TPlaneVect> ;
 

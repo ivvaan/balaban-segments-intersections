@@ -309,9 +309,11 @@ public:
     Init(c.N, c.collection, r);
   };
 
+  /*
   int4 get_sentinel(bool is_top_sentinel) {
     return N + is_top_sentinel;
   };
+*/
 
   void unclone() { if (clone_of == nullptr)return; collection = nullptr; clone_of = nullptr; };
   void SortAt(uint4 pt, uint4 n, int4* L)
@@ -337,8 +339,8 @@ public:
     Init(n, c, r);
     chopped_Y = new REAL[N + 2];
     if constexpr (THIS_HAS_SENTINELS) {
-      chopped_Y[get_sentinel(false)] = std::numeric_limits<REAL>::lowest();
-      chopped_Y[get_sentinel(true)] = std::numeric_limits<REAL>::max();
+      chopped_Y[this->get_sentinel(false)] = std::numeric_limits<REAL>::lowest();
+      chopped_Y[this->get_sentinel(true)] = std::numeric_limits<REAL>::max();
     }
   }
 
@@ -349,8 +351,8 @@ public:
     clone(coll, r);
     chopped_Y = new REAL[N + 2];
     if constexpr (THIS_HAS_SENTINELS) {
-        chopped_Y[get_sentinel(false)] = std::numeric_limits<REAL>::lowest();
-        chopped_Y[get_sentinel(true)] = std::numeric_limits<REAL>::max();
+        chopped_Y[this->get_sentinel(false)] = std::numeric_limits<REAL>::lowest();
+        chopped_Y[this->get_sentinel(true)] = std::numeric_limits<REAL>::max();
     }
   }
 
