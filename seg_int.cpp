@@ -354,6 +354,8 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
 -fhtmfile: if presented, program writes SVG picture to htmfile. For examle -fC:/tmp/res.htm
   To limit resulting file size option works only for 5000 segments and less, also only first 
   150000 intersections are drawn.
+-m: print truncated information in one row (to make a table)
+-w: stop and wait for an input befor exit
 )WYX"
     );
     
