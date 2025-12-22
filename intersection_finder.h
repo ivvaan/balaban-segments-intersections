@@ -48,20 +48,6 @@ typedef void (*FRegIntersection)(PRegObj intersection_registrator,PSeg s1,PSeg s
 
 
 
-//uncomment line bellow to switch on counters
-//#define COUNTERS_ON
-
-#ifdef COUNTERS_ON
-#define INC_COUNTER(i) (my_counter[i]++)
-#define SET_COUNTER(i,value) my_counter[i]=value
-#define ADD_COUNTER(i,value) my_counter[i]+=value
-#define SET_COUNTER_IFGT(i,value) if(value>my_counter[i])my_counter[i]=value
-#else
-#define INC_COUNTER(i) 
-#define SET_COUNTER(i,value)
-#define ADD_COUNTER(i,value)
-#define SET_COUNTER_IFGT(i,value)
-#endif
 
 
 struct CSegmCompare
@@ -307,7 +293,7 @@ class CIntersectionFinder
 
 
     // some counters to explore algorithm (not nessesary for functioning)
-    double my_counter[8];
+    //double my_counter[8];
 
 
     CIntersectionFinder();
