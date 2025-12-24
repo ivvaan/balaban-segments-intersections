@@ -25,6 +25,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <math.h>
 typedef int int4;
 typedef unsigned int uint4;
+typedef unsigned long long uint8;
 typedef double REAL;
 //typedef float SINGLE;
 typedef int  BOOL;

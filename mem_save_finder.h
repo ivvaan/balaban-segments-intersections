@@ -47,7 +47,7 @@ public:
     from_begin = true;
     constexpr int4 bottom_index = 0;
     ProgramStackRec stack_rec(bottom_index, 2 * nTotSegm); //need to be initialized this way
-    InitialCutting(*this, segments, bottom_index, 0, 2 * nTotSegm - 1, &stack_rec/*, 0, get_max_call(2 * nTotSegm)*/);
+    MultipleCutting(*this, segments, bottom_index, 0, 2 * nTotSegm - 1, &stack_rec, GetDivPow(2 * nTotSegm - 1));
   }
 
   template<class SegmentsColl>

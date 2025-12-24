@@ -199,7 +199,6 @@ protected:
     //the stripe right bound needs to be installed correctly even if i_f.L_size <= 1
     segments.SetCurStripe(ENDS[interval_right_index - 1], ENDS[interval_right_index]);
     if (i_f.L_size > 1)i_f.SearchInStrip(segments, ladder_start_index);
-    return;
   }
 
 
@@ -213,53 +212,26 @@ protected:
       if (Q_pos == 0)break;
       Q_pos += ladder_start_index;
       ProgramStackRec stack_rec(Q_pos, interval_right_index, stack_pos);
-      if (i_f.dont_cut_stripe) { //if found a lot of intersections repeat FindR
-        i_f.dont_cut_stripe = false;
+      if (i_f.dont_cut_stripe || (i_f.L_size == 0)) { //if found a lot of intersections repeat FindR
         FindRNoChecks(i_f, segments, Q_pos, interval_left_index, interval_right_index, &stack_rec);
-        i_f.Merge(segments, interval_left_index, ladder_start_index, Q_pos);
-        return;
       }
-      uint4 m = (interval_left_index + interval_right_index) / 2;
-      FindR(i_f, segments, Q_pos, interval_left_index, m, &stack_rec);
-      i_f.InsDel(segments, ENDS[m], &stack_rec);
-      FindR(i_f, segments, Q_pos, m, interval_right_index, &stack_rec);
-   
-//actually works without SetCurStripeLeft, but it simplifies segment collection class protocol
-      segments.SetCurStripeLeft(ENDS[interval_left_index]);
+      else{
+        uint4 m = (interval_left_index + interval_right_index) / 2;
+        FindR(i_f, segments, Q_pos, interval_left_index, m, &stack_rec);
+        i_f.InsDel(segments, ENDS[m], &stack_rec);
+        FindR(i_f, segments, Q_pos, m, interval_right_index, &stack_rec);
+        //actually works without SetCurStripeLeft, but it simplifies segment collection class protocol
+        segments.SetCurStripeLeft(ENDS[interval_left_index]);
+      }
 
       i_f.Merge(segments, interval_left_index, ladder_start_index, Q_pos);
       return;
     } while (false);
-    //if L or Q empty cut into 16 parts
+    //if L or Q empty cut the strip into 2^divide_pow substrips
     constexpr const uint4 divide_pow = 4;
-//    constexpr const uint4 divide_into = 1 << divide_pow;//16
-    constexpr const uint4 min_size = 128;//must be >= 1<<(divide_pow+1)
-//    constexpr const uint4 min_step = 12;
-
-    auto step = interval_right_index - interval_left_index;
-
-    if (step <= min_size) {
-      return SISFindR(i_f, segments, ladder_start_index, interval_left_index, interval_right_index, stack_pos);
-    }
-
-    //step = MAX(step, (1 << divide_pow)*min_step);
-    auto rb = step + (interval_left_index << divide_pow);//* divide_into
-    auto left_bound= interval_left_index;
-    auto right_bound = rb >> divide_pow; // / divide_into;
-    auto stripe_left = ENDS[left_bound];
-    do {
-      auto stripe_right = ENDS[right_bound];
-      segments.SetCurStripe(stripe_left, stripe_right);
-      FindRNoChecks(i_f, segments, ladder_start_index, left_bound, right_bound, stack_pos);
-      i_f.InsDel(segments, stripe_right, stack_pos);
-      left_bound = right_bound;
-      stripe_left = stripe_right;
-      right_bound = (rb += step) >> divide_pow; // / divide_into;
-    } while (right_bound < interval_right_index);
-    //_FindR(i_f, segments, ladder_start_index, left_bound, interval_right_index, stack_pos);
-    assert(interval_right_index - left_bound > 1);
-    segments.SetCurStripe(stripe_left, ENDS[interval_right_index]);
-    FindRNoChecks(i_f, segments, ladder_start_index, left_bound, interval_right_index, stack_pos);
+    if (interval_right_index > interval_left_index + (6 << divide_pow)) 
+      MultipleCutting(i_f, segments, ladder_start_index, interval_left_index, interval_right_index, stack_pos, divide_pow);
+    else SISFindR(i_f, segments, ladder_start_index, interval_left_index, interval_right_index, stack_pos);  //if strip narrow just apply SISFindR
   };
 
   template <class IntersectionFinder, class SegmentsColl>
@@ -270,9 +242,8 @@ protected:
       if (i_f.L_size > 1) {
         i_f.SearchInStrip(segments, ladder_start_index);
       }
-      return;
-    }
-    FindRNoChecks(i_f, segments, ladder_start_index, interval_left_index, interval_right_index, stack_pos);
+    }else
+      FindRNoChecks(i_f, segments, ladder_start_index, interval_left_index, interval_right_index, stack_pos);
   }
 
   uint4 GetDivPow(uint4 l) {
@@ -283,13 +254,13 @@ protected:
     return MAX(res,4);
   };
 
+  //cuts the strip into 2^divide_pow substrips
   template <class IntersectionFinder, class SegmentsColl>
-  static void InitialCutting(IntersectionFinder& i_f, SegmentsColl& segments, int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec* stack_pos)
+  static void MultipleCutting(IntersectionFinder& i_f,SegmentsColl& segments, int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec* stack_pos, uint4 divide_pow)
   {
     auto ENDS = i_f.ENDS;
-    long long step = interval_right_index - interval_left_index;
-    uint4 divide_pow = i_f.GetDivPow(step);
-    long long rb = step + (((long long)interval_left_index) << divide_pow);
+    uint8 step = interval_right_index - interval_left_index;
+    uint8 rb = step + (((uint8)interval_left_index) << divide_pow);
     uint4 left_bound = interval_left_index;
     uint4 right_bound = rb >> divide_pow; 
     auto stripe_left = ENDS[left_bound];

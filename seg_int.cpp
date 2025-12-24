@@ -233,8 +233,8 @@ void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr
       {
         exec_time[a]=-1;
         if ((alg_list[a] == fast_no_ip) && (seg_type == _Segment::arc)) { if (!print_less)printf("fast no inters. points algorithm can handle only line segments\n"); continue; }
-        if ((alg_list[a] == bentley_ottmann) && (impl == impl_new)) { if (!print_less)printf("new implementation does't support segments functions for Bentley & Ottman algorithm\n"); continue; }
-        if ((alg_list[a] == fast_no_ip) && (impl == impl_new)) { if (!print_less)printf("new implementation does't support segments functions for no inters. points algorithm \n"); continue; }
+        if ((alg_list[a] == bentley_ottmann) && (impl == impl_new)) { if (!print_less)printf("new implementation does't support functions nessesary for Bentley & Ottman algorithm\n"); continue; }
+        if ((alg_list[a] == fast_no_ip) && (impl == impl_new)) { if (!print_less)printf("new implementation does't support functions nessesary for no inters. points algorithm \n"); continue; }
         if (impl == impl_old)
           exec_time[a] = _benchmark_old(use_counters?counters_mute:NULL, n, seg_ptr_coll, seg_type, alg_list[a], nInt[a], dont_need_ip);
         else
