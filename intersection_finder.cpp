@@ -1247,7 +1247,7 @@ CIntersectionFinder<is_line_seg>::CIntersectionFinder()
 	no_ipR = NULL;
 	no_ipQ = NULL;
   clone_of = NULL;
-	//memset(my_counter, 0, sizeof(my_counter));
+	memset(my_counter, 0, sizeof(my_counter));
 };
 
 template<bool is_line_seg>

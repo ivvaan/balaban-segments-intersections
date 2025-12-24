@@ -78,8 +78,6 @@ if(state<=1){dir=1;}
 
 const char* to_insert_SVG = "<!--inserthere-->";
 
-constexpr unsigned int def_thread = 3;
-constexpr unsigned int def_aff = 1U << (def_thread - 1);
 
 #if defined(_WIN32) && !defined(_DEBUG)
 #include <windows.h>
@@ -133,21 +131,21 @@ void search_problem(uint4 n) {
 };
 
 
-double _benchmark_old(/*char* counters_string,*/ int4 n, PSeg* seg_ptr_coll, int4 s_type, int4 alg, double& res, bool dont_need_ip = false)
+double _benchmark_old(char* counters_string, int4 n, PSeg* seg_ptr_coll, int4 s_type, int4 alg, double& res, bool dont_need_ip = false)
   {
   double timeit,tottime=0;
-  //double c[8] = {0,0,0,0,0,0,0,0};
+  double c[8] = {0,0,0,0,0,0,0,0};
   int4 n_call=0;
   using namespace std::chrono;
   double mint = 1.0e10;
-  unsigned long thread_affinity_mask = alg & fast_parallel ? 0 : def_aff;
+  unsigned long thread_affinity_mask = alg & fast_parallel ? 0 : 8;
 
   ON_BENCH_BEG
     
   do
   {
       auto start = high_resolution_clock::now();
-      res = find_intersections(s_type, n, seg_ptr_coll, alg, /*c,*/ dont_need_ip);
+      res = find_intersections(s_type, n, seg_ptr_coll, alg, c, dont_need_ip);
 	  tottime+=timeit = static_cast<duration<double>>(high_resolution_clock::now() - start).count();
       if (timeit < mint)
           mint = timeit;
@@ -161,10 +159,8 @@ double _benchmark_old(/*char* counters_string,*/ int4 n, PSeg* seg_ptr_coll, int
 
   ON_BENCH_END
 
-  /*if (counters_string) {
-    double *c = my_counter;
-    sprintf(counters_string, "%11.2f;%11.2f;%11.2f;%11.2f;%11.2f;%11.2f;%11.2f;%11.2f", c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7]);
-  }*/
+  if(counters_string)
+   sprintf(counters_string,"%11.2f;%11.2f;%11.2f;%11.2f;%11.2f;%11.2f;%11.2f;%11.2f",c[0],c[1],c[2],c[3],c[4],c[5],c[6],c[7]);
    //printf("avg Size %11.2f\n",c[3]/(c[4]+1));
 
   //return (stop - start) / (n_call*CLOCKS_PER_SEC);
@@ -177,7 +173,7 @@ double _benchmark_new(int4 n, PSeg seg_coll, int4 s_type, int4 alg, double& res,
   int4 n_call = 0;
   using namespace std::chrono;
   double mint = 1.0e10;
-  unsigned long thread_affinity_mask = alg & fast_parallel ? 0 : def_aff;
+  unsigned long thread_affinity_mask = alg & fast_parallel ? 0 : 8;
 
   ON_BENCH_BEG
   do
@@ -211,8 +207,8 @@ void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr
   double exec_time[33], nInt[33];
   const char *ss = "Llag", *sd = "rlmspc";
   char counters_string[256],*counters_mute;
-  const char *stat_names_new[] = { "inters. numb","max inters. per segm","inters. numb","inters. numb","inters. numb" };
-  const char *stat_names_old[] = { "inters. numb","inters. numb","inters. numb","inters. numb","inters. numb" };
+  const char *stat_names_new[] = { "inters. numb","max inters. per segm","inters. numb","inters. numb" };
+  const char *stat_names_old[] = { "inters. numb","inters. numb","inters. numb","inters. numb" };
   const char **stat_names= stat_names_new;
 
   counters_string[0] = 0;
@@ -240,8 +236,7 @@ void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr
         if ((alg_list[a] == bentley_ottmann) && (impl == impl_new)) { if (!print_less)printf("new implementation does't support segments functions for Bentley & Ottman algorithm\n"); continue; }
         if ((alg_list[a] == fast_no_ip) && (impl == impl_new)) { if (!print_less)printf("new implementation does't support segments functions for no inters. points algorithm \n"); continue; }
         if (impl == impl_old)
-          exec_time[a] = _benchmark_old(n, seg_ptr_coll, seg_type, alg_list[a], nInt[a], dont_need_ip);
-          //exec_time[a] = _benchmark_old(use_counters ? counters_mute : NULL, n, seg_ptr_coll, seg_type, alg_list[a], nInt[a], dont_need_ip);
+          exec_time[a] = _benchmark_old(use_counters?counters_mute:NULL, n, seg_ptr_coll, seg_type, alg_list[a], nInt[a], dont_need_ip);
         else
           exec_time[a] = _benchmark_new(n, seg_coll, seg_type, alg_list[a], nInt[a],reg_stat);
         

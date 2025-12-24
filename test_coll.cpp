@@ -228,7 +228,7 @@ class SegmentFunctions
 const int4 reg_obj_margin = (std::hardware_constructive_interference_size + sizeof(double) - 1) / sizeof(double);// for reg objects to be in different CPU cache lines
 double reg_objects[reg_obj_margin*n_threads];
 
-double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg,/* double* counters, */bool dont_need_ip)
+double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double* counters, bool dont_need_ip )
   {
   if(colls==NULL) return 0;
   double int_numb=0;
@@ -293,7 +293,7 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg,/* doubl
 				  break;
 				  case bentley_ottmann:intersection_finder.bentley_ottmann(SN, colls); break;
 			  };
-		  //memcpy(counters, intersection_finder.my_counter, sizeof(intersection_finder.my_counter));
+		  memcpy(counters, intersection_finder.my_counter, sizeof(intersection_finder.my_counter));
       }
 
   if (seg_type == _Segment::arc)
@@ -336,7 +336,7 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg,/* doubl
 		  case bentley_ottmann:intersection_finder.bentley_ottmann(SN, colls); break;
 	  }
 
-	 // memcpy(counters, intersection_finder.my_counter, sizeof(intersection_finder.my_counter));
+	  memcpy(counters, intersection_finder.my_counter, sizeof(intersection_finder.my_counter));
   }
 
   return int_numb;

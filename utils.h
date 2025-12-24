@@ -40,23 +40,6 @@ typedef int  BOOL;
 #define MIN(a,b)            (((a) < (b)) ? (a) : (b))
 #endif
 
-//uncomment line bellow to switch on counters
-//#define COUNTERS_ON
-
-#ifdef COUNTERS_ON
-  // some counters to explore algorithm (not nessesary for functioning)
-inline double my_counter[8] = {};
-#define INC_COUNTER(i) (my_counter[i]++)
-#define SET_COUNTER(i,value) my_counter[i]=value
-#define ADD_COUNTER(i,value) my_counter[i]+=value
-#define SET_COUNTER_IFGT(i,value) if(value>my_counter[i])my_counter[i]=value
-#else
-#define INC_COUNTER(i) 
-#define SET_COUNTER(i,value)
-#define ADD_COUNTER(i,value)
-#define SET_COUNTER_IFGT(i,value)
-#endif
-
 
 //#define register
 #ifndef NDEBUG
