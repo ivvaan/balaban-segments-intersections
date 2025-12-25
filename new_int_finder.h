@@ -207,30 +207,25 @@ protected:
   static void FindRNoChecks(IntersectionFinder& i_f, SegmentsColl& segments, int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec* stack_pos)
   {
     auto ENDS = i_f.ENDS;
-    do {
-      if (i_f.L_size == 0)break;
-      auto Q_pos = i_f.Split(segments, i_f.Q + ladder_start_index, interval_right_index);
-      if (Q_pos == 0)break;
-      Q_pos += ladder_start_index;
-      ProgramStackRec stack_rec(Q_pos, interval_right_index, stack_pos);
-      if (i_f.dont_cut_stripe ) { //if found a lot of intersections repeat FindR
-        FindRNoChecks(i_f, segments, Q_pos, interval_left_index, interval_right_index, &stack_rec);
-      }
-      else{
-        uint4 m = (interval_left_index + interval_right_index) / 2;
-        FindR(i_f, segments, Q_pos, interval_left_index, m, &stack_rec);
-        i_f.InsDel(segments, ENDS[m], &stack_rec);
-        FindR(i_f, segments, Q_pos, m, interval_right_index, &stack_rec);
-        //actually works without SetCurStripeLeft, but it simplifies segment collection class protocol
-        segments.SetCurStripeLeft(ENDS[interval_left_index]);
-      }
-
-      i_f.Merge(segments, interval_left_index, ladder_start_index, Q_pos);
-      return;
-    } while (false);
+    int4 Q_pos;
     //if L or Q empty cut the strip into 2^divide_pow substrips
     constexpr const uint4 divide_pow = 4;
-    MultipleCutting(i_f, segments, ladder_start_index, interval_left_index, interval_right_index, stack_pos, divide_pow);
+    if ((i_f.L_size == 0)||(0 == (Q_pos = i_f.Split(segments, i_f.Q + ladder_start_index, interval_right_index))))
+      return MultipleCutting(i_f, segments, ladder_start_index, interval_left_index, interval_right_index, stack_pos, divide_pow);
+    //normal processing otherwise
+    Q_pos += ladder_start_index;
+    ProgramStackRec stack_rec(Q_pos, interval_right_index, stack_pos);
+    if (i_f.dont_cut_stripe ) { //if found a lot of intersections repeat FindR
+      FindRNoChecks(i_f, segments, Q_pos, interval_left_index, interval_right_index, &stack_rec);
+    }else{// cut at the middle into two substrips 
+      uint4 middle = (interval_left_index + interval_right_index) / 2;
+      FindR(i_f, segments, Q_pos, interval_left_index, middle, &stack_rec);
+      i_f.InsDel(segments, ENDS[middle], &stack_rec);
+      FindR(i_f, segments, Q_pos, middle, interval_right_index, &stack_rec);
+      //actually works without SetCurStripeLeft, but it simplifies segment collection class protocol
+      segments.SetCurStripeLeft(ENDS[interval_left_index]);
+    }
+    i_f.Merge(segments, interval_left_index, ladder_start_index, Q_pos);
   };
 
   template <class IntersectionFinder, class SegmentsColl>
