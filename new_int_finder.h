@@ -189,13 +189,13 @@ protected:
   static void SISFindR(IntersectionFinder& i_f, SegmentsColl& segments, int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec* stack_pos)
   {
     auto ENDS = i_f.ENDS;
-    for (auto i = interval_left_index + 1; i != interval_right_index; ++i) {
+    for (auto i = interval_left_index + 1, prev_pt = ENDS[interval_left_index]; i != interval_right_index; ++i) {
       auto pt = ENDS[i];
       if (i_f.L_size > 1) {
-        segments.SetCurStripe(ENDS[i - 1], pt);
+        segments.SetCurStripe(prev_pt, pt);
         i_f.SearchInStrip(segments, ladder_start_index);
       }
-      i_f.InsDel(segments, pt, stack_pos);
+      i_f.InsDel(segments, prev_pt=pt, stack_pos);
     }
     //the stripe right bound needs to be installed correctly even if i_f.L_size <= 1
     segments.SetCurStripe(ENDS[interval_right_index - 1], ENDS[interval_right_index]);
