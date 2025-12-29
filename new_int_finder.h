@@ -222,7 +222,7 @@ protected:
       i_f.InsDel(segments, i_f.ENDS[middle], &stack_rec);
       FindR(i_f, segments, Q_pos, middle, interval_right_index, &stack_rec);
       //actually works without SetCurStripeLeft, but it simplifies segment collection class protocol
-      segments.SetCurStripeLeft(i_f.ENDS[interval_left_index]);
+      //segments.SetCurStripeLeft(i_f.ENDS[interval_left_index]);
     }
     i_f.Merge(segments, interval_left_index, ladder_start_index, Q_pos);
   };

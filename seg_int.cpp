@@ -208,7 +208,7 @@ void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr
   const char *ss = "Llag", *sd = "rlmspc";
   char counters_string[256],*counters_mute;
   const char *stat_names_new[] = { "inters. numb","max inters. per segm","inters. numb","inters. numb" };
-  const char *stat_names_old[] = { "inters. numb","inters. numb","inters. numb","inters. numb" };
+  const char *stat_names_old[] = { "inters. numb","inters. numb","inters. numb","inters. numb", "inters. numb" };
   const char **stat_names= stat_names_new;
 
   counters_string[0] = 0;
