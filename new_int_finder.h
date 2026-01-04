@@ -143,7 +143,7 @@ public:
     ~CommonImpl() { FreeMem(); };
 protected:
   constexpr static uint4 cut_margin = 24;
-  constexpr static uint4 min_strip_width = 6;
+  constexpr static uint4 min_strip_width = 6;// at least 2
 
   uint4 LR_len = 0;
   uint4 nTotSegm = 0;

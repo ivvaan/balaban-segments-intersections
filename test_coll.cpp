@@ -344,7 +344,7 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
 
 
   template<template<class>class SegColl,class Counter>
-  double find_int( int4 n, SegColl<Counter> &coll,int4 alg,uint4 stat)
+  auto find_int( int4 n, SegColl<Counter> &coll,int4 alg,uint4 stat)
   {
     switch (alg) {
         case triv: {
@@ -395,7 +395,7 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
   };
 
   template<class Counter>
-  double _find_int(int4 seg_type, int4 n, PSeg segs, int4 alg,uint4 stat)
+  auto _find_int(int4 seg_type, int4 n, PSeg segs, int4 alg,uint4 stat)
   {
     Counter reg;
     reg.Alloc(n);
@@ -417,7 +417,7 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
         return find_int(n, coll, alg, stat);
       };
     }
-    return 0;
+    return 0ULL;
   };
 
   void write_SVG(chostream* SVG_stream, int4 seg_type, int4 n, PSeg segs, int4 algs, uint4 stat)

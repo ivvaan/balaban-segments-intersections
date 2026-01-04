@@ -111,8 +111,8 @@ double ICT = -1;
 unsigned random_seed = 317;
 
 void search_problem(uint4 n) {
-  double nfast = 0;
-  double ntriv = 0;
+  uint8 nfast = 0;
+  uint8 ntriv = 0;
   uint4 r_seed = 1;
   CRandomValueGen rv(r_seed);
   auto find_intersections = get_find_intersections_func(_Registrator::just_count);
