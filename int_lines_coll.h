@@ -32,7 +32,7 @@ namespace {
   T& unmove(T&& t) { return t; };
 
   enum _Stages {
-    split=0, bubble, merge
+    split_down=0, split_up, bubble, merge
   };
 }
 
@@ -429,7 +429,7 @@ public:
 
   void SetCurSegCutBE(uint4 s){
     SetCurSeg(s);
-    stage = _Stages::split;
+    stage = _Stages::split_down;
     curB = MAX(B, curB);
     //cs_l_numerator = cur_seg.YAtX_Numerator(E);
     if (E < curE) {
@@ -442,7 +442,7 @@ public:
 
   void SetCurSegCutBeg(uint4 s) {
     SetCurSeg(s);
-    stage = _Stages::split;
+    stage = _Stages::split_up;
     curB = MAX(B, curB);
     active_end = cur_seg.EndPoint();
   };
@@ -485,7 +485,8 @@ public:
   auto StumpPos(int4 s_) const {
     //returns cur_seg Y < s_ Y ? 1:-1;
     // probable error here!!!!!!
-    return cur_seg.YAtX_frac(is_right ? E : B) <=> collection[s_].YAtX_frac(is_right ? E : B);
+    auto X = is_right ? E : B;
+    return cur_seg.YAtX_frac(X) <=> collection[s_].YAtX_frac(X);
   };
 
   bool FindCSIntWith(int4 s_) {
@@ -493,7 +494,7 @@ public:
     auto& s1 = cur_seg;
     auto& s2 = collection[s_];
     if (stage == _Stages::bubble) {
-      if (s2.shift.x == 0 || s1.shift.x == 0)
+      if (s2.is_vertical() || s1.is_vertical())
         return SSCurSegIntWith(s_);
       lp = collection[s_].under(cur_point);
       rp = collection[s_].under(active_end);
@@ -511,8 +512,8 @@ public:
 
     bool one_s_pt_in_stripe = is_right_pt_in_stripe(cur_seg_idx) || is_right_pt_on_bound(s_);
 
-    if (stage == _Stages::split) {
-      if (s1.shift.x == 0 || s2.shift.x==0)
+    if (stage <= _Stages::split_up) {
+      if (s1.is_vertical() || s2.is_vertical())
           return one_s_pt_in_stripe?SSCurSegIntWith(s_): SSCurSegIntWith<false>(s_);
       lp = StumpPos<left_bound>(s_);// if negative s_ is under cur left end 
       if (E == B)//degenerate stripe
@@ -523,7 +524,7 @@ public:
       rp = is_rstump ?
         StumpPos<right_bound>(s_) :// if negative s_ is under cur right end 
         collection[s_].under(active_end);// if negative s_ is under cur right end (active_end)
-      if (lp == 0 && rp == 0){//segments parallel
+      if (lp == 0 && rp == 0){//segments parallel !!! impossible for nondegenerate strip
         if (one_s_pt_in_stripe)register_pair(this,cur_seg_idx, s_);
         return true;
       }      
@@ -546,7 +547,7 @@ public:
     }
 
     if (stage == _Stages::merge) {
-      if (s1.shift.x == 0 || s2.shift.x == 0)
+      if (s1.is_vertical() || s2.is_vertical())
         return one_s_pt_in_stripe ? SSCurSegIntWith(s_) : SSCurSegIntWith<false>(s_);
       rp = StumpPos<right_bound>(s_);// if negative s_ is under cur right end 
       if (E == B)//degenerate stripe
@@ -585,11 +586,11 @@ public:
   bool XBelow(int4 s_1, int4 s_2, int4 X) const {
     auto& s1 = collection[s_1];
     auto& s2 = collection[s_2];//for right bound s2 always a stair
-    if ((s1.shift.x == 0)&&(s2.shift.x==0)) {
-      //y1 = is_right_pt_on_bound(s_1) ? s1.org.y + s1.shift.y : s1.org.y;
-      //y2 = is_right_pt_on_bound(s_2) ? s2.org.y + s2.shift.y : s2.org.y;
+    if ((s1.is_vertical())&&(s2.is_vertical())) {
+      //y1 = is_right_pt_on_bound(s_1) ? s1.ey() : s1.by();
+      //y2 = is_right_pt_on_bound(s_2) ? s2.ey() : s2.by();
       //return y1 < y2;
-      return s1.org.y + s1.shift.y < s2.org.y + s2.shift.y;
+      return s1.ey() < s2.ey();
     };
     {
       auto cmp = s1.YAtX_frac(X) <=> s2.YAtX_frac(X);
@@ -645,7 +646,7 @@ public:
     if (((beg > 0) != (end < 0)) && (beg != 0) && (end != 0))//begin and end of s2 are on the same side of l1 
         return false;
 
-    auto int_type = _IntType::s2_beg_int * (beg == 0) + _IntType::s2_end_int * (end == 0);
+    //auto int_type = _IntType::s2_beg_int * (beg == 0) + _IntType::s2_end_int * (end == 0);
 
     //at this moment, we can be sure that s2 intesects l1 (2)
     beg = delt % s2.shift;
@@ -654,7 +655,7 @@ public:
         (end == 0) ||//end of s1 lies on l2, taking (2) to account
         ((beg > 0) != (end > 0))) {//begin and end of s1 are on diffenent sides l2
 
-      int_type += _IntType::s1_beg_int * (beg == 0) + _IntType::s1_end_int * (end == 0);
+      //int_type += _IntType::s1_beg_int * (beg == 0) + _IntType::s1_end_int * (end == 0);
 
       if constexpr (reg)register_pair(this, cur_seg_idx, s_);
       return true;
@@ -732,9 +733,9 @@ public:
     return UnderActiveEnd(s_);
   };
 
-  bool UnderCurPoint(int4 s_) const { //returns true if s is under current point 
+  bool UnderCurPoint(int4 s_) const { //returns true if s_ is under current point 
     auto& s2 = collection[s_];
-    if (s2.shift.x == 0) {
+    if (s2.is_vertical()) {
       auto y = is_right_pt_in_stripe(s_) ? s2.org.y + s2.shift.y : s2.org.y;
       if (y != cur_point.y)
         return y < cur_point.y;
@@ -951,7 +952,7 @@ private:
   CIntegerSegmentCollection *clone_of = nullptr;
   uint4 N=0;
   int4 B, E, curB, curE, stripe_right, right_bound_idx, left_bound_idx;
-  uint4 stage = _Stages::split;
+  uint4 stage = _Stages::split_down;
 
   uint4 cur_seg_idx = 0xFFFFFFFF, cur_point_idx= 0xFFFFFFFF;
   uint4 cur_point_seg = 0xFFFFFFFF, active_end_idx = 0xFFFFFFFF;
