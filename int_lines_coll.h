@@ -22,7 +22,10 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 // NEW IMPLEMENTATION
 
 #include "segments.h"
+#include "registrator.h"
+#include "utils.h"
 #include <cassert>
+#include <algorithm>
 
 namespace {
   template<class T>
@@ -33,13 +36,36 @@ namespace {
   };
 }
 
+template<typename Real>
+Real get_max_gap_middle(uint4 N, Real arr[]) {
+  // function to find a middle of maximum gap between arr elements, Real is like double 
+
+  assert(N > 1);
+  std::sort(arr, arr + N);
+
+  // Find the first maximum gap and return its midpoint.
+  uint4 best_i = 1;
+  auto _arr = arr - 1;
+  Real max_gap = arr[best_i] - _arr[best_i];
+
+  for (uint4 i = 2; i < N; ++i) {
+    if (Real g = arr[i] - _arr[i]; g > max_gap) {
+      max_gap = g;
+      best_i = i;
+    }
+  }
+
+  return (arr[best_i] + _arr[best_i]) / Real(2);
+}
 
 
 template<class IntersectionRegistrator>
 class CIntegerSegmentCollection
 {
+  using CTHIS = CIntegerSegmentCollection< IntersectionRegistrator>;
 public:
-  static constexpr bool is_line_segments = false;//they can have more than one point of intersection with each other!!
+  //static constexpr bool is_line_segments = false;//they can have more than one point of intersection with each other!!
+  static constexpr bool is_line_segments = true;
 
   static  bool is_last(uint4 pt)
   {
@@ -59,9 +85,281 @@ public:
   };
   static  uint4 last_point(uint4 s)
   {
-    return (s << 1)+1;
+    return (s << 1) + 1;
   };
 
+
+private:
+
+  //===========================================================================
+  class CRemaper {
+
+    struct RemappedRecord {
+      uint4 beg = 0;
+      uint4 end = 0;
+    };
+
+    static REAL get_rot_angle(uint4 n, TLineSegment1 sc[]) {
+      REAL* arr;
+      DECL_RAII_ARR(arr, n + 2);
+      arr[0] = - M_PI / 2.;
+      std::transform(sc, sc + n, arr,
+        [](const TLineSegment1& s) {
+          return std::atan2(s.shift.y, s.shift.x);
+        });
+      arr[n+1] = M_PI / 2.;
+      auto max_gap_mid = get_max_gap_middle(n + 2, arr);
+      return max_gap_mid + (max_gap_mid > 0 ? -M_PI / 2. : M_PI / 2.);
+    }
+
+  public:
+
+    template<bool remove_zero_seg>
+    uint4 int_seg_from_real(uint4 n, TLineSegment1 sc[], std::vector<TIntegerVect>& points) {
+      //REAL angle = CRandomValueGen().GetRandomDouble();
+      //REAL angle = get_rot_angle(n,sc);//try to rotate the scene to remove vertical segments
+      //REAL si = std::sin(angle), co = std::cos(angle);
+
+      REAL si = 0., co = 1.;
+      auto mm_rect = get_rot_minmax(n, sc, si, co);
+      auto x_transf = transf1D{ .shift = -mm_rect.ld.x - mm_rect.get_width() / 2.,
+        .scale = 2.*range / mm_rect.get_width() };
+      auto y_transf = transf1D{ .shift = -mm_rect.ld.y - mm_rect.get_height() / 2.,
+        .scale = 2.*range / mm_rect.get_height() };
+      auto coll_begin = set_size(seg_v, n);
+#ifdef PRINT_SEG_AND_INT
+      TIntegerSegment::coll_begin = coll_begin;
+#endif
+      TIntegerSegment s;
+      uint4 i = 0;
+      for (uint4 m = 0; m != n; ++m) {
+        s.Init(sc[m], si, co, x_transf, y_transf);
+        if constexpr (remove_zero_seg) {
+          if (s.shift.is_zero()) continue;
+        }
+        seg_v[i] = s;
+        points[first_point(i)] = seg_v[i].BegPoint();
+        points[last_point(i)] = seg_v[i].EndPoint();
+        ++i;
+      }
+      return i;
+    }
+
+    bool prepare_remap(std::vector<uint4>& indexes, TIntegerVect points[],
+      std::vector<TIntegerSegment>& res_coll,
+      std::vector<TIntegerVect>& res_pts) {
+
+      auto N = indexes.size();
+      uint4 remap_size = 0;
+      int seg_numb = 0;
+      remapped_SN = 0;
+      for (auto pt : indexes) {
+        seg_numb += is_last(pt) ? -1 : 1;
+        assert(seg_numb >= 0);
+        remap_size += seg_numb;
+        remapped_SN += (seg_numb) ? 1 : 0;
+      }
+      if ((initial_SN == remapped_SN) && (initial_SN == nonzero_N))
+        return true;//not remapped
+      auto rrec = set_size(rrec_v, remapped_SN);
+      auto remap = set_size(remap_v, remap_size);
+
+      set_size(res_coll, remapped_SN);
+      set_size(res_pts, 2 * remapped_SN);
+      uint4 remaper_pos = 0, new_seg_num = 0;
+      std::vector<uint4> stack;
+      stack.reserve(nonzero_N);
+      bool not_remapped = initial_SN == nonzero_N;
+      for (size_t i = 0; i < N; ++i) {
+        auto pt = indexes[i];
+        if (is_last(pt)) {
+          remove_by_val(stack, get_segm(pt));
+        }
+        else {
+          auto s = get_segm(pt);
+          for (auto p : stack) {
+            registrator->register_pair(s, p);
+          }
+          stack.push_back(s);
+        };
+        auto size = stack.size();
+
+        if (size != 0) {
+          assert(i + 1 < N);
+
+          auto beg = points[pt];
+          auto end = points[indexes[i + 1]];
+
+          if (beg != end) {
+            std::copy(stack.begin(), stack.end(), remap + remaper_pos);
+            rrec[new_seg_num] = { remaper_pos,remaper_pos + (uint4)size };
+            remaper_pos += size;
+            not_remapped &= size < 2;
+            res_coll[new_seg_num] = { beg,end };
+            res_pts[first_point(new_seg_num)] = beg;
+            res_pts[last_point(new_seg_num)] = end;
+            ++new_seg_num;
+
+          }
+        };
+      }
+      remapped_SN = new_seg_num;
+      remap_size = remaper_pos;
+      return not_remapped;
+    }
+
+    void register_pair(uint4 s1, uint4 s2, uint4 int_type) {
+      auto orig_int_type = seg_v[s1].get_int_type_beg(seg_v[s2]);
+      if (int_type == orig_int_type)
+        registrator->register_pair(s1, s2);
+    }
+
+    void register_pair(uint4 s1, uint4 s2) {
+#ifdef PRINT_SEG_AND_INT
+      if (s1 > s2)
+        std::swap(s1, s2);
+      printf("remapped int pair %i %i\n", s1, s2);
+#endif 
+      auto rr1 = rrec_v[s1];
+      auto rr2 = rrec_v[s2];
+      auto int_type = remapped_segs[s1].get_int_type_beg(remapped_segs[s2]);
+      //trivial remap (should be most of the time)
+      if (rr1.end + rr2.end - rr1.beg - rr2.beg < 3) {
+        register_pair(remap_v[rr1.beg], remap_v[rr2.beg], int_type);
+        return;
+      }
+      //marking all nonunique segments
+      constexpr const uint4 mark = 1 << (sizeof(uint4) * 8 - 1);
+      for (uint4 seg1 = rr1.beg; seg1 < rr1.end; ++seg1)
+        for (uint4 seg2 = rr2.beg; seg2 < rr2.end; ++seg2)
+          if (remap_v[seg1] == remap_v[seg2]) {//same segment found, mark it 
+            remap_v[seg1] |= mark;
+            remap_v[seg2] |= mark;
+            break;
+          }
+
+      //register only intersections with nonmarked segments
+      for (uint4 seg1 = rr1.beg; seg1 < rr1.end; ++seg1)
+        if ((remap_v[seg1] & mark) == 0) {
+          for (uint4 seg2 = rr2.beg; seg2 < rr2.end; ++seg2)
+            if ((remap_v[seg2] & mark) == 0)
+              register_pair(remap_v[seg1], remap_v[seg2], int_type);
+        }
+
+      // erase marks, back to original values
+      for (uint4 seg1 = rr1.beg; seg1 < rr1.end; ++seg1)
+        remap_v[seg1] &= ~mark;
+      for (uint4 seg2 = rr2.beg; seg2 < rr2.end; ++seg2)
+        remap_v[seg2] &= ~mark;
+
+    };
+
+    template<bool remove_zero_seg = true>
+    auto NoRemapInit(uint4 n, void* c, IntersectionRegistrator* r, int4 range, CTHIS& collection) {
+      initial_SN = n;
+      auto sc = reinterpret_cast<TLineSegment1*>(c);
+      std::vector<TIntegerVect> points(2 * n);
+
+      this->range = range;
+      remapped_SN = nonzero_N = int_seg_from_real<remove_zero_seg>(n, sc, points);
+      if constexpr (remove_zero_seg)
+        initial_SN = nonzero_N;
+      registrator = r;
+
+      collection.segments = std::move(seg_v);
+      collection.points = std::move(points);
+      return;
+    };
+
+    auto TurnRemapOn(CTHIS& collection) {
+      auto points = std::move(collection.points);
+      seg_v = std::move(collection.segments);
+      std::vector<uint4> indexes;
+      auto n = initial_SN;
+      indexes.reserve(2 * n);
+
+      for (uint4 i = 0; i < 2 * n; ++i)
+        if (seg_v[get_segm(i)].shift.is_non_zero())
+          indexes.push_back(i);
+
+      nonzero_N = indexes.size() / 2;
+
+      auto comparator = [segments = seg_v.data(), pts = points.data()](uint4 pt1, uint4 pt2) {
+        auto i1 = get_segm(pt1);
+        auto i2 = get_segm(pt2);
+        if (i1 == i2) // same segment
+          return pt1 < pt2; //beging first
+        auto& s1 = segments[i1];
+        auto& s2 = segments[i2];
+        auto S = s1.shift % s2.shift;
+        if (S != 0)//segments non parallel
+          return S < 0;
+        //segments parallel
+        auto shift = s1.shift + s2.shift;
+        auto oo = pts[pt2] - pts[pt1];
+        S = shift % oo;
+        if (S != 0)// segments on different lines
+          return  S < 0;
+        //segments parallel and lies on one line
+        assert((shift.x > 0) || ((shift.x == 0) && (shift.y > 0)));
+        auto prod = oo * shift;
+        if (prod != 0)// points not coinside
+          return  0 < prod;
+        // points coinside
+        if (is_last(pt1) != is_last(pt2))
+          return is_last(pt1) > is_last(pt2); //different segments end first
+        return pt1 < pt2;
+        };
+
+      std::sort(indexes.begin(), indexes.end(), comparator);
+
+      bool not_remapped = prepare_remap(indexes, points.data(), collection.segments, collection.points);
+      if (not_remapped) {
+        collection.segments = std::move(seg_v);
+        collection.points = std::move(points);
+        return false;
+      }
+      remapped_segs = collection.segments.data();
+      remapped_ends = collection.points.data();
+
+      return true;
+    };
+
+    TIntegerSegment& get_original_segment(uint4 s) {
+      return seg_v[s];
+    }
+
+
+    auto get_N() {
+      return remapped_SN;
+    }
+
+    IntersectionRegistrator* registrator = nullptr;
+
+  private:
+    uint4 initial_SN = 0;
+    uint4 nonzero_N = 0;
+    uint4 remapped_SN = 0;
+    uint4 remap_size = 0;
+    int4 range = 1;
+    std::vector<RemappedRecord> rrec_v;
+    std::vector<uint4> remap_v;
+    std::vector<TIntegerSegment> seg_v;//if remapped original int segments are stored here
+    TIntegerSegment* remapped_segs = nullptr;
+    TIntegerVect* remapped_ends = nullptr;
+
+  };
+  //===========================================================================
+
+public:
+
+
+  static void reg_pair(CIntegerSegmentCollection* c, uint4 s1, uint4 s2) {
+    c->remaper.registrator->register_pair(s1, s2);
+  };
+  static void reg_remapped_pair(CIntegerSegmentCollection* c, uint4 s1, uint4 s2) {
+    c->remaper.register_pair(s1, s2);
+  };
   //TPlaneVect
   uint4  GetSegmNumb() { return N; };
   uint4 get_right_pt_idx(uint4 right_pt) {
@@ -90,34 +388,38 @@ public:
     return left_bound_idx >= SegL[s];
   }
 
-   void SetCurStripe(uint4 left, uint4 right)
-  {
+  void SetCurStripe(uint4 left, uint4 right){//left,right: #points - bounds of the stripe 
     B = GetX(left);
     E = GetX(stripe_right = right);
     left_bound_idx = get_left_pt_idx(left);
     right_bound_idx = get_right_pt_idx(right);
-   };
-   void SetCurStripeRight(uint4 right) { E = GetX(stripe_right=right); };
-   void SetCurStripeLeft(uint4 left) { B = GetX(left); };
-  void SetCurPoint(uint4 pt)
-  {
-    cur_point = is_last(pt) ?
-      collection[get_segm(pt)].EndPoint() :
-      collection[get_segm(pt)].BegPoint();
   };
-  void SetCurSegAndPoint(uint4 s)
-  {
+
+  void SetCurStripeRight(uint4 right){ 
+    E = GetX(stripe_right=right); 
+  };
+
+  void SetCurStripeLeft(uint4 left) { 
+    B = GetX(left); 
+  };
+
+  void SetCurPoint(uint4 pt){
+    cur_point = pts[pt];
+  };
+
+  /*void SetCurSegAndPoint(uint4 s) {
     cur_point_idx = first_point(s);
     cur_point_seg = s;
     cur_point=collection[s].BegPoint();
-  };
+  };*/
+
   void SetCurPointAtBeg(uint4 s) {
     cur_point_idx = first_point(s);
     cur_point_seg = s;
     cur_point = collection[s].BegPoint();
   };
-  void SetCurSeg(uint4 s)
-  {
+
+  void SetCurSeg(uint4 s){
     cur_seg_idx = s;
     cur_seg = collection[s];
     curB = cur_seg.org.x;
@@ -125,8 +427,7 @@ public:
     is_rstump=false;
   };
 
-  void SetCurSegCutBE(uint4 s)
-  {
+  void SetCurSegCutBE(uint4 s){
     SetCurSeg(s);
     stage = _Stages::split;
     curB = MAX(B, curB);
@@ -139,12 +440,12 @@ public:
     active_end = cur_seg.EndPoint();
   };
 
-  /*void SetCurSegCutBeg(uint4 s)
-  {
+  void SetCurSegCutBeg(uint4 s) {
     SetCurSeg(s);
+    stage = _Stages::split;
     curB = MAX(B, curB);
     active_end = cur_seg.EndPoint();
-  };*/
+  };
 
   void SetCurSegCutEnd(uint4 s)
   {
@@ -154,28 +455,26 @@ public:
     active_end = cur_seg.BegPoint();
   };
 
-  /*void SetCurSegAE(uint4 s)
-  {
+  void SetCurSegAndPoint(uint4 s) {
+    SetCurPointAtBeg(s);
+
     SetCurSeg(s);
     stage = _Stages::bubble;
-    active_end = cur_seg.EndPoint();
-  };*/
-
-#define FLAG_BASE_COMP_RET(v1,v2,f)  if (v1 != v2) return (v1 < v2) && !f || f && (v1 > v2);
-
+    active_end = pts[last_point(s)];
+  };
 
   template<bool check_s_under_cur_seg>// s_ is_under or is_upper of cur_seg
-  bool RStump2CurSeg(int4 s_)  {
+  bool RStump2CurSeg(int4 s_) const {
     auto& s = collection[s_];
     auto prod = cur_seg.shift % s.shift;
-    if (prod  == 0)return false;
-    unsigned __int64 prod_lo1, prod_hi1;//cur_seg Y
-    unsigned __int64 prod_lo2, prod_hi2;//s_ Y
-    prod_lo1 = _umul128(s.shift.x, cur_seg.YAtX_Numerator(E), &prod_hi1);
-    prod_lo2 = _umul128(cur_seg.shift.x, s.YAtX_Numerator(E), &prod_hi2);
-    FLAG_BASE_COMP_RET(prod_hi1, prod_hi2, check_s_under_cur_seg);
-    FLAG_BASE_COMP_RET(prod_lo1, prod_lo2, check_s_under_cur_seg);
- 
+    if (prod == 0)return false;
+    auto cmp = cur_seg.YAtX_frac(E) <=> s.YAtX_frac(E);
+    if (cmp!= std::strong_ordering::equal){ 
+      if constexpr (check_s_under_cur_seg)
+        return cmp > 0;
+      else
+        return cmp < 0;
+    }
     return is_right_pt_in_stripe(s_);
   };
 
@@ -183,35 +482,28 @@ public:
   constexpr bool static right_bound = true;
 
   template <bool is_right>
-  int8 StumpPos(int4 s_) const {
-    auto& s = collection[s_];
-    unsigned __int64 prod_lo1, prod_hi1;//cur_seg Y
-    unsigned __int64 prod_lo2, prod_hi2;//s_ Y
-    prod_lo1 = _umul128(s.shift.x, cur_seg.YAtX_Numerator(is_right ? E : B), &prod_hi1);
-    prod_lo2 = _umul128(cur_seg.shift.x, s.YAtX_Numerator(is_right ? E : B), &prod_hi2);
-    if (prod_hi1 != prod_hi2)
-      return (prod_hi1 < prod_hi2) ? 1 : -1;
-    if (prod_lo1 != prod_lo2)
-      return (prod_lo1 < prod_lo2) ? 1 : -1;
-    return 0;
+  auto StumpPos(int4 s_) const {
+    //returns cur_seg Y < s_ Y ? 1:-1;
+    // probable error here!!!!!!
+    return cur_seg.YAtX_frac(is_right ? E : B) <=> collection[s_].YAtX_frac(is_right ? E : B);
   };
 
   bool FindCSIntWith(int4 s_) {
-    int8 lp, rp;
+    std::strong_ordering lp, rp;
     auto& s1 = cur_seg;
     auto& s2 = collection[s_];
     if (stage == _Stages::bubble) {
       if (s2.shift.x == 0 || s1.shift.x == 0)
         return SSCurSegIntWith(s_);
-      lp = collection[s_].point_pos(cur_point);
-      rp = collection[s_].point_pos(active_end);
+      lp = collection[s_].under(cur_point);
+      rp = collection[s_].under(active_end);
       // now cur_seg is not vertical, stripe is not degenerate (means s_ is no vertical too)
       if ((lp == 0) || (rp == 0)){
-        registrator->register_pair(cur_seg_idx, s_);
+        register_pair(this,cur_seg_idx, s_);
         return true;
       }
       if ((lp < 0) ^ (rp < 0)) {
-        registrator->register_pair(cur_seg_idx, s_);
+        register_pair(this,cur_seg_idx, s_);
         return true;
       };
 
@@ -225,30 +517,30 @@ public:
       lp = StumpPos<left_bound>(s_);// if negative s_ is under cur left end 
       if (E == B)//degenerate stripe
         if (lp == 0) {
-          if (one_s_pt_in_stripe)registrator->register_pair(cur_seg_idx, s_);
+          if (one_s_pt_in_stripe)register_pair(this,cur_seg_idx, s_);
           return true;
         }
       rp = is_rstump ?
         StumpPos<right_bound>(s_) :// if negative s_ is under cur right end 
-        collection[s_].point_pos(active_end);// if negative s_ is under cur right end (active_end)
+        collection[s_].under(active_end);// if negative s_ is under cur right end (active_end)
       if (lp == 0 && rp == 0){//segments parallel
-        if (one_s_pt_in_stripe)registrator->register_pair(cur_seg_idx, s_);
+        if (one_s_pt_in_stripe)register_pair(this,cur_seg_idx, s_);
         return true;
       }      
       // now cur_seg is not vertical, stripe is not degenerate (means s_ is no vertical too)
       // and segments not parallel
       if (lp == 0)
       {
-        registrator->register_pair(cur_seg_idx, s_);
+        register_pair(this,cur_seg_idx, s_);
         return true;
       } 
       if(rp == 0)  {
         if (one_s_pt_in_stripe)
-          registrator->register_pair(cur_seg_idx, s_);
+          register_pair(this,cur_seg_idx, s_);
         return true;
       }
       if((lp < 0) ^ (rp < 0)) {
-        registrator->register_pair(cur_seg_idx, s_);
+        register_pair(this,cur_seg_idx, s_);
         return true;
       };
     }
@@ -259,28 +551,28 @@ public:
       rp = StumpPos<right_bound>(s_);// if negative s_ is under cur right end 
       if (E == B)//degenerate stripe
         if (rp == 0) {
-          if (one_s_pt_in_stripe)registrator->register_pair(cur_seg_idx, s_);
+          if (one_s_pt_in_stripe)register_pair(this,cur_seg_idx, s_);
           return true;
         }
       lp =  collection[s_].point_pos(active_end);// if negative s_ is under cur left end (active_end)
       if (lp == 0 && rp == 0) {//segments parallel
-        if (one_s_pt_in_stripe)registrator->register_pair(cur_seg_idx, s_);
+        if (one_s_pt_in_stripe)register_pair(this,cur_seg_idx, s_);
         return true;
       }
       // now cur_seg is not vertical, stripe is not degenerate (means s_ is no vertical too)
       // and segments not parallel
       if (lp == 0)
       {
-        registrator->register_pair(cur_seg_idx, s_);
+        register_pair(this,cur_seg_idx, s_);
         return true;
       }
       if (rp == 0) {
         if (one_s_pt_in_stripe)
-          registrator->register_pair(cur_seg_idx, s_);
+          register_pair(this,cur_seg_idx, s_);
         return true;
       }
       if ((lp < 0) ^ (rp < 0)) {
-        registrator->register_pair(cur_seg_idx, s_);
+        register_pair(this,cur_seg_idx, s_);
         return true;
       };
 
@@ -300,13 +592,9 @@ public:
       return s1.org.y + s1.shift.y < s2.org.y + s2.shift.y;
     };
     {
-      unsigned __int64 prod_lo1, prod_hi1, prod_lo2, prod_hi2;
-      prod_lo1 = _umul128(s2.shift.x, s1.YAtX_Numerator(X), &prod_hi1);
-      prod_lo2 = _umul128(s1.shift.x, s2.YAtX_Numerator(X), &prod_hi2);
-      if (prod_hi1 != prod_hi2)
-        return (prod_hi1 < prod_hi2);
-      if (prod_lo1 != prod_lo2)
-        return (prod_lo1 < prod_lo2);
+      auto cmp = s1.YAtX_frac(X) <=> s2.YAtX_frac(X);
+      if (cmp != std::strong_ordering::equal)
+        return cmp < 0;
     };
     auto prod = s1.shift % s2.shift;
  
@@ -327,77 +615,58 @@ public:
   {
     auto& s1 = cur_seg;
     auto& s2 = collection[s_];
-    if ((s1.org.x+s1.shift.x < s2.org.x) || (s2.org.x + s2.shift.x < s1.org.x))
+    if ((s1.ex() < s2.bx()) || (s2.ex() < s1.bx()))
       return false;//segments are not on vertical line and can't intersect
     return SSCurSegIntWith(s_);
   };
 
-  template <bool reg=true>
+
+  template <bool reg = true>
   bool SSCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (both are on some vertical line) and register them
   {
+    //!!! can't process zero segments
+    //!precondition segments share some x coords
     auto& s1 = cur_seg;
     auto& s2 = collection[s_];
-    auto delt = s2.org - s1.org;
-    //at this moment, we can be sure that segments' x-projections intersect each other (1)
+    if (s1.no_common_y(s2))
+      return false;
+    //at this moment, we can be sure that segments' x,y-projections intersect each other (1)
     // let l1 is the line through s1 and l2 is the line through s2
+    auto delt = s2.BegPoint() - s1.BegPoint();
     auto prod = s1.shift % s2.shift, beg = s1.shift % delt;
-    decltype(prod) end;
     if (prod == 0) { // segments parallel
       if (beg == 0) {// they are on the same line
-        if ((s1.shift.x != 0) || // if they not vertical
-          (s1.shift.y >= delt.y) && (s2.shift.y >= -delt.y)) {// or y- intersects
-          if constexpr (reg)registrator->register_pair(cur_seg_idx, s_);
-          return true;//segments are not on vertical line and can't intersect
-          }
+        if constexpr (reg)register_pair(this, cur_seg_idx, s_);
+        return true;
       }
-      return false;
+      return false;//segments are not on one line and can't intersect
     }
- 
-    do {
-      if (beg == 0) {//begin of s2 lies on l1, and taking (1) to account
-        if ((delt.x > 0)||((delt.x==0)&&(delt.y>=0)))//if begin of s2 is on the right of begin of s1
-        {
-          if constexpr(reg)registrator->register_pair(cur_seg_idx, s_);
-          return true;
-        };
-        break;
-      }
-      end = beg + prod;
-      if (end == 0) {//end of s2 lies on l1, and taking (1) to account
-        if (delt.x + s2.shift.x <= s1.shift.x)//if end of s2 is on the left of s1 end
-        {
-          if constexpr (reg)registrator->register_pair(cur_seg_idx, s_);
-          return true;
-        };
-        break;
-      }
-      if ((beg > 0) ^ (end < 0))////begin and end of s2 are on the same side of l1 
+    auto end = beg + prod;
+    if (((beg > 0) != (end < 0)) && (beg != 0) && (end != 0))//begin and end of s2 are on the same side of l1 
         return false;
-    } while (false);
+
+    auto int_type = _IntType::s2_beg_int * (beg == 0) + _IntType::s2_end_int * (end == 0);
+
     //at this moment, we can be sure that s2 intesects l1 (2)
     beg = delt % s2.shift;
     end = beg - prod;
-    /*if ((beg == 0) || (end == 0)) {
-      registrator->register_pair(cur_seg_idx, s_);
-      return true;
-    };
-    if ((beg > 0) ^ (end > 0)) {//begin and end of s1 are on diffenent sides l2
-      registrator->register_pair(cur_seg_idx, s_);
-      return true;
-    };*/
+    if ((beg == 0) ||//begin of s1 lies on l2, taking (1)(2) to account 
+        (end == 0) ||//end of s1 lies on l2, taking (2) to account
+        ((beg > 0) != (end > 0))) {//begin and end of s1 are on diffenent sides l2
 
-    if ((beg == 0) ||//begin of s1 lies on l2, taking (2) to account
-      (end == 0) ||//end of s1 lies on l2, taking (2) to account
-      ((beg > 0) ^ (end > 0))) {//begin and end of s1 are on diffenent sides l2 
-      if constexpr (reg)registrator->register_pair(cur_seg_idx, s_);
+      int_type += _IntType::s1_beg_int * (beg == 0) + _IntType::s1_end_int * (end == 0);
+
+      if constexpr (reg)register_pair(this, cur_seg_idx, s_);
       return true;
     };
     return false;
   };
 
+
+
   int4 FindCurSegIntDownWith(int4 s_){//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
     if (IsIntersectsCurSegDown(s_)) {
-      registrator->register_pair(cur_seg_idx, s_);
+      register_pair(this,cur_seg_idx, s_);
       return true;
     }
     return false;
@@ -406,7 +675,7 @@ public:
 
   bool FindCurSegIntUpWith(int4 s_){//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
     if (IsIntersectsCurSegUp(s_)) {
-      registrator->register_pair(cur_seg_idx, s_);
+      register_pair(this,cur_seg_idx, s_);
       return true;
     }
     return false;
@@ -420,38 +689,36 @@ public:
     return UpperActiveEnd(s_);
   };
 
-  auto FindCurSegIntDownWith(int4* s_,int4* last) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+  auto FindCurSegIntDownWith(int4* s_, int4* last) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
   //Caller ensures that "last" points to the allocated memory address accessible for reading and writing.
-    auto r = registrator;
     auto cs = cur_seg_idx;
     if (is_rstump) {
       while ((THIS_HAS_SENTINELS || (s_ != last)) && RStump2CurSeg<false>(*s_)) {
-        r->register_pair(cs, *s_);
+        register_pair(this,cs, *s_);
         --s_;
       }
       return s_;
     }
 
     while ((THIS_HAS_SENTINELS || (s_ != last)) && UpperActiveEnd(*s_)) {
-      r->register_pair(cs, *s_);
+      register_pair(this,cs, *s_);
       --s_;
     }
     return s_;
   };
 
-  auto FindCurSegIntUpWith(int4* s_,int4* last) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+  auto FindCurSegIntUpWith(int4* s_, int4* last) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
   //Caller ensures that "last" points to the allocated memory address accessible for reading and writing.
-    auto r = registrator;
     auto cs = cur_seg_idx;
     if (is_rstump) {
       while ((THIS_HAS_SENTINELS || (s_ != last)) && RStump2CurSeg<true>(*s_)) {
-        r->register_pair(cs, *s_);
+        register_pair(this,cs, *s_);
         ++s_;
       }
       return s_;
     }
     while ((THIS_HAS_SENTINELS || (s_ != last)) && UnderActiveEnd(*s_)) {
-      r->register_pair(cs, *s_);
+      register_pair(this,cs, *s_);
       ++s_;
     }
     return s_;
@@ -506,27 +773,29 @@ public:
     for (uint4 i = 0; i < NN; ++i)  epoints[i] = i*2;
 
 
-    for (uint4 i = 0; i < N; ++i) {
-      collection[i].shift.x += collection[i].org.x;
-    };
-
+/*
     static_assert(sizeof(TIntegerSegment) == 4 * sizeof(int4), "one segment should occupy 4 reals space");
     static_assert(offsetof(TIntegerSegment, org.x) == 0, "TLineSegment1.org.x should have 0 offset");
     static_assert(offsetof(TIntegerSegment, shift.x) == 2 * sizeof(int4), "TLineSegment1.shift.x should have 2 reals offset");
-
+*/
     std::sort(epoints, epoints + NN,
-      [x = reinterpret_cast<int4*>(collection)](uint4 pt1, uint4 pt2) {
+      [x = reinterpret_cast<int4*>(pts)](uint4 pt1, uint4 pt2) {
         if (x[pt1] != x[pt2])
           return x[pt1] < x[pt2];
         auto le1 = (pt1 & 2), le2 = (pt2 & 2);
         if (le1 != le2) //last end (last ending on 0b10, first on 0b00) alway greater than the first
           return le1 < le2;
+        /*y = x + 1;
+        if (y[pt1] != y[pt2])
+          return y[pt1] < y[pt2];*/
         return (pt1 < pt2);
       }
     );
-    ENDS = epoints;
 
     for (uint4 i = 0; i < NN; ++i)  epoints[i] /= 2;
+
+    ENDS = epoints;
+
 
     /*SegR = new uint4[N];
     for (uint4 i = 0, cur_end; i < NN; ++i) {
@@ -535,9 +804,6 @@ public:
         SegR[get_segm(cur_end)] = i;
     };*/  
 
-    for (uint4 i = 0; i < N; ++i) {
-      collection[i].shift.x -= collection[i].org.x;
-    };
   };
 
   void set_seg2end_arr(uint4* _SegL, uint4* _SegR) {
@@ -552,6 +818,7 @@ public:
       ENDS = c.ENDS;
       SegR = c.SegR;
       collection = c.collection;
+      //!!!!!clone remaper!!!!!!!!!!!!
       SetRegistrator(r);
   };
 
@@ -561,6 +828,8 @@ public:
     clone_of = nullptr; 
     ENDS = nullptr;
     SegR = nullptr;
+    //unclone remaper !!!!!!!!
+
   };
 
   void SortAt(uint4 pt, uint4 n, int4 *L)
@@ -574,38 +843,74 @@ public:
     assert(("integer collection registers only intersecting pairs:\n\
        intersection points don't have integer coords ",
       (IntersectionRegistrator::reg_type & _RegistrationType::point) == 0));
-    registrator = r;
+    remaper.registrator = r;
   };
 
-  IntersectionRegistrator* GetRegistrator() { return registrator; };
-
+  IntersectionRegistrator* GetRegistrator() { return  remaper.registrator; };
 
   CIntegerSegmentCollection(uint4 n, void* c, IntersectionRegistrator *r, int4 range)
   {
-    N = n;
-    auto coll = reinterpret_cast<TLineSegment1*>(c);
-    {
-      auto ck = std::make_unique<TIntegerSegment[]>(N);
-      collection_keeper.swap(ck);
-    }
-    //collection_keeper.swap(unmove(std::make_unique<TIntegerSegment[]>(N)));
-    collection = collection_keeper.get();
-    auto mm_rect = get_minmax(N,coll);
-    auto x_transf = transf1D{.shift = -mm_rect.ld.x,
-      .scale = range / (mm_rect.rt.x - mm_rect.ld.x)};
-    auto y_transf = transf1D{.shift = -mm_rect.ld.y,
-      .scale = range / (mm_rect.rt.y - mm_rect.ld.y)};
-    for (uint4 i = 0; i != n; ++i)
-      collection[i].Init(coll[i], x_transf, y_transf);
-    SetRegistrator(r);
+    assert(("integer collection registers only intersecting pairs:\n\
+       intersection points don't have integer coords ",
+      (IntersectionRegistrator::reg_type & _RegistrationType::point) == 0));
+    remaper.NoRemapInit(n, c, r, range, *this);
+    is_collection_remapped = false;
+    register_pair = reg_pair;
+    N = remaper.get_N();
+    collection = segments.data();
+    pts = points.data();
 
+  }
+
+  bool TurnRemapOn() {
+    is_collection_remapped = remaper.TurnRemapOn(*this);
+    register_pair = is_collection_remapped?reg_remapped_pair: reg_pair;
+    N = remaper.get_N();
+    collection = segments.data();
+    pts = points.data();
+    return is_collection_remapped;
+  }
+
+  TIntegerSegment& get_original_segment(uint4 s) {
+    if (is_collection_remapped)
+      return remaper.get_original_segment(s);
+    return collection[s];
+  }
+
+  // Print difference vectors produced by multiset_difference.
+  void print_difference_vectors(const std::vector<int_rec>& a_minus_b,
+    const std::vector<int_rec>& b_minus_a,
+    const char* nameA = "reg1",
+    const char* nameB = "reg2")
+  {
+    printf("Pairs present in %s but not in %s (with multiplicity): %zu\n", nameA, nameB, a_minus_b.size());
+    for (const auto& t : a_minus_b) {
+      auto n1 = std::get<0>(t);
+      auto n2 = std::get<1>(t);
+      auto& s1 = get_original_segment(n1);
+      auto& s2 = get_original_segment(n2);
+      printf("%u %u:[(%i,%i)(%i,%i){%i,%i}] [(%i,%i)(%i,%i){%i,%i}]\n", n1, n2,
+        s1.org.x, s1.org.y, s1.org.x + s1.shift.x, s1.org.y + s1.shift.y, s1.shift.x, s1.shift.y,
+        s2.org.x, s2.org.y, s2.org.x + s2.shift.x, s2.org.y + s2.shift.y, s2.shift.x, s2.shift.y);
+    }
+
+    printf("Pairs present in %s but not in %s (with multiplicity): %zu\n", nameB, nameA, b_minus_a.size());
+    for (const auto& t : b_minus_a) {
+      auto n1 = std::get<0>(t);
+      auto n2 = std::get<1>(t);
+      auto& s1 = get_original_segment(n1);
+      auto& s2 = get_original_segment(n2);
+      printf("%u %u:[(%i,%i)(%i,%i){%i,%i}] [(%i,%i)(%i,%i){%i,%i}]\n", n1, n2,
+        s1.org.x, s1.org.y, s1.org.x + s1.shift.x, s1.org.y + s1.shift.y, s1.shift.x, s1.shift.y,
+        s2.org.x, s2.org.y, s2.org.x + s2.shift.x, s2.org.y + s2.shift.y, s2.shift.x, s2.shift.y);
+    }
   }
 
   CIntegerSegmentCollection() {};
  
   CIntegerSegmentCollection(CIntegerSegmentCollection& coll, IntersectionRegistrator* r)
   {
-    clone(coll, r);
+    //clone(coll, r);
   }
 
   ~CIntegerSegmentCollection()
@@ -626,22 +931,23 @@ public:
     for (int4 i = 0; i < n; ++i)collection[i].write_SVG(i, SVG_stream);
   };
 
-
 private:
   auto GetX(uint4 pt) const {
-    return collection[get_segm(pt)].PointX(is_last(pt));
+    return pts[pt].x;
   };
 
   TIntegerSegment* collection = nullptr;
+  TIntegerVect* pts = nullptr;
   //uint4* SegL = nullptr; 
   uint4* SegL = nullptr, * SegR = nullptr, * ENDS = nullptr;
 
   TIntegerSegment cur_seg;
   TIntegerVect cur_point, active_end;
   //int8 cs_r_numerator = 0, cs_l_numerator = 0;
-  std::unique_ptr<TIntegerSegment[]> collection_keeper;
-
-  IntersectionRegistrator *registrator = nullptr;
+  std::vector<TIntegerSegment> segments;
+  std::vector<TIntegerVect> points;
+  CRemaper remaper;
+  decltype(reg_pair) *register_pair = reg_pair;
   CIntegerSegmentCollection *clone_of = nullptr;
   uint4 N=0;
   int4 B, E, curB, curE, stripe_right, right_bound_idx, left_bound_idx;
@@ -651,6 +957,8 @@ private:
   uint4 cur_point_seg = 0xFFFFFFFF, active_end_idx = 0xFFFFFFFF;
   //TPlaneVect x_transf, y_transf;
   bool is_rstump = false;
+  bool is_collection_remapped = false;
 //  bool rbelong_to_stripe=true;
 };
 
+// some string

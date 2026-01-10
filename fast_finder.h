@@ -245,7 +245,7 @@ public:
     while (R_pos!=R)
     {
       --R_pos;
-      segments.SetCurSegCutBeg(*R_pos);
+      segments.SetCurSegCutBeg(*R_pos);//!!!!
       segments.FindCurSegIntUpWith(_Q + *Q_tail, _Q_pos);
       ++Q_tail;
     } 
