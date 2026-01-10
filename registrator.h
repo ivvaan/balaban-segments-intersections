@@ -26,6 +26,8 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <tuple>
 #include <vector>
+#include <cstdint>
+#include <cstdio>
 #include "utils.h"
 
 enum _RegistrationType
@@ -37,12 +39,40 @@ enum _RegistrationType
   full = 7
 };
 
-template <class ipoint>
+using int_rec = std::tuple<uint4, uint4>;
+
+
+struct RegistratorBase {
+  void (*reg_pair)(void*, uint4 s1, uint4 s2) = nullptr;
+  void (*alloc)(void*, uint4 N) = nullptr;
+  double (*get_st)(void *,uint4 stat_type) = nullptr;
+  void (*wr_SVG)(void* ,uint4 alg, chostream* SVG_text) = nullptr;
+  void* instance=nullptr;
+
+  void register_pair(uint4 s1, uint4 s2) const { reg_pair(instance, s1, s2); };
+  void Alloc(uint4 N) const { alloc(instance, N); };
+  double get_stat(uint4 stat_type) const { return get_st(instance, stat_type); };
+  void write_SVG(uint4 alg, chostream* SVG_text) const { wr_SVG(instance,alg, SVG_text); };
+};
+
+template<typename T>
+RegistratorBase makeRegistratorBase(T& obj) {
+  return {
+      [](void* instance, uint4 s1, uint4 s2) { static_cast<T*>(instance)->register_pair(s1,s2); },
+      [](void* instance, uint4 N) { static_cast<T*>(instance)->Alloc(N); },
+      [](void* instance, uint4 stat_type) { return static_cast<T*>(instance)->get_stat(stat_type); },
+      [](void* instance, uint4 alg, chostream* SVG_text) { static_cast<T*>(instance)->write_SVG(alg,SVG_text); },
+    &obj
+  };
+}
+
+template <class ipoint, uint4 r_type = 0>
 class JustCountingRegistrator
 {
-  double counter = 0;
+  uint8  counter = 0;
 public:
-  static constexpr uint4 reg_type = _RegistrationType::count;
+  static constexpr uint4 reg_type = r_type | _RegistrationType::count;
+  //static constexpr uint4 reg_type = _RegistrationType::count + _RegistrationType::segments + _RegistrationType::point;
   void register_pair(uint4 s1, uint4 s2) noexcept {
 #ifdef PRINT_SEG_AND_INT
     if (s1 > s2)
@@ -53,6 +83,8 @@ public:
 
     ++counter; 
   };
+
+  template <class ipoint>
   void register_pair_and_point(uint4 s1, uint4 s2, const ipoint& p) { register_pair(s1, s2); };
  
   void combine_reg_data(uint4 n_threads, JustCountingRegistrator* additional_reg_obj[])
@@ -63,18 +95,17 @@ public:
   void Alloc(uint4 _N) {};
 
   // to return some statistics about registered intersections;
-  double get_stat(uint4 stat_type = 0) { return counter; };
+  auto get_stat(uint4 stat_type = 0) { return counter; };
 
   void write_SVG(uint4 alg, chostream* SVG_text) {};
 
 };
 
-template <class ipoint>
 class PerSegmCountingRegistrator
 {
   uint4 N;
   uint4* segm_counters = nullptr;
-  double counter = 0;
+  uint8 counter = 0;
 
 public:
   static constexpr uint4 reg_type = _RegistrationType::count + _RegistrationType::segments;
@@ -86,6 +117,8 @@ public:
     ++segm_counters[s1];
     ++segm_counters[s2];
   };
+
+  template <class ipoint>
   void register_pair_and_point(uint4 s1, uint4 s2, const ipoint& p) { register_pair(s1, s2); };
 
   void Alloc(uint4 _N)
@@ -107,11 +140,11 @@ public:
   };
 
   // to return some statistics about registered intersections;
-  double get_stat(uint4 stat_type = 0)
+  auto get_stat(uint4 stat_type = 0)
   {
     // if stat_type nonzero return maximal number of intersections per segment;
     if (stat_type == _Registrator::per_segm_reg_max_per_segm_stat)
-      return *std::max_element(segm_counters, segm_counters + N);
+      return (uint8)*std::max_element(segm_counters, segm_counters + N);
     return counter;
   };
 
@@ -119,12 +152,151 @@ public:
 
 };
 
+class PairRegistrator
+{
+public:
+
+  std::vector<int_rec>  intersections;
+  uint8 counter = 0;
+
+  static constexpr uint4 reg_type = _RegistrationType::count + _RegistrationType::segments;
+
+  PairRegistrator() {
+  };
+
+  ~PairRegistrator() {
+  };
+
+
+
+  void register_pair(uint4 s1, uint4 s2) {
+      if (counter == 0)
+      intersections.reserve(1024 * 1024);
+    ++counter;
+#ifdef NDEBUG
+    if (s1 < s2)
+      intersections.emplace_back(s1, s2);
+    else
+      intersections.emplace_back(s2, s1);
+#else
+    if (s1 > s2)std::swap(s1, s2);
+    intersections.emplace_back(s1, s2);
+#endif
+  };
+
+  void Alloc(uint4) {};
+
+  // to return some statistics about registered intersections;
+  auto get_stat(uint4 stat_type = 0)
+  {
+    return counter;
+  };
+
+  // Sort stored pairs in-place (lexicographic on tuple).
+  void sort_inplace()
+  {
+    std::sort(intersections.begin(), intersections.end());
+  }
+
+  // Compute multiset difference: fill a_minus_b with elements in A\B (with multiplicities),
+  // and b_minus_a with elements in B\A (with multiplicities).
+  // The function does NOT modify the original registrators.
+  static void multiset_difference(const PairRegistrator &A, const PairRegistrator &B,
+                                  std::vector<int_rec> &a_minus_b,
+                                  std::vector<int_rec> &b_minus_a)
+  {
+    a_minus_b.clear();
+    b_minus_a.clear();
+
+    // make copies and sort (we don't mutate originals)
+    std::vector<int_rec> a = A.intersections;
+    std::vector<int_rec> b = B.intersections;
+    std::sort(a.begin(), a.end());
+    std::sort(b.begin(), b.end());
+
+    size_t i = 0, j = 0;
+    const size_t na = a.size();
+    const size_t nb = b.size();
+
+    while (i < na && j < nb)
+    {
+      if (a[i] == b[j])
+      {
+        // count multiplicities for this key in both
+        size_t ia = i + 1;
+        while (ia < na && a[ia] == a[i]) ++ia;
+        size_t jb = j + 1;
+        while (jb < nb && b[jb] == b[j]) ++jb;
+
+        size_t ca = ia - i;
+        size_t cb = jb - j;
+        if (ca > cb)
+        {
+          // append (ca - cb) copies of a[i]
+          for (size_t t = 0; t < ca - cb; ++t)
+            a_minus_b.push_back(a[i]);
+        }
+        else if (cb > ca)
+        {
+          for (size_t t = 0; t < cb - ca; ++t)
+            b_minus_a.push_back(b[j]);
+        }
+        i = ia;
+        j = jb;
+      }
+      else if (a[i] < b[j])
+      {
+        // all occurrences of a[i] are only in A
+        size_t ia = i + 1;
+        while (ia < na && a[ia] == a[i]) ++ia;
+        size_t ca = ia - i;
+        for (size_t t = 0; t < ca; ++t)
+          a_minus_b.push_back(a[i]);
+        i = ia;
+      }
+      else // b[j] < a[i]
+      {
+        size_t jb = j + 1;
+        while (jb < nb && b[jb] == b[j]) ++jb;
+        size_t cb = jb - j;
+        for (size_t t = 0; t < cb; ++t)
+          b_minus_a.push_back(b[j]);
+        j = jb;
+      }
+    }
+
+    // remaining in A
+    while (i < na)
+    {
+      size_t ia = i + 1;
+      while (ia < na && a[ia] == a[i]) ++ia;
+      size_t ca = ia - i;
+      for (size_t t = 0; t < ca; ++t)
+        a_minus_b.push_back(a[i]);
+      i = ia;
+    }
+    // remaining in B
+    while (j < nb)
+    {
+      size_t jb = j + 1;
+      while (jb < nb && b[jb] == b[j]) ++jb;
+      size_t cb = jb - j;
+      for (size_t t = 0; t < cb; ++t)
+        b_minus_a.push_back(b[j]);
+      j = jb;
+    }
+  }
+
+ 
+};
+
+
 template <class ipoint>
 class PairAndPointRegistrator
 {
   using int_rec = std::tuple<uint4, uint4, ipoint>;
   std::vector<int_rec>  intersections;
-  double counter = 0;
+  uint8 counter = 0;
 
 public:
   static constexpr uint4 reg_type = _RegistrationType::count + _RegistrationType::segments + _RegistrationType::point;
@@ -173,8 +345,7 @@ public:
   };
 
   // to return some statistics about registered intersections;
-  double get_stat(uint4 stat_type = 0)
-  {
+  auto get_stat(uint4 stat_type = 0)  {
     return counter;
   };
 
@@ -203,12 +374,12 @@ public:
     };
   }
 
-
 };
 
 
-using SimpleCounter=JustCountingRegistrator<TPlaneVect> ;
-using PerSegmCounter=PerSegmCountingRegistrator<TPlaneVect> ;
+using SimpleCounter = JustCountingRegistrator<TPlaneVect>;
+using SimpleCounter2 = JustCountingRegistrator<TPlaneVect,_RegistrationType::point>;
+using PerSegmCounter = PerSegmCountingRegistrator;
 using TrueRegistrator = PairAndPointRegistrator<TPlaneVect> ;
 
 #endif // !REGISTRATOR_FOR_SEGMENT_INTERSECTION
