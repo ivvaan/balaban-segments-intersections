@@ -34,7 +34,13 @@ class TLineSegment1
 public:
   static const int4 is_line = 1;
   TLineSegment1():org(),shift() {};
-  TLineSegment1(const TPlaneVect &p1, const TPlaneVect &p2) :org(p1), shift(p2-p1) {};
+  TLineSegment1(const TPlaneVect &p1, const TPlaneVect &p2) :org(p1), shift(p2-p1) {
+    Refine();
+  };
+  TLineSegment1(REAL xb, REAL yb, REAL xs, REAL ys) :org(xb, yb), shift(xs, ys) {
+    Refine();
+  };
+
   // int4 parnum,intpar;
   TPlaneVect org;
   TPlaneVect shift;
@@ -46,6 +52,25 @@ public:
       org = org + shift; 
       shift = -shift;
     }
+  };
+  void Rotate(double s,double c) {// s = sin(angle), c = cos(angle);
+    assert(fabs(s * s + c * c - 1.) < 1.e-12);
+    org = { c * org.x - s * org.y,  
+            s * org.x + c * org.y };
+    shift = { c * shift.x - s * shift.y,  
+              s * shift.x + c * shift.y };
+    Refine();
+  };
+
+  TLineSegment1 get_rotated(double s, double c) const {// s = sin(angle), c = cos(angle);
+    assert(fabs(s * s + c * c - 1.) < 1.e-12);
+    TLineSegment1 res;
+    res.org = { c * org.x - s * org.y,
+            s * org.x + c * org.y };
+    res.shift = { c * shift.x - s * shift.y,
+              s * shift.x + c * shift.y };
+    res.Refine();
+    return res;
   };
   void Init(const TLineSegment1 &s) { org = s.org; shift = s.shift; };
   void InitRandom(CRandomValueGen &rv, int4 seg_n, int4 type, REAL par);
@@ -228,7 +253,6 @@ public:
     }
 
   }
-
 };
   bool below(REAL X, TArcSegment *s1, TArcSegment *s2);
   int4 IntPointsInStripe(REAL x1, REAL x2, TArcSegment *s1, TArcSegment *s2, TPlaneVect *p);
@@ -240,12 +264,21 @@ public:
   struct TIntegerSegment
   {
     constexpr static int4 is_line = 1;
+#ifdef PRINT_SEG_AND_INT
+    static TIntegerSegment* coll_begin;
+#endif
+
     TIntegerSegment() :org(), shift() {};
-    TIntegerSegment(const TIntegerVect& p1, const TIntegerVect& p2) :org(p1), shift(p2 - p1) {};
-    // int4 parnum,intpar;
+    TIntegerSegment(TIntegerVect p1, TIntegerVect p2) :org(p1), shift(p2 - p1) {
+      Refine();
+    };
+    TIntegerSegment(int4 xb, int4 yb, int4 xs, int4 ys) :org( xb,yb ), shift(xs,ys) {
+      Refine();
+    };
+
     TIntegerVect org;
     TIntegerVect shift;
-    //TIntegerVect cash_pt;
+
     void Refine()
     {
       if ((shift.x < 0) || ((shift.x == 0) && (shift.y < 0)))
@@ -261,22 +294,26 @@ public:
       Refine();
       //assert((shift.x > 0)||((shift.x==0)&&(shift.y>0)));
 #ifdef PRINT_SEG_AND_INT
-      if (org.x == 4) {
-        org = { 2, 3 };
-        shift = { 1, -1 };
-      }
-     /* org = 10 * org;
-      shift = 10 * shift;
-      if (shift.x == 20 && shift.y == 10)
-      {
-        org = {20,5};
-        shift = { 10,5 };
-      }*/
-        //shift = shift + TIntegerVect(2, 1);
       if (print_at_lineseg1_init)
-        printf("[%i,%i,%i,%i],\n", org.x, org.y, org.x + shift.x, org.y + shift.y);
+        printf("s%i[%i,%i,%i,%i],\n", org.x, org.y, org.x + shift.x, org.y + shift.y);
 #endif
     };
+
+    void Init(const TLineSegment1& seg, double si, double co,const transf1D& x_transf, const transf1D& y_transf) {
+      auto s = seg.get_rotated(si, co);
+      org.from_real(s.org, x_transf, y_transf);
+      shift = TIntegerVect(s.org + s.shift, x_transf, y_transf) - org;
+      Refine();
+      //assert((shift.x > 0)||((shift.x==0)&&(shift.y>0)));
+#ifdef PRINT_SEG_AND_INT
+      if (print_at_lineseg1_init) {
+        uint4 sn = this - TIntegerSegment::coll_begin;
+        //printf("is%i[%i,%i,%i,%i],\n", sn, org.x, org.y, org.x + shift.x, org.y + shift.y);
+        printf("is%i[%i,%i,%i,%i],\n", sn, org.x, org.y, shift.x,shift.y);
+      }
+#endif
+    };
+
     TIntegerVect BegPoint() const {
       return org;
     };
@@ -292,21 +329,67 @@ public:
     void EndPoint(int4& x, int4& y) const {
       x = org.x + shift.x; y = org.y + shift.y;
     };
-    auto point_pos(const TIntegerVect& v) const { //return negative if segment placed under point v
+    auto bx() const {
+      return org.x;
+    }
+    auto by() const {
+      return org.y;
+    }
+    auto ex() const {
+      return org.x+shift.x;
+    }
+    auto ey() const {
+      return org.y+shift.y;
+    }
+    auto sx() const {
+      return shift.x;
+    }
+    auto sy() const {
+      return shift.y;
+    }
+    bool is_vertical() const {
+      return sx() == 0;
+    }
+    auto point_pos(TIntegerVect v) const { //return negative if segment placed under point v
       return (v - org) % shift;
     };
-    auto under(const TIntegerVect& v) const { //segment placed under point v
+    auto under(TIntegerVect v) const { //segment placed under point v
       return (v - org) % shift <=> 0;
     };
-    bool exact_under(const TIntegerVect& v) const { //segment placed under point v
+    bool exact_under(TIntegerVect v) const { //segment placed under point v
       return (v - org) % shift < 0;
     };
-    auto upper(const TIntegerVect& v) const {
+    auto upper(TIntegerVect v) const {
       return 0 <=>(v - org) % shift;
     };
-    bool exact_upper(const TIntegerVect& v) const {
+    bool exact_upper(TIntegerVect v) const {
       return (v - org) % shift > 0;
     };
+    bool no_common_y(const TIntegerSegment& s2) const {
+      decltype(org.y) min1, min2, max1, max2;
+
+      auto dy = sy();
+      if (dy > 0) {
+        min1 = by();
+        max1 = min1 + dy;
+      }
+      else {
+        max1 = by();
+        min1 = max1 + dy;
+      }
+
+      dy = s2.sy();
+      if (dy > 0) {
+        min2 = s2.by();
+        max2 = min2 + dy;
+      }
+      else {
+        max2 = s2.by();
+        min2 = max2 + dy;
+      }
+      return (min2 > max1) || (min1 > max2);
+    }
+
     void write_SVG(int4 id, chostream* SVG_text) const {
       if (SVG_text) {
         auto bp = BegPoint();
@@ -318,14 +401,43 @@ public:
         *SVG_text << "' y2='" << ep.y;
         *SVG_text << "' class='line1'/>\n";
       }
+    };
 
+    auto get_int_type(const TIntegerSegment& s) const {
+      assert(shift.is_non_zero() && s.shift.is_non_zero());
+      uint4 res= _IntType::common_int;
+      auto d = s.BegPoint() - BegPoint();
+      if (d % shift == 0) res += _IntType::s2_beg_int;
+      if (d % s.shift == 0) res += _IntType::s1_beg_int;
+      d = s.EndPoint() - EndPoint();
+      if (d % shift == 0) res += _IntType::s2_end_int;
+      if (d % s.shift == 0) res += _IntType::s1_end_int;
+      return res;
+    }
+
+    auto get_int_type_beg(const TIntegerSegment& s) const {
+      assert(shift.is_non_zero() && s.shift.is_non_zero());
+      uint4 res = _IntType::common_int;
+      auto d = s.BegPoint() - BegPoint();
+      if (d % shift == 0) res += _IntType::s2_beg_int;
+      if (d % s.shift == 0) res += _IntType::s1_beg_int;
+      return res;
+    }
+
+
+    friend std::ostream& operator<<(std::ostream& os, const TIntegerSegment& s) {
+      os <<"["<<s.org.x << "," << s.org.y << ";" << s.shift.x << "," << s.shift.y << "]"; //" " <<double(s.shift.y)/ s.shift.x<< std::endl;
+      return os;
     };
 
     auto YAtX_Numerator(int4 X) const {
       assert(X >= org.x);
-      auto res = (int8)org.y * (int8)shift.x + (int8)(X - org.x) * (int8)shift.y;
-      assert(res >= 0);
-      return res;
+      return (int8)org.y * (int8)shift.x + (int8)(X - org.x) * (int8)shift.y;
+      //assert(res >= 0);
+    };
+
+    frac64 YAtX_frac(int4 X) const {
+      return { YAtX_Numerator(X),shift.x };
     };
  
  /*   uint4 below(const TIntegerSegment& s, int4 X) {
@@ -340,3 +452,4 @@ public:
     };*/
 
   };
+  // some string

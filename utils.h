@@ -263,7 +263,7 @@ struct TIntegerVect {
     x(x_transf(v.x) + 0.5),  
     y(y_transf(v.y) + 0.5)
   {};
-  TIntegerVect(const TIntegerVect& c) = default;
+  TIntegerVect(const TIntegerVect & c) = default;
   auto getX() const { return x; };
   auto getY() const { return y; };
   bool operator<(TIntegerVect v2) const {
@@ -316,7 +316,7 @@ struct TIntegerVect {
     x = v.x * x_scale + 0.5;
     y = v.y * y_scale + 0.5;
   };
-  friend std::ostream& operator<<(std::ostream& os, const TIntegerVect& v) {
+  friend std::ostream& operator<<(std::ostream& os, TIntegerVect v) {
     os << "(" << v.x << "," << v.y<<")"; //" " <<double(s.shift.y)/ s.shift.x<< std::endl;
     return os;
   };
@@ -325,17 +325,17 @@ struct TIntegerVect {
 inline constexpr TIntegerVect int_max_vect{ std::numeric_limits<decltype(TIntegerVect::x)>::max(),std::numeric_limits<decltype(TIntegerVect::y)>::max() };
 inline constexpr TIntegerVect int_zero_vect{ 0,0 };
 
-int8 operator%(const TIntegerVect& v1, const TIntegerVect& v2);
+int8 operator%(TIntegerVect v1, TIntegerVect v2);
 
-int8 operator*(const TIntegerVect& v1, const TIntegerVect& v2);
+int8 operator*(TIntegerVect v1, TIntegerVect v2);
 
-TIntegerVect operator+(const TIntegerVect& v1, const TIntegerVect& v2);
+TIntegerVect operator+(TIntegerVect v1, TIntegerVect v2);
 
-TIntegerVect operator-(const TIntegerVect& v1, const TIntegerVect& v2);
+TIntegerVect operator-(TIntegerVect v1, TIntegerVect v2);
 
-TIntegerVect operator*(int4 r, const TIntegerVect& t);
+TIntegerVect operator*(int4 r, TIntegerVect t);
 
-TIntegerVect operator*(const TIntegerVect& t, int4 r);
+TIntegerVect operator*(TIntegerVect t, int4 r);
 
 
 
