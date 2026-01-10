@@ -66,10 +66,10 @@ RegistratorBase makeRegistratorBase(T& obj) {
   };
 }
 
-template <class ipoint, uint4 r_type = 0>
+template <uint4 r_type = 0>
 class JustCountingRegistrator
 {
-  uint8  counter = 0;
+  uint8 counter = 0;
 public:
   static constexpr uint4 reg_type = r_type | _RegistrationType::count;
   //static constexpr uint4 reg_type = _RegistrationType::count + _RegistrationType::segments + _RegistrationType::point;
@@ -290,7 +290,6 @@ public:
  
 };
 
-
 template <class ipoint>
 class PairAndPointRegistrator
 {
@@ -377,8 +376,8 @@ public:
 };
 
 
-using SimpleCounter = JustCountingRegistrator<TPlaneVect>;
-using SimpleCounter2 = JustCountingRegistrator<TPlaneVect,_RegistrationType::point>;
+using SimpleCounter = JustCountingRegistrator<>;
+using SimpleCounter2 = JustCountingRegistrator<_RegistrationType::point>;
 using PerSegmCounter = PerSegmCountingRegistrator;
 using TrueRegistrator = PairAndPointRegistrator<TPlaneVect> ;
 

@@ -26,39 +26,42 @@ template<class IntersectionRegistrator>
 class CLine2SegmentCollection
 {
 public:
-  static constexpr bool is_line_segments = true;
+  using this_T = CLine2SegmentCollection;
+  static constexpr _Coll_flag_state get_coll_flag(_Coll_flags flag) {
+    if (flag == _Coll_flags::line_segments)
+      return _Coll_flag_state::state_true;
 
-  static inline bool is_last(uint4 pt)
-  {
+    return _Coll_flag_state::state_unimplemented;
+  }
+
+  //static constexpr bool is_line_segments = true;
+
+  static bool is_last(uint4 pt){
     return pt & 2;
   };
-  static inline uint4 get_segm(uint4 pt)
-  {
+  static uint4 get_segm(uint4 pt) {
     return pt >> 2;
   };
 
   //TPlaneVect
   uint4  GetSegmNumb() const { return N; };
-  inline void SetCurStripe(uint4 left, uint4 right)
-  {
+  void SetCurStripe(uint4 left, uint4 right){
     B = GetX(left);
     E = GetX(right);
   };
-  inline void SetCurStripeRight(uint4 right) { E = GetX(right); };
-  inline void SetCurStripeLeft(uint4 left) { B = GetX(left); };
-  void SetCurPoint(uint4 pt)
-  {
-    cur_point = is_last(pt) ?
-      collection[get_segm(pt)].EndPoint() :
-      collection[get_segm(pt)].BegPoint();
-  };
-  void SetCurPointAtBeg(uint4 s)
-  {
+  void SetCurStripeRight(uint4 right) { E = GetX(right); };
+  void SetCurStripeLeft(uint4 left) { B = GetX(left); };
+
+  void SetCurPointAtBeg(uint4 s) {
     cur_point = collection[s].BegPoint();
-  };
-  void SetCurPointAtEnd(uint4 s)
-  {
-    cur_point = collection[s].EndPoint();
+  }
+  
+
+  void SetCurSegAndPoint(uint4 s) {
+    cur_point = collection[s].BegPoint();
+    SetCurSeg(s);
+    if constexpr ((IntersectionRegistrator::reg_type & _RegistrationType::point) == 0)
+      active_end = cur_seg.EndPoint();
   };
 
   void SetCurSeg(uint4 s)
@@ -70,10 +73,12 @@ public:
   void SetCurSegCutBE(uint4 s)
   {
     SetCurSeg(s);
-    cur_seg.x1 = MAX(cur_seg.x1, B);
+    
     cur_seg.x2 = MIN(cur_seg.x2, E);
     if constexpr ((IntersectionRegistrator::reg_type & _RegistrationType::point) == 0)
       active_end = cur_seg.EndPoint();
+    else
+      cur_seg.x1 = MAX(cur_seg.x1, B);
   };
 
   void SetCurSegCutBeg(uint4 s)
@@ -87,19 +92,11 @@ public:
   void SetCurSegCutEnd(uint4 s)
   {
     SetCurSeg(s);
-    cur_seg.x2 = MIN(cur_seg.x2, E);
     if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0)
       active_end = cur_seg.BegPoint();
+    else
+      cur_seg.x2 = MIN(cur_seg.x2, E);
   };
-
-  void SetCurSegAndPoint(uint4 s)
-  {
-    SetCurPointAtEnd(s);
-    SetCurSeg(s);
-    if constexpr ((IntersectionRegistrator::reg_type & _RegistrationType::point) == 0)
-      active_end = cur_seg.EndPoint();
-  };
-
 
   bool LBelow(int4 s_1, int4 s_2) const //retuns if s1 below s2 at current vertical line
   {
@@ -124,14 +121,12 @@ public:
     if (x1 >= x2)return false;
     auto da = s2.a - s1.a;
     auto db = s1.b - s2.b;
-    if ((da * x1 - db > 0) ^ (da * x2 - db < 0)) return false;
-    if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) != 0)
-    {
+    if ((da * x1 > db) ^ (da * x2 < db)) return false;
+    if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) != 0){
       auto x = db / da;
-      registrator->register_pair_and_point(cur_seg_idx, s_, { x,s1.YAtX(x) });
+      registrator->register_pair_and_point(cur_seg_idx, s_, TPlaneVect( x,s1.YAtX(x) ));
     }
-    else
-    {
+    else{
       registrator->register_pair(cur_seg_idx, s_);
     }
     return true;
@@ -143,11 +138,11 @@ public:
     auto& s2 = cur_seg;
     auto da = s2.a - s1.a;
     auto db = s1.b - s2.b;
-    if ((da * MAX(s1.x1, s2.x1) - db > 0) ^ (da * MIN(s1.x2, s2.x2) - db < 0)) return false;
+    if ((da * s2.x1 > db) ^ (da * MIN(s1.x2, s2.x2) < db)) return false;
     if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) != 0)
     {
       auto x = db / da;
-      registrator->register_pair_and_point(cur_seg_idx, s_, { x,s1.YAtX(x) });
+      registrator->register_pair_and_point(cur_seg_idx, s_, TPlaneVect{ x,s1.YAtX(x) });
     }
     else
     {
@@ -166,7 +161,7 @@ public:
     if constexpr (!do_register) return true;
     if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) != 0) {
       REAL x = db / da;
-      registrator->register_pair_and_point(cur_seg_idx, s_, { x,s1.YAtX(x) });
+      registrator->register_pair_and_point(cur_seg_idx, s_, TPlaneVect( x,s1.YAtX(x) ));
     }
     else
       registrator->register_pair(cur_seg_idx, s_);
@@ -318,7 +313,7 @@ public:
   };
 
 private:
-  inline auto GetX(uint4 pt) const { return ends[pt]; };
+  auto GetX(uint4 pt) const { return ends[pt]; };
   //{ return is_last(pt) ? collection[get_segm(pt)].x2 :collection[get_segm(pt)].x1; };
 
 

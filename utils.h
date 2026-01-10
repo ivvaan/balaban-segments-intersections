@@ -66,7 +66,6 @@ constexpr uint4 max_truereg_items = 20000;
 
 template< class REAL> REAL sq(REAL x) { return x * x; }
 
-
 using chostream = std::basic_ostream<char>;
 
 typedef void(*PSeg);
@@ -236,7 +235,8 @@ template <class real>  couple<real> operator-(const couple<real>& v1, const coup
 }
 
 template<class out, class real>
-out& operator <<(out& o, const couple<real>& v) {
+out& operator <<(out& o, const couple<real>& v)
+{
   //return o << "x=" << v.x << ",y=" << v.y;
   return o << "[" << v.x << "," << v.y << "]";
 }
@@ -485,6 +485,6 @@ T* set_size(std::vector<T>& v, size_t new_size) {
   v.resize(new_size);
   return v.data();
 };
-// some string
+
 
 #endif

@@ -24,9 +24,6 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #define _USE_MATH_DEFINES
 #include "math.h"
 #include <cstddef>
-#include <intrin.h>
-#pragma intrinsic(_mul128)
-#pragma intrinsic(_umul128)
 
 
 class TLineSegment1
@@ -77,6 +74,24 @@ public:
   TPlaneVect BegPoint() const {
     return org;
   };
+  auto bx() const {
+    return org.x;
+  }
+  auto by() const {
+    return org.y;
+  }
+  auto ex() const {
+    return org.x + shift.x;
+  }
+  auto ey() const {
+    return org.y + shift.y;
+  }
+  auto sx() const {
+    return shift.x;
+  }
+  auto sy() const {
+    return shift.y;
+  }
   TPlaneVect EndPoint() const {
     return org + shift;
   };
@@ -98,7 +113,7 @@ public:
   REAL YAtX_Numerator(REAL X) const {
     return shift.x * org.y + shift.y * (X - org.x);
   };
-  void write_SVG(int4 id,chostream *SVG_text) {
+  void write_SVG(int4 id,chostream *SVG_text) const {
     if (SVG_text) {
       auto bp = BegPoint();
       auto ep = EndPoint();
@@ -157,7 +172,7 @@ public:
   REAL YAtX(REAL X) const {
     return a*X + b;
   };
-  void write_SVG(int4 id,chostream* SVG_text) {
+  void write_SVG(int4 id,chostream* SVG_text) const {
     if (SVG_text) {
       auto bp = BegPoint();
       auto ep = EndPoint();
@@ -433,23 +448,11 @@ public:
     auto YAtX_Numerator(int4 X) const {
       assert(X >= org.x);
       return (int8)org.y * (int8)shift.x + (int8)(X - org.x) * (int8)shift.y;
-      //assert(res >= 0);
     };
 
     frac64 YAtX_frac(int4 X) const {
       return { YAtX_Numerator(X),shift.x };
     };
- 
- /*   uint4 below(const TIntegerSegment& s, int4 X) {
-      __int64 prod_lo1, prod_hi1, prod_lo2, prod_hi2;
-      prod_lo1 = _mul128(s.shift.x, org.y * shift.x + (X - org.x) * shift.y, &prod_hi1);
-      prod_lo2 = _mul128(shift.x, s.org.y * s.shift.x + (X - s.org.x) * s.shift.y, &prod_hi2);
-      if (prod_hi1 != prod_hi2)
-        return (prod_hi1 < prod_hi2)+1;
-      if (prod_lo1 != prod_lo2)
-        return (prod_lo1 < prod_lo2)+1;
-      return 0;
-    };*/
 
   };
-  // some string
+

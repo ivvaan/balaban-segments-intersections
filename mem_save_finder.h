@@ -32,7 +32,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 class CMemSaveIntFinder : public CommonImpl 
 {
 public:
-  using CIMP = CommonImpl;
+  using imp_T = CommonImpl;
 
   template<class SegmentsColl>
   void find_intersections(SegmentsColl& segments)
@@ -42,18 +42,19 @@ public:
     DECL_RAII_ARR(L, LR_len);
     DECL_RAII_ARR(Q, len_of_Q);
 
-    ProgramStackRec stack_rec(-1, 2 * nTotSegm); //need to be initialized this way
-    L[0] = SegmentsColl::get_segm(ENDS[0]);
-    from_begin = true;
+    L[0]=SegmentsColl::get_segm(ENDS[0]);
     L_size = 1;
-    FindR(*this, segments, -1, 0, 2 * nTotSegm - 1, &stack_rec, 0, get_max_call(2 * nTotSegm));
+    from_begin = true;
+    constexpr int4 bottom_index = 0;
+    ProgramStackRec stack_rec(bottom_index, 2 * nTotSegm); //need to be initialized this way
+    MultipleCutting(*this, segments, bottom_index, 0, 2 * nTotSegm - 1, &stack_rec, GetDivPow(2 * nTotSegm - 1));
   }
 
   template<class SegmentsColl>
   void SearchInStrip(SegmentsColl& segments, int4 qp)
   {
     auto _L = from_begin ? L : L + (LR_len - L_size);
-    if constexpr (SegmentsColl::is_line_segments)
+    if constexpr (SegmentsColl::get_coll_flag(_Coll_flags::line_segments)==_Coll_flag_state::state_true)
     {
       //For line segments we can do more efficient insertion sorting using intersection check as comparison.
       //If s1<s2 at the left bound then s1 intersects s2 inside the stripe means s1>s2 at the right bound of the stripe.
@@ -93,13 +94,11 @@ public:
       }
       else // if startpoint - insert
       {
-        //segments.SetCurPointAtBeg(sn);
         segments.SetCurSegAndPoint(sn);
         for (i = L_size - 1; (i > -1) && (!segments.UnderCurPoint(L[i])); --i)
           L[i + 1] = L[i];
         L[i + 1] = sn;
         ++L_size;
-        //segments.SetCurSegAE(sn);
         FindIntI(segments, SegR[sn], stack_pos); // get internal intersections
       }
 
@@ -119,13 +118,11 @@ public:
       }
       else // if startpoint - insert
       {
-        //segments.SetCurPointAtBeg(sn);
         segments.SetCurSegAndPoint(sn);
         for (i = LR_len - L_size; (i != LR_len) && (segments.UnderCurPoint(L[i])); ++i)
           L[i - 1] = L[i];
         L[i - 1] = sn;
         ++L_size;
-        //segments.SetCurSegAE(sn);
 
         FindIntI(segments, SegR[sn], stack_pos); // get internal intersections
       }
@@ -206,7 +203,7 @@ public:
     auto Size = L_size;
     auto _L = from_begin ? L : L + (LR_len - Size);
     int4  new_L_size = 0,_Q_pos=0;
-    auto Q_tail = Q + len_of_Q;
+    auto Q_tail = GetQTail();
     long long n_int=0;
     for (decltype(Size) cur_L_pos = 0; cur_L_pos != Size; cur_L_pos++)
     {
@@ -232,17 +229,18 @@ public:
         //place segment in L
         L[new_L_size++] = cur_seg;
         //storing segment position in Q_tail
-        *(--Q_tail) = SegmentsColl::is_line_segments ? INT_MAX : _Q_pos;
+        if constexpr (SegmentsColl::get_coll_flag(_Coll_flags::line_segments) == _Coll_flag_state::state_true)
+          *(--Q_tail) = INT_MAX;
+        else
+          *(--Q_tail) = _Q_pos;
+       // *(--Q_tail) = SegmentsColl::get_coll_flag(line_segments)==_Coll_flag_state::state_true ? INT_MAX : _Q_pos;
       }
     }
     from_begin = true;
-    if (_Q_pos == 0)
-    {
-      dont_split_stripe = false;
-      L_size = new_L_size;
+    if (_Q_pos == 0) {
       return 0;
     }
-    Q_tail = Q + len_of_Q;
+    Q_tail = GetQTail();
     int4 loc;
     _L = L;
     // important to start from stair above current segm, meanwhile _Q[loc] is stair below
@@ -256,8 +254,8 @@ public:
         while ((cur_Q < last_Q) && (segments.FindCurSegIntUpWith(*cur_Q)))++cur_Q;
         n_int+= cur_Q - ini_Q;
       }
-//    dont_split_stripe = location != _step_index;
-    dont_split_stripe = n_int>new_L_size;
+//    dont_cut_stripe = location != _step_index;
+    dont_cut_stripe = n_int > new_L_size + cut_margin;
     L_size = new_L_size;
     return _Q_pos;
   };

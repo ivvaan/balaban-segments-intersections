@@ -31,8 +31,8 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 class CFastIntFinder : public CommonImpl
 {
 public:
-  using CTHIS = CFastIntFinder;
-  using CIMP = CommonImpl;
+  using this_T = CFastIntFinder;
+  using imp_T = CommonImpl;
  
   ~CFastIntFinder() { unclone(); FreeMem(); };
 
@@ -41,18 +41,20 @@ public:
   {
     //AllocMem
     len_of_Q = LR_len;
-    DECL_RAII_ARR(L, LR_len);
+    DECL_RAII_ARR(L, LR_len+1);
     ++L;//to have one cell before L for sentinel
-    DECL_RAII_ARR(R, LR_len);
+    DECL_RAII_ARR(R, LR_len+1);
     ++R;//to have one cell before R for sentinel
     DECL_RAII_ARR(Q, len_of_Q);
 
+    bool not_parallel = false;
     if (to == 0) {
       from = 0;
       to = 2 * nTotSegm - 1;
+      not_parallel = true;
     }
     if (from == 0) {
-      L[0] = SegmentsColl::get_segm(ENDS[0]);
+      L[0]=SegmentsColl::get_segm(ENDS[0]);
       L_size = 1;
     }
     else
@@ -60,7 +62,11 @@ public:
 
     constexpr int4 bottom_index = 0;
     ProgramStackRec stack_rec(bottom_index, 2 * nTotSegm); //need to be initialized this way
-    FindR(*this, segments, bottom_index, from, to, &stack_rec, 0, get_max_call(to-from));
+    if (avr_segm_on_vline < 35)
+      return SISFindR(*this, segments, bottom_index, from, to, &stack_rec);
+    if (not_parallel) 
+      return MultipleCutting(*this, segments, bottom_index, from, to, &stack_rec, GetDivPow(to - from));
+    FindR(*this, segments, bottom_index, from, to, &stack_rec/*, 0, get_max_call(to - from)*/);
   }
 
  template<template <class> class SegmentsColl, class CIntRegistrator >
@@ -68,9 +74,9 @@ public:
   {
     using namespace std;
     vector<thread> wrk_threads;
-    auto thread_func = [](CTHIS *master, SegmentsColl<CIntRegistrator> *segments, uint4 from, uint4 to, CIntRegistrator* add_reg) {
+    auto thread_func = [](this_T *master, SegmentsColl<CIntRegistrator> *segments, uint4 from, uint4 to, CIntRegistrator* add_reg) {
       SegmentsColl<CIntRegistrator> coll(*segments, add_reg);
-      CTHIS(master).find_intersections(coll, from, to);
+      this_T(master).find_intersections(coll, from, to);
     };
     auto n = segments.GetSegmNumb();
 
@@ -90,7 +96,7 @@ public:
   template<class SegmentsColl>
   void SearchInStrip(SegmentsColl &segments, int4 qp)
   {
-    if constexpr(SegmentsColl::is_line_segments)
+    if constexpr(SegmentsColl::get_coll_flag(_Coll_flags::line_segments)==_Coll_flag_state::state_true)
     {
       //For line segments we can do more efficient insertion sorting using intersection check as comparison.
       //If s1<s2 at the left bound then s1 intersects s2 inside the stripe means s1>s2 at the right bound of the stripe.
@@ -112,7 +118,7 @@ public:
   };
 
   template<class SegmentsColl>
-  void InsDel(SegmentsColl& segments, uint4 pt, ProgramStackRec* stack_pos)
+  void InsDel(SegmentsColl &segments, uint4 pt, ProgramStackRec * stack_pos)
   {
     auto sn = SegmentsColl::get_segm(pt);
     if (SegmentsColl::is_last(pt)) // if endpoint - delete
@@ -160,10 +166,10 @@ public:
         {
           segments.SetCurSegCutEnd(cur_seg);
           {
-            auto l = cur_stair - 1;
-            auto c = segments.FindCurSegIntDownWith(l, bot_Q);
-            if ((!SegmentsColl::is_line_segments || (c == l)))
-              segments.FindCurSegIntUpWith(cur_stair, top_Q);
+            auto c = segments.FindCurSegIntUpWith(cur_stair, top_Q); 
+            constexpr bool non_line_seg = (SegmentsColl::get_coll_flag(_Coll_flags::line_segments) != _Coll_flag_state::state_true);
+            if (non_line_seg || (c == cur_stair))
+              segments.FindCurSegIntDownWith(cur_stair-1, bot_Q);
           };
         }
         _L[new_size++] = cur_seg;
@@ -193,7 +199,7 @@ public:
   {
     auto R_pos = R;
     auto new_L_pos = L;
-    auto Q_tail = Q + len_of_Q;
+    auto Q_tail = GetQTail();
     assert(Q_tail > _Q + L_size);
     auto const last_L = L + L_size;
  //at first, place all lowest segments not covering current stripe to R (and implicitly L)
@@ -205,18 +211,19 @@ public:
             // one addition per loop by incrementing _Q later.
     }
     if (new_L_pos == last_L){
-      dont_split_stripe = false;
       return 0;
     }
 
     long long n_int = 0;
     auto  _Q_pos = _Q;
     //first segment covering current stripe we place to Q 
-    //it can't intersect any of the steps(stairs) because there no stairs yet     
-    segments.SetCurSegCutBE(*++_Q_pos = *new_L_pos);//we don't need SetCurSegCutBE but it is allow to speedup by y values caching 
-    auto cur_L = new_L_pos + 1;
-    for (CSentinel sentinel(segments, *_Q); cur_L < last_L; ++cur_L) {
-      auto cur_seg = *cur_L;
+    //it can't intersect any of the steps(stairs) because there no stairs yet 
+    *++_Q_pos = *new_L_pos;
+    if constexpr (SegmentsColl::get_coll_flag(_Coll_flags::needs_SetCurSegCutBE_at_start) == _Coll_flag_state::state_true)
+      segments.SetCurSegCutBE(*new_L_pos);//we don't need SetCurSegCutBE in all cases, only for Y caching collections 
+    auto cur = new_L_pos + 1;
+    for (CSentinel sentinel(segments, *_Q); cur < last_L; ++cur) {
+      auto cur_seg = *cur;
       segments.SetCurSegCutBE(cur_seg);
       if (segments.FindCurSegIntDownWith(*_Q_pos)) {//segment  intersects upper ladder stair
           // finding another ledder intersections
@@ -237,20 +244,27 @@ public:
       // one addition per loop by incrementing _Q later.
     }
     L_size = new_L_pos-L;
+    int4 Q_size=_Q_pos - _Q;
+    *--Q_tail = Q_size;//place a guard for the loop below
+
     // important to start from stair above current segm, meanwhile _Q[*Q_tail] is stair below
     ++_Q;// so we incremement _Q and _Q[*Q_tail] become stair above
     ++_Q_pos;
-    if constexpr (has_sentinels<SegmentsColl>)
+
+    if constexpr (has_sentinels<SegmentsColl>)//placing sentinel if collection supports
       *_Q_pos = segments.get_sentinel(true);//we don't need to restore _Q_pos just place sentinel
-    while (R_pos!=R)
+    
+    Q_tail = GetQTail() - 1;
+    cur = R;
+    for (auto Q_idx = *Q_tail; Q_idx != Q_size; Q_idx = *--Q_tail, ++cur)
     {
-      --R_pos;
-      segments.SetCurSegCutBeg(*R_pos);//!!!!
-      segments.FindCurSegIntUpWith(_Q + *Q_tail, _Q_pos);
-      ++Q_tail;
-    } 
-    dont_split_stripe = n_int > L_size;
-    return _Q_pos-_Q;
+      segments.SetCurSegCutBeg(*cur);
+//      auto Q_loc = _Q + Q_idx;
+//      n_int += segments.FindCurSegIntUpWith(Q_loc, _Q_pos) - Q_loc;
+      segments.FindCurSegIntUpWith(_Q + Q_idx, _Q_pos);
+    }
+    dont_cut_stripe = n_int > L_size + cut_margin;
+    return Q_size;
   };
 
   template<class SegmentsColl>
@@ -258,7 +272,7 @@ public:
   {
     auto  _Q_pos = _Q;
     long long n_int = 0;
-    auto Q_tail = Q + len_of_Q;
+    auto Q_tail = GetQTail();
     auto new_L_pos = L;
     CSentinel sentinel(segments, *_Q);
     for (auto L_pos = L, last_L = L + L_size; L_pos < last_L; ++L_pos) {
@@ -277,30 +291,34 @@ public:
       }
     }
     if (_Q_pos == _Q) {
-      dont_split_stripe = false;
       return 0;
     }
     L_size = new_L_pos - L;
-    Q_tail = Q + len_of_Q - 1;
+    int4 Q_size = _Q_pos - _Q;
+    *--Q_tail = Q_size;//place a guard for the loop below
+
     // important to start from stair above current segm, meanwhile _Q[*Q_tail] is stair below
     ++_Q;// so we incremement _Q and _Q[*Q_tail] become stair above
     ++_Q_pos;
     if constexpr (has_sentinels<SegmentsColl>)
       *_Q_pos = segments.get_sentinel(true);//we don't need to restore _Q_pos just place sentinel
-    for (auto L_pos=L; L_pos != new_L_pos ; ++L_pos, --Q_tail)
+    
+    Q_tail = GetQTail() - 1;
+    auto L_pos = L;
+    for (auto Q_idx =*Q_tail; Q_idx != Q_size; Q_idx = *--Q_tail, ++L_pos)
     {
       segments.SetCurSegCutBE(*L_pos);
-      segments.FindCurSegIntUpWith(_Q + *Q_tail, _Q_pos);
+      segments.FindCurSegIntUpWith(_Q + Q_idx, _Q_pos);
     }
-    dont_split_stripe = n_int > L_size;
-    return _Q_pos-_Q;
+    dont_cut_stripe = n_int > L_size + cut_margin;
+    return Q_size;
   };
 
 
   template<class SegmentsColl>
   int4 Split(SegmentsColl& segments, int4* _Q, uint4 RBoundIdx)
   {
-    if constexpr (SegmentsColl::is_line_segments)
+    if constexpr (SegmentsColl::get_coll_flag(_Coll_flags::line_segments)==_Coll_flag_state::state_true)
       return Split4LineSeg(segments, _Q, RBoundIdx);
     return Split4NonLineSeg(segments, _Q, RBoundIdx);
   };
@@ -309,9 +327,9 @@ public:
 
   protected:
   int4 *R = nullptr;
-  CTHIS* clone_of = nullptr;
+  this_T* clone_of = nullptr;
  
-  void clone(CTHIS* master)
+  void clone(this_T* master)
   {
       nTotSegm = master->nTotSegm;
       LR_len = master->LR_len;
@@ -319,6 +337,7 @@ public:
       SegL = master->SegL;
       SegR = master->SegR;
       ENDS = master->ENDS;
+      avr_segm_on_vline = master->avr_segm_on_vline;
       clone_of = master;
   };
 
@@ -333,7 +352,7 @@ public:
   };
 
 
-  CFastIntFinder(CTHIS* master) {
+  CFastIntFinder(this_T* master) {
     clone(master);
   };
  

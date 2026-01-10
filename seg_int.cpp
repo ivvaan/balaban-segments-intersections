@@ -111,8 +111,8 @@ double ICT = -1;
 unsigned random_seed = 317;
 
 void search_problem(uint4 n) {
-  double nfast = 0;
-  double ntriv = 0;
+  uint8 nfast = 0;
+  uint8 ntriv = 0;
   uint4 r_seed = 1;
   CRandomValueGen rv(r_seed);
   auto find_intersections = get_find_intersections_func(_Registrator::just_count);
@@ -208,7 +208,7 @@ void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr
   const char *ss = "Llag", *sd = "rlmspc";
   char counters_string[256],*counters_mute;
   const char *stat_names_new[] = { "inters. numb","max inters. per segm","inters. numb","inters. numb" };
-  const char *stat_names_old[] = { "inters. numb","inters. numb","inters. numb","inters. numb" };
+  const char *stat_names_old[] = { "inters. numb","inters. numb","inters. numb","inters. numb", "inters. numb" };
   const char **stat_names= stat_names_new;
 
   counters_string[0] = 0;
@@ -225,16 +225,16 @@ void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr
   else
     if (!print_less)printf("\nnew implementation testing... ************************************************\n");
 
-    if ((impl == impl_old)&& (seg_type == graph)) { if (!print_less)printf("old implementation can't deal with graph segments\n"); return; }
+    if ((impl == impl_old)&& (seg_type == _Segment::graph)) { if (!print_less)printf("old implementation can't deal with graph segments\n"); return; }
     for (int4 a = sizeof(alg_list) / sizeof(alg_list[0]) - 1; a>-1; a--)
       //for (int4 a = 0;a<sizeof(alg_list) / sizeof(alg_list[0]); a++)
     {
       if (alg&alg_list[a])
       {
         exec_time[a]=-1;
-        if ((alg_list[a] == fast_no_ip) && (seg_type == arc)) { if (!print_less)printf("fast no inters. points algorithm can handle only line segments\n"); continue; }
-        if ((alg_list[a] == bentley_ottmann) && (impl == impl_new)) { if (!print_less)printf("new implementation does't support segments functions for Bentley & Ottman algorithm\n"); continue; }
-        if ((alg_list[a] == fast_no_ip) && (impl == impl_new)) { if (!print_less)printf("new implementation does't support segments functions for no inters. points algorithm \n"); continue; }
+        if ((alg_list[a] == fast_no_ip) && (seg_type == _Segment::arc)) { if (!print_less)printf("fast no inters. points algorithm can handle only line segments\n"); continue; }
+        if ((alg_list[a] == bentley_ottmann) && (impl == impl_new)) { if (!print_less)printf("new implementation does't support functions nessesary for Bentley & Ottman algorithm\n"); continue; }
+        if ((alg_list[a] == fast_no_ip) && (impl == impl_new)) { if (!print_less)printf("new implementation does't support functions nessesary for no inters. points algorithm \n"); continue; }
         if (impl == impl_old)
           exec_time[a] = _benchmark_old(use_counters?counters_mute:NULL, n, seg_ptr_coll, seg_type, alg_list[a], nInt[a], dont_need_ip);
         else
@@ -288,7 +288,7 @@ int main(int argc, char* argv[])
   bool use_counters = false;
   char rpar[]="-r";
   int4 impl = _Implementation::impl_old + _Implementation::impl_new;
-  const char *ss = "Llagi", *sd = "rlmspcd",*sr="pPcr";
+  const char *ss = "Llag", *sd = "rlmspc",*sr="pPcrC";
   const char *alg_names[] = { "trivial","simple_sweep","fast","optimal","fast_parallel","bentley_ottmann","fast no inters points","fast 'no R'" };
   uint4 reg_stat = 2;
   const char* fname = nullptr;
@@ -340,12 +340,13 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
   the less parallel 'long' and longer 'short' segments
  D=s: short segments: random segment with  length multiplied by distr_param/N
  D=distr_param: random segment with  length multiplied by distr_param
- D=c: segments ends are on the opposite sides of unit circul, each
+ D=c: segments ends are on the opposite sides of unit circle, each
   segment intesect each
  D=d: appled only to integer segments; same as "r" but rounded to small integer range
    creating a lot of degeneracies
 -rR: type of registrator used in new implementation and type of result statistic
  R=c: total intersection counting registrator; total count statistic
+ R=C: total intersection counting registrator; total count statistic, but it pretend it register intersection points
  R=p: total intersection counting and per segment intersection counting registrator; 
   total count statistic
  R=P: total intersection counting and per segment intersection counting registrator; 
@@ -356,6 +357,8 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
 -fhtmfile: if presented, program writes SVG picture to htmfile. For examle -fC:/tmp/res.htm
   To limit resulting file size option works only for 5000 segments and less, also only first 
   150000 intersections are drawn.
+-m: print truncated information in one row (to make a table)
+-w: stop and wait for an input befor exit
 )WYX"
     );
     
@@ -392,15 +395,15 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
           {
             switch (argv[i][2])
             {
-            case 'L':seg_type = line1; break;
-            case 'l':seg_type = line2; break;
-            case 'a':seg_type = arc; break;
-            case 'g':seg_type = graph; break;
-            case 'i':seg_type = intline; break;
+            case 'L':seg_type = _Segment::line1; break;
+            case 'l':seg_type = _Segment::line2; break;
+            case 'a':seg_type = _Segment::arc; break;
+            case 'g':seg_type = _Segment::graph; break;
+            case 'i':seg_type = _Segment::intline; break;
             default:
             {
               printf("some error in -s param. l used instead.\n");
-              seg_type = line2;
+              seg_type = _Segment::line2;
             }
             };
           };
@@ -409,17 +412,17 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
           {
             switch (argv[i][2])
             {
-            case 'r':distr_type = random; break;
-            case 'l':distr_type = parallel; break;
-            case 'm':distr_type = mixed; break;
-            case 's':distr_type = small; break;
-            case 'p':distr_type = param_defined; break;
-            case 'c':distr_type = circle; break;
-            case 'd':distr_type = degenerate; break;
+            case 'r':distr_type = _Distribution::random; break;
+            case 'l':distr_type = _Distribution::parallel; break;
+            case 'm':distr_type = _Distribution::mixed; break;
+            case 's':distr_type = _Distribution::small; break;
+            case 'p':distr_type = _Distribution::param_defined; break;
+            case 'c':distr_type = _Distribution::circle; break;
+            case 'd':distr_type = _Distribution::degenerate; break;
             default:
             {
               printf("some error in -distr_type param. r used instead.\n");
-              distr_type = random;
+              distr_type = _Distribution::random;
             }
             };
           };
@@ -429,6 +432,7 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
             switch (argv[i][2])
             {
             case 'c':reg_stat = _Registrator::just_count; break;
+            case 'C':reg_stat = _Registrator::just_count_require_intersections; break;
             case 'p':reg_stat = _Registrator::per_segm_reg_just_count_stat; break;
             case 'P':reg_stat = _Registrator::per_segm_reg_max_per_segm_stat; break;
             case 'r':reg_stat = _Registrator::store_pairs_and_ints_just_count_stat; break;
@@ -478,7 +482,7 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
           break;
           case 'f':
           {
-            fname = argv[i] + 2;;
+            fname = argv[i] + 2;
           }
           break;
 #ifdef COUNTERS_ON
@@ -491,29 +495,27 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
           }
       }
   }
-  if((seg_type==graph)&&(distr_type!=random)) {printf("-sg  is compartible only with -dr!\n"); if (wait) { printf("\npress 'Enter' to continue"); getchar(); } return 0;}
+  if((seg_type== _Segment::graph)&&(distr_type!= _Distribution::random)) {printf("-sg  is compartible only with -dr!\n"); if (wait) { printf("\npress 'Enter' to continue"); getchar(); } return 0;}
   if ((reg_stat == _Registrator::store_pairs_and_ints_just_count_stat) && (n > max_truereg_items)) {
     printf("Too many segments (and possible intersections!) for true registration! Just counting used instead.\n"); 
     reg_stat = _Registrator::just_count;
     }
 
- 
-
   if (!print_less)printf("actual params is: -a%i -s%c -d%c -r%c -i%i -n%i -S%i -p%f -e%f\n", alg, ss[seg_type], sd[distr_type],sr[reg_stat], impl, n, random_seed, distr_param,ICT);
+  //search_problem(n);
+  //return 0;
   PSeg *seg_ptr_coll = nullptr;
   PSeg seg_coll;
   CRandomValueGen rv(random_seed);
   int4 new_seg_type = seg_type;
-  if (distr_type == degenerate) {
-    new_seg_type = -seg_type;//use negative values to show degenerate distr
+  if (distr_type == _Distribution::degenerate) {
+    new_seg_type = -seg_type;//use negative values to show degenerate distr !!!!
     distr_type = _Distribution::random;
   }
   if(impl&_Implementation::impl_old)
     seg_coll = create_test_collection(seg_type, n, distr_type, distr_param,rv, &seg_ptr_coll);
   else
     seg_coll = create_test_collection(seg_type, n, distr_type, distr_param,rv, nullptr);
-
-
 
   bool dont_need_ip = (alg & fast_no_ip) != 0;
   if (impl&_Implementation::impl_old)

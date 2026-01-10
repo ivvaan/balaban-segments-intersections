@@ -50,13 +50,13 @@ PSeg create_test_collection(int4 seg_type, int4 n, int4 distr, REAL par, CRandom
   int4 i;
   constexpr int4 sentinels = 2;
   if (seg_ptr_coll_ptr != nullptr)colls = new PSeg[n];
-  if (distr != param_defined)par /= n / 33.0;
-  if (distr == parallel)par /= 2.4;
+  if (distr != _Distribution::param_defined)par /= n / 33.0;
+  if (distr == _Distribution::parallel)par /= 2.4;
   PSeg result;
   switch (seg_type)
   {
-  case line1:
-  case intline:
+  case _Segment::line1:
+  case _Segment::intline:
   {
     TLineSegment1* Colls = new TLineSegment1[n + sentinels];
     if (seg_ptr_coll_ptr != nullptr)for (i = 0; i < n; i++)colls[i] = Colls + i;
@@ -68,7 +68,7 @@ PSeg create_test_collection(int4 seg_type, int4 n, int4 distr, REAL par, CRandom
     result = Colls;
     first_segment_ptr = Colls;
   }; break;
-  case line2:
+  case _Segment::line2:
   {
     TLineSegment2* Colls = new TLineSegment2[n + sentinels];
     if (seg_ptr_coll_ptr != nullptr)for (i = 0; i < n; i++)colls[i] = Colls + i;
@@ -80,7 +80,7 @@ PSeg create_test_collection(int4 seg_type, int4 n, int4 distr, REAL par, CRandom
     result = Colls;
     first_segment_ptr = Colls;
   }; break;
-  case arc:
+  case _Segment::arc:
   {
     TArcSegment* Colls = new TArcSegment[n];
     if (seg_ptr_coll_ptr != nullptr)for (i = 0; i < n; i++)colls[i] = Colls + i;
@@ -89,7 +89,7 @@ PSeg create_test_collection(int4 seg_type, int4 n, int4 distr, REAL par, CRandom
     result = Colls;
     first_segment_ptr = Colls;
   }; break;
-  case graph:
+  case _Segment::graph:
   {
     TPlaneVect* Colls = new TPlaneVect[n];
     for (i = 0; i < n; i++)
@@ -109,9 +109,9 @@ void  delete_test_collection(int4 seg_type, PSeg seg_coll, PSeg* seg_ptr_coll)
 {
   switch (seg_type)
   {
-  case line1:delete[](TLineSegment1*)seg_coll; break;
-  case line2:delete[](TLineSegment2*)seg_coll; break;
-  case arc:delete[](TArcSegment*)seg_coll; break;
+  case _Segment::line1:delete[](TLineSegment1*)seg_coll; break;
+  case _Segment::line2:delete[](TLineSegment2*)seg_coll; break;
+  case _Segment::arc:delete[](TArcSegment*)seg_coll; break;
   }
   if (seg_ptr_coll)delete[]  seg_ptr_coll;
 };
@@ -207,7 +207,7 @@ class SegmentFunctions
 
   };
 
-const int4 reg_obj_margin = 2 + std::hardware_constructive_interference_size / sizeof(double);// for reg objects to be in different CPU cache lines
+const int4 reg_obj_margin = (std::hardware_constructive_interference_size + sizeof(double) - 1) / sizeof(double);// for reg objects to be in different CPU cache lines
 double reg_objects[reg_obj_margin*n_threads];
 
 double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double* counters, bool dont_need_ip )
@@ -215,12 +215,12 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
   if(colls==NULL) return 0;
   double int_numb=0;
   BOOL is_line;
-  if ((seg_type == line1) || (seg_type == line2))
+  if ((seg_type == _Segment::line1) || (seg_type == _Segment::line2))
 	  {
 		  CLineFinder intersection_finder;
 		  switch (seg_type)
 			  {
-			  case line1:
+			  case _Segment::line1:
 				  intersection_finder.set_segm_fuctions(
 					  SegmentFunctions<TLineSegment1>::__Below,
 					  dont_need_ip ? SegmentFunctions<TLineSegment1>::__FindAndRegIPoints<false> : SegmentFunctions<TLineSegment1>::__FindAndRegIPoints<true>,
@@ -236,7 +236,7 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
 					  is_line = TLineSegment1::is_line
 				  );
 				  break;
-			  case line2:
+			  case _Segment::line2:
 				  intersection_finder.set_segm_fuctions(
 					  SegmentFunctions<TLineSegment2>::__Below,
 					  dont_need_ip ? SegmentFunctions<TLineSegment2>::__FindAndRegIPoints<false> : SegmentFunctions<TLineSegment2>::__FindAndRegIPoints<true>,
@@ -278,7 +278,7 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
 		  memcpy(counters, intersection_finder.my_counter, sizeof(intersection_finder.my_counter));
       }
 
-  if (seg_type == arc)
+  if (seg_type == _Segment::arc)
   {
 	  CCommonFinder intersection_finder;
 	  intersection_finder.set_segm_fuctions(
@@ -326,7 +326,7 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
 
 
   template<template<class>class SegColl,class Counter>
-  double find_int( int4 n, SegColl<Counter> &coll,int4 alg,uint4 stat)
+  auto find_int( int4 n, SegColl<Counter> &coll,int4 alg,uint4 stat)
   {
     switch (alg) {
         case triv: {
@@ -357,7 +357,7 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
             break;
         case fast_parallel: {
           constexpr uint4 cache_line_size = std::hardware_constructive_interference_size;
-          constexpr uint4 reg_margin = 2 + cache_line_size / sizeof(Counter);// for reg objects to be in different CPU cache lines
+          constexpr uint4 reg_margin = (cache_line_size + sizeof(Counter) - 1) / sizeof(Counter);// for reg objects to be in different CPU cache lines
           Counter reg_objects[reg_margin * n_threads];
           Counter* additional_reg_obj[n_threads];
             for (int i = 0; i < n_threads - 1; i++) {
@@ -377,14 +377,14 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
   };
 
   template<class Counter>
-  double _find_int(int4 seg_type, int4 n, PSeg segs, int4 alg,uint4 stat)
+  auto _find_int(int4 seg_type, int4 n, PSeg segs, int4 alg,uint4 stat)
   {
     Counter reg;
     reg.Alloc(n);
     uint4 range = (seg_type < 0) ? degenerate_range : full_int_range;
     seg_type = abs(seg_type);
     switch (seg_type) {
-      case line1: {
+      case _Segment::line1: {
         CLine1SegmentCollection<Counter> coll(n, segs, &reg);
         return find_int(n, coll, alg, stat);
       };
@@ -396,16 +396,16 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
           CLine2SegmentCollection<Counter> coll(n, segs, &reg);
           return find_int(n, coll, alg, stat); 
       };
-      case arc:{
+      case _Segment::arc:{
         CArcSegmentCollection<Counter>  coll(n, segs, &reg);
         return find_int(n, coll, alg, stat);
       };
-      case graph: {
+      case _Segment::graph: {
         CGraphSegmentCollection<Counter> coll(n, segs, &reg);
         return find_int(n, coll, alg, stat);
       };
     }
-    return 0;
+    return 0ULL;
   };
 
   void write_SVG(chostream* SVG_stream, int4 seg_type, int4 n, PSeg segs, int4 algs, uint4 stat)
@@ -423,19 +423,19 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
     };
 
     switch (seg_type) {
-      case line1: {
+      case _Segment::line1: {
         CLine1SegmentCollection<TrueRegistrator> coll(n, segs, nullptr);
         apply_algs(coll);
       }; break;
-      case line2: {
+      case _Segment::line2: {
         CLine2SegmentCollection<TrueRegistrator> coll(n, segs, nullptr);
         apply_algs(coll);
       }; break;
-      case arc: {
+      case _Segment::arc: {
         CArcSegmentCollection<TrueRegistrator>  coll(n, segs, nullptr);
         apply_algs(coll);
       }; break;
-      case graph: {
+      case _Segment::graph: {
         CGraphSegmentCollection<TrueRegistrator> coll(n, segs, nullptr);
         apply_algs(coll);
       }; break;
@@ -445,7 +445,10 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
 
   find_intersections_func get_find_intersections_func(uint4 reg_type)
   {
+    
     if (reg_type == _Registrator::just_count)return _find_int<SimpleCounter>;
+    if (reg_type == _Registrator::just_count_require_intersections)
+      return _find_int<SimpleCounter2>;
     if (reg_type == _Registrator::store_pairs_and_ints_just_count_stat)
       return _find_int<TrueRegistrator>;
     return _find_int<PerSegmCounter>;

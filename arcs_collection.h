@@ -26,40 +26,42 @@ template<class IntersectionRegistrator>
 class CArcSegmentCollection
 {
 public:
-  static constexpr bool is_line_segments = false;
+  using this_T = CArcSegmentCollection;
+  static constexpr _Coll_flag_state get_coll_flag(_Coll_flags flag) {
+    if (flag == _Coll_flags::line_segments)
+      return _Coll_flag_state::state_false;
+   
+    return _Coll_flag_state::state_unimplemented;
+  }
 
-  static inline bool is_last(uint4 pt)
+  //static constexpr bool is_line_segments = false;
+
+  static bool is_last(uint4 pt)
   {
     return pt & 1;
   };
-  static inline uint4 get_segm(uint4 pt)
+  static uint4 get_segm(uint4 pt)
   {
     return pt / 6;
   };
 
   //TPlaneVect
   uint4  GetSegmNumb() const { return N; };
-  inline void SetCurStripe(uint4 left, uint4 right)
+  void SetCurStripe(uint4 left, uint4 right)
   {
     B = GetX(left);
     E = GetX(right);
   };
-  inline void SetCurStripeRight(uint4 right) { E = GetX(right); };
-  inline void SetCurStripeLeft(uint4 left) { B = GetX(left); };
-  void SetCurPoint(uint4 pt)
-  {
-    if (is_last(pt))
-      collection[get_segm(pt)].EndPoint(cur_point.x, cur_point.y);
-    else
-      collection[get_segm(pt)].BegPoint(cur_point.x, cur_point.y);
-  };
-  void SetCurPointAtBeg(uint4 s)
-  {
+  void SetCurStripeRight(uint4 right) { E = GetX(right); };
+  void SetCurStripeLeft(uint4 left) { B = GetX(left); };
+
+  void SetCurPointAtBeg(uint4 s) {
     collection[s].BegPoint(cur_point.x, cur_point.y);
   };
-  void SetCurPointAtEnd(uint4 s)
-  {
-    collection[s].EndPoint(cur_point.x, cur_point.y);
+
+  void SetCurSegAndPoint(uint4 s)  {
+    collection[s].BegPoint(cur_point.x, cur_point.y);
+    SetCurSeg(s);
   };
 
   void SetCurSeg(uint4 s)
@@ -85,12 +87,6 @@ public:
     cur_seg.x2 = MIN(cur_seg.x2, E);
   };
 
-  void SetCurSegAndPoint(uint4 s)
-  {
-    SetCurPointAtEnd(s);
-    SetCurSeg(s);
-  };
-
   bool LBelow(int4 s_1, int4 s_2) const //retuns if s1 below s2 at current vertical line
   {
     return collection[s_1].under(collection[s_2].PointAtX(B));
@@ -111,22 +107,21 @@ public:
 
 
   template <bool not_register>
-  bool IntPointsInStripe(REAL x1, REAL x2, TArcSegment *s2)
-  {
+  bool IntPointsInStripe(REAL x1, REAL x2, TArcSegment* s2) {
     auto s1 = &cur_seg;
     auto oo = s2->org - s1->org;
     REAL org_dist2 = oo.get_norm();
-    REAL delta = 0.5*(s1->r2 - s2->r2 + org_dist2);
-    REAL l2 = s1->r2* org_dist2 - delta*delta;
-    if (l2<0)return false;
-    oo = (1.0 / org_dist2) * oo;
+    REAL delta = 0.5 * (s1->r2 - s2->r2 + org_dist2);
+    REAL l2 = s1->r2 * org_dist2 - delta * delta;
+    if (l2 < 0)return false;
+    oo /= org_dist2;
     auto m = s1->org + delta * oo;
-    oo = sqrt(l2) % oo;
+    oo.rotate_prod(sqrt(l2));
     auto res = m + oo;
     bool ret = false;
     if ((res.x >= x1) && (res.x <= x2) && (s1->IsTheSamePart(res)) && (s2->IsTheSamePart(res)))
     {
-      if constexpr(not_register) return true;
+      if constexpr (not_register) return true;
       ret = true;
       REGISTER_INTERSECTION(cur_seg_idx, s2, res);
     }
@@ -181,12 +176,11 @@ public:
     return IntPointsInStripe<false>(cur_seg.x1, cur_seg.x2, collection + s_);
   };
 
-  bool IsIntersectsCurSegDown(int4 s_)//check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
-  {
+  bool IsIntersectsCurSegDown(int4 s_){//check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
     return IntPointsInStripe<true>(cur_seg.x1, cur_seg.x2, collection + s_);
   };
-  bool IsIntersectsCurSegUp(int4 s_)//check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
-  {
+
+  bool IsIntersectsCurSegUp(int4 s_){//check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
     return IntPointsInStripe<true>(cur_seg.x1, cur_seg.x2, collection + s_);
   };
 
@@ -201,11 +195,11 @@ public:
     }
     );
   };
-  void SetRegistrator(IntersectionRegistrator *r)
-  {
+
+  void SetRegistrator(IntersectionRegistrator *r){
     registrator = r;
-    
   };
+
   IntersectionRegistrator *GetRegistrator() { return registrator; };
 
   void set_seg2end_arr(uint4* SegL, uint4* SegR) {};
@@ -269,7 +263,7 @@ public:
 
 
 private:
-  inline auto GetX(uint4 pt) const { return ends[pt]; };
+  auto GetX(uint4 pt) const { return ends[pt]; };
   //{ return is_last(pt) ? collection[get_segm(pt)].x2 :collection[get_segm(pt)].x1; };
 
 

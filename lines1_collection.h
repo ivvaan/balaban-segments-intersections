@@ -29,39 +29,46 @@ template<class IntersectionRegistrator>
 class CLine1SegmentCollection
 {
 public:
-  static constexpr bool is_line_segments = true;
+  using this_T = CLine1SegmentCollection;
+  static constexpr _Coll_flag_state get_coll_flag(_Coll_flags flag) {
+    if (flag == _Coll_flags::line_segments)
+      return _Coll_flag_state::state_true;
+    if (flag == _Coll_flags::needs_SetCurSegCutBE_at_start)
+      return _Coll_flag_state::state_true;
+    return _Coll_flag_state::state_unimplemented;
+  }
 
-  static inline bool is_last(uint4 pt)
+  //static constexpr bool is_line_segments = true;
+
+  static bool is_last(uint4 pt)
   {
     return pt & 1;
   };
-  static inline uint4 get_segm(uint4 pt)
+
+  static uint4 get_segm(uint4 pt)
   {
     return pt >> 1;
   };
 
   uint4  GetSegmNumb() { return N; };
-  inline void SetCurStripe(uint4 left, uint4 right)
+  void SetCurStripe(uint4 left, uint4 right)
   {
     B = GetX(left);
     E = GetX(right);
   };
-  inline void SetCurStripeRight(uint4 right) { E = GetX(right); };
-  inline void SetCurStripeLeft(uint4 left) { B = GetX(left); };
-  void SetCurPoint(uint4 pt)
-  {
-    cur_point = is_last(pt) ?
-      collection[get_segm(pt)].EndPoint() :
-      collection[get_segm(pt)].BegPoint();
-  };
-  void SetCurPointAtBeg(uint4 s)
-  {
+  void SetCurStripeRight(uint4 right) { E = GetX(right); };
+  void SetCurStripeLeft(uint4 left) { B = GetX(left); };
+  void SetCurPointAtBeg(uint4 s){
     cur_point = collection[s].BegPoint();
   };
-  void SetCurPointAtEnd(uint4 s)
-  {
-    cur_point = collection[s].EndPoint();
+
+  void SetCurSegAndPoint(uint4 s) {
+    cur_point = collection[s].BegPoint();
+    SetCurSeg(s);
+    if constexpr ((IntersectionRegistrator::reg_type & _RegistrationType::point) == 0)
+      active_end = cur_seg.EndPoint();
   };
+
   void SetCurSeg(uint4 s)
   {
     cur_seg_idx = s;
@@ -102,14 +109,6 @@ public:
       active_end = cur_seg.BegPoint();
   };
 
-  void SetCurSegAndPoint(uint4 s)
-  {
-    SetCurPointAtEnd(s);
-    SetCurSeg(s);
-    if constexpr ((IntersectionRegistrator::reg_type & _RegistrationType::point) == 0)
-      active_end = cur_seg.EndPoint();
-  };
-
   bool LBelow(int4 s_1, int4 s_2) const //retuns if s1 below s2 at current vertical line
   {
     auto& s1 = collection[s_1];
@@ -139,7 +138,7 @@ public:
       if (((xc <= x1) || (xc > x2))) return false;
       if (!do_register) return true;
       if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) != 0)
-        registrator->register_pair_and_point(cur_seg_idx, s_, { xc, s2.org.y - mul * s2.shift.y });
+        registrator->register_pair_and_point(cur_seg_idx, s_, TPlaneVect( xc, s2.org.y - mul * s2.shift.y ));
       else
         registrator->register_pair(cur_seg_idx, s_);
       return true;
@@ -310,9 +309,11 @@ public:
     Init(c.N, c.collection, r);
   };
 
+  /*
   int4 get_sentinel(bool is_top_sentinel) {
     return N + is_top_sentinel;
   };
+*/
 
   void unclone() { if (clone_of == nullptr)return; collection = nullptr; clone_of = nullptr; };
   void SortAt(uint4 pt, uint4 n, int4* L)
@@ -340,8 +341,8 @@ public:
     Init(n, c, r);
     chopped_Y = new REAL[N + 2];
     if constexpr (THIS_HAS_SENTINELS) {
-      chopped_Y[get_sentinel(false)] = std::numeric_limits<REAL>::min();
-      chopped_Y[get_sentinel(true)] = std::numeric_limits<REAL>::max();
+      chopped_Y[this->get_sentinel(false)] = std::numeric_limits<REAL>::lowest();
+      chopped_Y[this->get_sentinel(true)] = std::numeric_limits<REAL>::max();
     }
   }
 
@@ -350,8 +351,11 @@ public:
   CLine1SegmentCollection(CLine1SegmentCollection& coll, IntersectionRegistrator* r)
   {
     clone(coll, r);
-    chopped_Y = new REAL[N + 1];
-    chopped_Y[N] = std::numeric_limits<REAL>::min();
+    chopped_Y = new REAL[N + 2];
+    if constexpr (THIS_HAS_SENTINELS) {
+        chopped_Y[this->get_sentinel(false)] = std::numeric_limits<REAL>::lowest();
+        chopped_Y[this->get_sentinel(true)] = std::numeric_limits<REAL>::max();
+    }
   }
 
   ~CLine1SegmentCollection()
@@ -374,9 +378,9 @@ public:
 
 
 private:
-  inline auto GetX(uint4 pt) const
+  auto GetX(uint4 pt) const
   {
-    return is_last(pt) ? collection[get_segm(pt)].org.x + collection[get_segm(pt)].shift.x : collection[get_segm(pt)].org.x;
+    return is_last(pt) ? collection[get_segm(pt)].ex() : collection[get_segm(pt)].bx();
   };
 
 
