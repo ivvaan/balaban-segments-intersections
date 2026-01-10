@@ -24,9 +24,8 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <random>
 #include <intrin.h>
 
-
 #ifdef PRINT_SEG_AND_INT
-bool print_at_lineseg1_init = true;
+bool print_at_lineseg1_init =  true;
 #endif
 
 namespace {
@@ -60,12 +59,12 @@ CRandomValueGen::CRandomValueGen()
 
 CRandomValueGen::CRandomValueGen(unsigned seed)
 {
-  SetSeeed(seed);
+  SetSeed(seed);
 };
 
 //zero seed means use of random gen
 //nonzero - use of pseudo random setting seed
-void CRandomValueGen::SetSeeed(unsigned seed)
+void CRandomValueGen::SetSeed(unsigned seed)
 {
   stduniform = seed ? drd_gen.seed(seed), stduniform2 : stduniform1;
 };
@@ -118,3 +117,5 @@ std::strong_ordering comp_prod(int64_t a, int64_t b, int64_t c, int64_t d) {
 
   return lo1 <=> lo2;
 }
+
+// some string

@@ -25,6 +25,8 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <type_traits>
 #include <math.h>
 #include <intrin.h>
+#include <algorithm>
+#include <vector>
 typedef int int4;
 typedef unsigned int uint4;
 typedef long long int8;
@@ -47,7 +49,7 @@ typedef int  BOOL;
 
 //#define register
 #ifndef NDEBUG
-#define PRINT_SEG_AND_INT
+//#define PRINT_SEG_AND_INT
 extern bool print_at_lineseg1_init;
 #endif
 
@@ -71,8 +73,7 @@ typedef void(*PSeg);
 typedef void(*PRegObj);
 
 
-enum _Algorithm
-{
+enum _Algorithm{
   triv = 1,
   simple_sweep = 2,
   fast = 4,
@@ -82,6 +83,15 @@ enum _Algorithm
   fast_no_ip = 64,
   mem_save = 128
 };
+
+enum _IntType {
+  common_int = 0,
+  s1_beg_int = 2,
+  s2_beg_int = 4,
+  s1_end_int = 8,
+  s2_end_int = 16,
+};
+
 
 constexpr int4 alg_list[] = { triv, simple_sweep, fast, optimal, fast_parallel, bentley_ottmann,fast_no_ip,mem_save };
 constexpr const char* alg_names[] = { "trivial","simple_sweep","fast","optimal","fast_parallel","bentley_ottmann","fast no inters points","fast 'no R'" };
@@ -104,7 +114,21 @@ enum _Registrator
   per_segm_reg_just_count_stat = 0,
   per_segm_reg_max_per_segm_stat = 1,
   just_count = 2,
-  store_pairs_and_ints_just_count_stat = 3
+  store_pairs_and_ints_just_count_stat = 3,
+  just_count_require_intersections = 4
+};
+
+enum class _Coll_flag_state
+{
+  state_false = 0,
+  state_true = 1,
+  state_unimplemented = 2
+};
+
+enum class _Coll_flags
+{
+  line_segments,
+  needs_SetCurSegCutBE_at_start
 };
 
 
@@ -113,7 +137,7 @@ class CRandomValueGen
 public:
   CRandomValueGen();
   CRandomValueGen(unsigned seed);
-  void SetSeeed(unsigned seed);
+  void SetSeed(unsigned seed);
   double GetRandomDouble();
   //BOOL RandomChoose(double prop);
   bool RandomChoose();
@@ -143,6 +167,18 @@ public:
   couple<real> operator-() const {
     return { -x, -y };
   };
+  couple<real>& operator/=(REAL r) {
+    x /= r;
+    y /= r;
+    return *this;
+  };
+
+  void rotate_prod(REAL r) {
+    auto t = -y * r;
+    y = x * r;
+    x = t;
+  }
+
   auto get_norm() const {
     return x * x + y * y;
   }
@@ -221,7 +257,7 @@ struct TIntegerVect {
   int4 x = 0;
   int4 y = 0;
   TIntegerVect() {};
-  TIntegerVect(int4 xc, int4 yc) :x(xc), y(yc) {};
+  constexpr TIntegerVect(int4 xc, int4 yc) :x(xc), y(yc) {};
   template <class real>
   TIntegerVect(const couple<real>& v, const transf1D& x_transf, const transf1D& y_transf) :
     x(x_transf(v.x) + 0.5),  
@@ -230,13 +266,31 @@ struct TIntegerVect {
   TIntegerVect(const TIntegerVect& c) = default;
   auto getX() const { return x; };
   auto getY() const { return y; };
-  bool operator<(const TIntegerVect& v2) const {
+  bool operator<(TIntegerVect v2) const {
     return ((x < v2.x) || (x == v2.x) && (y < v2.y));
   };
-  bool operator<=(const TIntegerVect& v2)  const {
+  bool operator!=(TIntegerVect v2) const {
+   // *reinterpret_cast<int8 *>((void*)this)!= *reinterpret_cast<int8*>((void*)&v2)
+    return (x != v2.x) || (y != v2.y);
+  };
+
+  bool operator==(TIntegerVect v2) const {
+    // *reinterpret_cast<int8 *>((void*)this)== *reinterpret_cast<int8*>((void*)&v2)
+    return (x == v2.x) && (y == v2.y);
+  };
+
+  bool is_zero() const {
+    return (x == 0) && (y == 0);
+  }
+
+  bool is_non_zero() const {
+    return !is_zero();
+  }
+
+  bool operator<=(TIntegerVect v2)  const {
     return ((x < v2.x) || (x == v2.x) && (y <= v2.y));
   };
-  bool operator>(const TIntegerVect& v2)  const {
+  bool operator>(TIntegerVect v2)  const {
     return ((x > v2.x) || (x == v2.x) && (y > v2.y));
   };
   TIntegerVect operator-() const {
@@ -262,8 +316,14 @@ struct TIntegerVect {
     x = v.x * x_scale + 0.5;
     y = v.y * y_scale + 0.5;
   };
-
+  friend std::ostream& operator<<(std::ostream& os, const TIntegerVect& v) {
+    os << "(" << v.x << "," << v.y<<")"; //" " <<double(s.shift.y)/ s.shift.x<< std::endl;
+    return os;
+  };
 };
+
+inline constexpr TIntegerVect int_max_vect{ std::numeric_limits<decltype(TIntegerVect::x)>::max(),std::numeric_limits<decltype(TIntegerVect::y)>::max() };
+inline constexpr TIntegerVect int_zero_vect{ 0,0 };
 
 int8 operator%(const TIntegerVect& v1, const TIntegerVect& v2);
 
@@ -282,6 +342,16 @@ TIntegerVect operator*(const TIntegerVect& t, int4 r);
 
 struct minmaxrect { 
   TPlaneVect ld, rt; // left down, right top coners
+  auto get_diag() const {
+    return rt - ld;
+  }
+  auto get_width() const {
+    return rt.x - ld.x;
+  }
+  auto get_height() const {
+    return rt.x - ld.x;
+  }
+
   minmaxrect get_scaled(REAL factor) {// enlage rectangle into factor times 
     auto fp = 0.5 * (1. + factor);
     auto fm = 0.5 * (1. - factor);
@@ -315,6 +385,30 @@ minmaxrect get_minmax(int4 n, T c[])
   for (int4 i = 1; i < n; ++i) {
     bp = c[i].BegPoint();
     ep = c[i].EndPoint();
+    xmin = MIN(xmin, bp.x);
+    xmax = MAX(xmax, ep.x);
+    ymin = std::min({ ymin,bp.y,ep.y });
+    ymax = std::max({ ymax,bp.y,ep.y });
+  }
+
+  return { {xmin,ymin},{xmax,ymax} };
+};
+
+template <class T>
+minmaxrect get_rot_minmax(int4 n, T coll[], double s, double c)
+{
+  //auto s = sin(angle), c = cos(angle);
+  auto r = coll[0].get_rotated(s, c);
+  TPlaneVect bp = r.BegPoint();
+  TPlaneVect ep = r.EndPoint();
+  REAL xmin = bp.x;
+  REAL xmax = ep.x;
+  REAL ymin = MIN(bp.y, ep.y);
+  REAL ymax = MAX(bp.y, ep.y);
+  for (int4 i = 1; i < n; ++i) {
+    r = coll[i].get_rotated(s, c);
+    bp = r.BegPoint();
+    ep = r.EndPoint();
     xmin = MIN(xmin, bp.x);
     xmax = MAX(xmax, ep.x);
     ymin = std::min({ ymin,bp.y,ep.y });
@@ -360,20 +454,37 @@ struct frac64 {// represents proper fraction num/denum (denum>0)
   };
 };
 
-// denum can be passed to the constructor negative (more slower)
-struct div64 :public frac64 {// represents division num/denum 
-  div64(int64_t n, int64_t d) {
-    if (d < 0) {
-      num = -n;
-      denum = -d;
+inline frac64 div64(int64_t n, int64_t d) {// represents division n/d convert it
+      //to proper fraction n'/d', where d'>0
+  if (d < 0)
+    return { -n, -d };
+  return { n, d };
+}
+
+template <typename Itterator, typename Compare>
+void sort_by_spaceship(Itterator f, Itterator l, Compare cmp) {
+  std::sort(f, l, [=](auto&& a, auto&& b) -> bool {
+    return cmp(std::forward<decltype(a)>(a), std::forward<decltype(b)>(b)) < 0;
     }
-    else
-    {
-      num = n;
-      denum = d;
-    }
-  };
+  );
 };
 
+template <typename T>
+void removeElement(std::vector<T>& vec, const T& value_to_remove) {
+  vec.erase(std::remove(vec.begin(), vec.end(), value_to_remove), vec.end());
+}
+
+template <typename T>
+void remove_by_val(std::vector<T>& vec, T value_to_remove) {
+  vec.erase(std::remove(vec.begin(), vec.end(), value_to_remove), vec.end());
+};
+
+template <typename T>
+T* set_size(std::vector<T>& v, size_t new_size) {
+  v.reserve(new_size);
+  v.resize(new_size);
+  return v.data();
+};
+// some string
 
 #endif

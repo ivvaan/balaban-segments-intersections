@@ -117,7 +117,7 @@ void search_problem(uint4 n) {
   CRandomValueGen rv(r_seed);
   auto find_intersections = get_find_intersections_func(_Registrator::just_count);
   while (nfast == ntriv) {
-    rv.SetSeeed(++r_seed);
+    rv.SetSeed(++r_seed);
     auto seg_coll = create_test_collection(_Segment::arc, n, _Distribution::random, 1.0, rv, nullptr);
     nfast = find_intersections(_Segment::arc, n, seg_coll, _Algorithm::fast, _Registrator::just_count);
     ntriv = find_intersections(_Segment::arc, n, seg_coll, _Algorithm::simple_sweep, _Registrator::just_count);
