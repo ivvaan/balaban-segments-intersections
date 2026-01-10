@@ -106,7 +106,7 @@ constexpr uint4 degenerate_range = 0x4;
 
 enum _Distribution
 {
-  random = 0, parallel, mixed, small, param_defined, circul, degenerate
+  random = 0, parallel, mixed, small, param_defined, circle, degenerate
 };
 
 enum _Registrator

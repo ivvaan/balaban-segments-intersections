@@ -414,7 +414,7 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
             case 'm':distr_type = mixed; break;
             case 's':distr_type = small; break;
             case 'p':distr_type = param_defined; break;
-            case 'c':distr_type = circul; break;
+            case 'c':distr_type = circle; break;
             case 'd':distr_type = degenerate; break;
             default:
             {
