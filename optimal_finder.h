@@ -153,8 +153,9 @@ private:
   };
 
   template<class SegmentsColl>
-  void InsDel(SegmentsColl& segments, uint4 pt, ProgramStackRec* stack_pos)
+  void InsDel(SegmentsColl& segments, uint4 end_index, ProgramStackRec* stack_pos)
   {
+    auto pt = ENDS[end_index];
     auto sn = SegmentsColl::get_segm(pt);
     if (SegmentsColl::is_last(pt)) // if endpoint - delete
     {
