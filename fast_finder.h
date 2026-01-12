@@ -258,7 +258,7 @@ public:
     cur = R;
     for (auto Q_idx = *Q_tail; Q_idx != Q_size; Q_idx = *--Q_tail, ++cur)
     {
-      segments.SetCurSegCutBeg(*cur);
+      segments.SetCurSegCutBE(*cur);//SetCurSegCutBeg
 //      auto Q_loc = _Q + Q_idx;
 //      n_int += segments.FindCurSegIntUpWith(Q_loc, _Q_pos) - Q_loc;
       segments.FindCurSegIntUpWith(_Q + Q_idx, _Q_pos);

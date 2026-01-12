@@ -32,8 +32,9 @@ namespace {
   T& unmove(T&& t) { return t; };
 
   enum _Stages {
-    split_down=0, split_up, bubble, merge
+    stage_split=0, split_up, stage_bubble, stage_merge
   };
+
 }
 
 template<typename Real>
@@ -67,7 +68,7 @@ public:
   //static constexpr bool is_line_segments = false;//they can have more than one point of intersection with each other!!
   static constexpr _Coll_flag_state get_coll_flag(_Coll_flags flag) {
     if (flag == _Coll_flags::line_segments)
-      return _Coll_flag_state::state_true;
+      return _Coll_flag_state::state_false;// degenerate segments should be processed as nonlinear
 
     return _Coll_flag_state::state_unimplemented;
   }
@@ -386,6 +387,7 @@ public:
   bool is_left_pt_inside(uint4 s) const {
     return left_bound_idx > SegL[s];
   }
+ 
   bool is_right_pt_on_bound(uint4 s) const {
     return right_bound_idx == SegR[s];
   }
@@ -394,7 +396,7 @@ public:
   }
 
   void SetCurStripe(uint4 left, uint4 right){//left,right: #points - bounds of the stripe 
-    B = GetX(left);
+    B = GetX(stripe_left = left);
     E = GetX(stripe_right = right);
     left_bound_idx = get_left_pt_idx(left);
     right_bound_idx = get_right_pt_idx(right);
@@ -405,17 +407,12 @@ public:
   };
 
   void SetCurStripeLeft(uint4 left) { 
-    B = GetX(left); 
+    B = GetX(stripe_left = left);
   };
 
-  void SetCurPoint(uint4 pt){
+  /*void SetCurPoint(uint4 pt){
     cur_point = pts[pt];
   };
-
-  /*void SetCurSegAndPoint(uint4 s) {
-    cur_point_idx = first_point(s);
-    cur_point_seg = s;
-    cur_point=collection[s].BegPoint();
   };*/
 
   void SetCurPointAtBeg(uint4 s) {
@@ -427,18 +424,16 @@ public:
   void SetCurSeg(uint4 s){
     cur_seg_idx = s;
     cur_seg = collection[s];
-    curB = cur_seg.org.x;
-    curE = cur_seg.org.x + cur_seg.shift.x;
+    curB = cur_seg.bx();
+    curE = cur_seg.ex();
     is_rstump=false;
   };
 
   void SetCurSegCutBE(uint4 s){
     SetCurSeg(s);
-    stage = _Stages::split_down;
-    curB = MAX(B, curB);
-    //cs_l_numerator = cur_seg.YAtX_Numerator(E);
-    if (E < curE) {
-        //cs_r_numerator = cur_seg.YAtX_Numerator(E);
+    stage = _Stages::stage_split;
+    curB = MAX(B, curB);// possibly curB=B; !!!!!
+    if (E < curE) {//means cur_seg.is_vertical()==false otherwise curE<=E
         curE = E;
         is_rstump = true;
     }
@@ -448,15 +443,15 @@ public:
   void SetCurSegCutBeg(uint4 s) {
     SetCurSeg(s);
     stage = _Stages::split_up;
-    curB = MAX(B, curB);
+    curB = MAX(B, curB);// possibly curB=B; !!!!!
     active_end = cur_seg.EndPoint();
   };
 
   void SetCurSegCutEnd(uint4 s)
   {
     SetCurSeg(s);
-    stage = _Stages::merge;
-    curE = MIN(E, curE);
+    stage = _Stages::stage_merge;
+    curE = MIN(E, curE);// possibly curE=E; !!!!!
     active_end = cur_seg.BegPoint();
   };
 
@@ -464,23 +459,89 @@ public:
     SetCurPointAtBeg(s);
 
     SetCurSeg(s);
-    stage = _Stages::bubble;
+    stage = _Stages::stage_bubble;
     active_end = pts[last_point(s)];
   };
 
-  template<bool check_s_under_cur_seg>// s_ is_under or is_upper of cur_seg
-  bool RStump2CurSeg(int4 s_) const {
-    auto& s = collection[s_];
-    auto prod = cur_seg.shift % s.shift;
-    if (prod == 0)return false;
-    auto cmp = cur_seg.YAtX_frac(E) <=> s.YAtX_frac(E);
-    if (cmp!= std::strong_ordering::equal){ 
-      if constexpr (check_s_under_cur_seg)
-        return cmp > 0;
-      else
-        return cmp < 0;
+  bool is_cur_strip_zero() const {
+    return B == E;
+  }
+
+  bool is_cur_strip_non_zero() const {
+    return !is_cur_strip_zero();
+  }
+
+  enum _Int_reg {
+    // segments are not intersecting
+    no_int = 0,
+    // segments are intersecting, but no registration
+    int_no_reg = 1,
+    //Segments are intersecting and must be registered
+    int_reg = int_no_reg + true //i.e. int_reg == 2 
+  };
+
+  int4 UpperThanRStump(int4 s_) const { // s_  is_upper than cur_seg right stump
+    return RStump2CurSeg<false>(s_);
+  };
+  int4 UnderRStump(int4 s_) const { // s_  is_upper than cur_seg right stump
+    return RStump2CurSeg<true>(s_);
+  };
+
+  template<bool check_way_up_s_is_under_cur_seg>// s_  is_under or is_upper than cur_seg right stump
+  int4 RStump2CurSeg(int4 s_) const { 
+    assert(stage == _Stages::stage_split);
+    assert(!cur_seg.is_vertical());
+    auto &s = collection[s_];
+    if (is_cur_strip_non_zero()) {
+      auto cmpB = s.YAtX_frac(B) <=> cur_seg.YAtX_frac(B);// 1 is >
+      if (cmpB == std::strong_ordering::equal)// inresection on left bound
+        return _Int_reg::int_reg;// and must be registered
+
+      auto cmpE = s.YAtX_frac(E) <=> cur_seg.YAtX_frac(E);// cmpE==1 is s.YAtX_frac(E) > cur_seg.YAtX_frac(E)
+      if (cmpE == std::strong_ordering::equal) {// inresection on right bound
+        //  but no registration except right bound is defined last point of s
+        return _Int_reg::int_no_reg + (stripe_right == last_point(s_));
+      }
+
+      if constexpr (check_way_up_s_is_under_cur_seg)
+        return (cmpE == std::strong_ordering::less) * _Int_reg::int_reg; //s < cur_seg
+      else //check_way_down_s_is_upper_cur_seg
+        return (cmpE == std::strong_ordering::greater) * _Int_reg::int_reg; //s > cur_seg
     }
-    return is_right_pt_in_stripe(s_);
+    else {// cur strip is zero
+      if (stripe_right == last_point(s_)) {// the right bound defined by s last point
+        auto cmp_last = cur_seg.upper(pts[stripe_right]);// 1 == false: last p of s is above cur_seg (s>cur_seg), remember last_point(s_)==stripe_right
+        if (s.is_vertical()) {
+          auto cmp_first = cur_seg.upper(pts[first_point(s_)]);// 1 == false:  beg. of s is above cur_seg
+          assert( check_way_up_s_is_under_cur_seg ? cmp_first <= 0 : cmp_last >= 0);
+          assert((cmp_first != 0) || (cmp_last != 0));
+          if (cmp_first != cmp_last) {
+            return _Int_reg::int_reg;
+          }
+        }
+        if constexpr (check_way_up_s_is_under_cur_seg) 
+          return (cmp_last <= 0) * _Int_reg::int_reg; //s <= cur_seg
+        else //check_way_down_s_is_upper_cur_seg
+          return (cmp_last >= 0) * _Int_reg::int_reg; //s >= cur_seg -> int_reg
+      }
+      else {// cur strip is zero and its right bound IS NOT defined by s last point
+        if (s.is_vertical()) {
+          auto cmp_last = cur_seg.upper(pts[last_point(s_)]);// -1 if end of s is bellow cur_seg
+          if constexpr (check_way_up_s_is_under_cur_seg)
+            return (cmp_last <= 0) * _Int_reg::int_reg; //s <= cur_seg
+          else //check_way_down_s_is_upper_cur_seg
+            return (cmp_last >= 0) * _Int_reg::int_reg; //s >= cur_seg -> int_reg
+        }
+        // int_no_reg
+        auto cmpE = s.YAtX_frac(E) <=> cur_seg.YAtX_frac(E);
+        assert(check_way_up_s_is_under_cur_seg ? cmpE >= 0 : cmpE <= 0);
+        return cmpE == std::strong_ordering::equal; 
+       /* if constexpr (check_way_up_s_is_under_cur_seg)
+          return (cmpE <= 0); //s <= cur_seg
+        else //check_way_down_s_is_upper_cur_seg
+          return (cmpE >= 0); //s >= cur_seg -> int_no_reg*/
+      }
+    }
   };
 
   constexpr bool static left_bound = false;
@@ -498,7 +559,7 @@ public:
     std::strong_ordering lp, rp;
     auto& s1 = cur_seg;
     auto& s2 = collection[s_];
-    if (stage == _Stages::bubble) {
+    if (stage == _Stages::stage_bubble) {
       if (s2.is_vertical() || s1.is_vertical())
         return SSCurSegIntWith(s_);
       lp = collection[s_].under(cur_point);
@@ -551,7 +612,7 @@ public:
       };
     }
 
-    if (stage == _Stages::merge) {
+    if (stage == _Stages::stage_merge) {
       if (s1.is_vertical() || s2.is_vertical())
         return one_s_pt_in_stripe ? SSCurSegIntWith(s_) : SSCurSegIntWith<false>(s_);
       rp = StumpPos<right_bound>(s_);// if negative s_ is under cur right end 
@@ -641,7 +702,7 @@ public:
     auto delt = s2.BegPoint() - s1.BegPoint();
     auto prod = s1.shift % s2.shift, beg = s1.shift % delt;
     if (prod == 0) { // segments parallel
-      if (beg == 0) {// they are on the same line
+      if ( (beg == 0) && (s2.shift % delt == 0)) {// they are on the same line
         if constexpr (reg)register_pair(this, cur_seg_idx, s_);
         return true;
       }
@@ -655,7 +716,7 @@ public:
 
     //at this moment, we can be sure that s2 intesects l1 (2)
     beg = delt % s2.shift;
-    end = beg - prod;
+    end = beg - prod;// if beg==0 && end == 0 -> prod == 0 impossible here  
     if ((beg == 0) ||//begin of s1 lies on l2, taking (1)(2) to account 
         (end == 0) ||//end of s1 lies on l2, taking (2) to account
         ((beg > 0) != (end > 0))) {//begin and end of s1 are on diffenent sides l2
@@ -691,15 +752,15 @@ public:
   bool IsIntersectsCurSegDown(int4 s_) //check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
   {
     if (is_rstump)
-      return RStump2CurSeg<false>(s_);
-    return UpperActiveEnd(s_);
+      return UpperThanRStump(s_); // s_is_upper_cur_seg==true
+    return UpperActiveEnd(s_); // s_ is upper when active end
   };
 
   auto FindCurSegIntDownWith(int4* s_, int4* last) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
   //Caller ensures that "last" points to the allocated memory address accessible for reading and writing.
     auto cs = cur_seg_idx;
     if (is_rstump) {
-      while ((THIS_HAS_SENTINELS || (s_ != last)) && RStump2CurSeg<false>(*s_)) {
+      while ((THIS_HAS_SENTINELS || (s_ != last)) && UpperThanRStump(*s_)) {
         register_pair(this,cs, *s_);
         --s_;
       }
@@ -716,13 +777,13 @@ public:
   auto FindCurSegIntUpWith(int4* s_, int4* last) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
   //Caller ensures that "last" points to the allocated memory address accessible for reading and writing.
     auto cs = cur_seg_idx;
-    if (is_rstump) {
+    /*if (is_rstump) {
       while ((THIS_HAS_SENTINELS || (s_ != last)) && RStump2CurSeg<true>(*s_)) {
         register_pair(this,cs, *s_);
         ++s_;
       }
       return s_;
-    }
+    }*/
     while ((THIS_HAS_SENTINELS || (s_ != last)) && UnderActiveEnd(*s_)) {
       register_pair(this,cs, *s_);
       ++s_;
@@ -733,8 +794,7 @@ public:
 
   bool IsIntersectsCurSegUp(int4 s_){ //check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
   
-    if (is_rstump)
-      return RStump2CurSeg<true>(s_);
+    //if (is_rstump)return RStump2CurSeg<true>(s_);
     return UnderActiveEnd(s_);
   };
 
@@ -773,10 +833,23 @@ public:
     return is_right_pt_in_stripe(cur_seg_idx);
   };
 
+  bool operator ()(uint4 pt1, uint4 pt2) {
+    if (pts[pt1].x != pts[pt2].x)
+      return pts[pt1].x < pts[pt2].x;
+    if (pts[pt1].y != pts[pt2].y)
+      return pts[pt1].y < pts[pt2].y;
+    auto le1 = is_last (pt1), le2 = is_last(pt2);
+    if (le1 != le2) 
+      return le1 < le2;
+    return (pt1 < pt2);
+  }
+
+
+
   void PrepareEndpointsSortedList(uint4 *epoints)// endpoints allocated by caller and must contain space for at least 2*GetSegmNumb() points 
   {
     auto NN = N * 2;
-    for (uint4 i = 0; i < NN; ++i)  epoints[i] = i*2;
+    for (uint4 i = 0; i < NN; ++i)  epoints[i] = i;
 
 
 /*
@@ -784,21 +857,7 @@ public:
     static_assert(offsetof(TIntegerSegment, org.x) == 0, "TLineSegment1.org.x should have 0 offset");
     static_assert(offsetof(TIntegerSegment, shift.x) == 2 * sizeof(int4), "TLineSegment1.shift.x should have 2 reals offset");
 */
-    std::sort(epoints, epoints + NN,
-      [x = reinterpret_cast<int4*>(pts)](uint4 pt1, uint4 pt2) {
-        if (x[pt1] != x[pt2])
-          return x[pt1] < x[pt2];
-        auto le1 = (pt1 & 2), le2 = (pt2 & 2);
-        if (le1 != le2) //last end (last ending on 0b10, first on 0b00) alway greater than the first
-          return le1 < le2;
-        /*y = x + 1;
-        if (y[pt1] != y[pt2])
-          return y[pt1] < y[pt2];*/
-        return (pt1 < pt2);
-      }
-    );
-
-    for (uint4 i = 0; i < NN; ++i)  epoints[i] /= 2;
+    std::sort(epoints, epoints + NN, *this);
 
     ENDS = epoints;
 
@@ -956,8 +1015,8 @@ private:
   decltype(reg_pair) *register_pair = reg_pair;
   CIntegerSegmentCollection *clone_of = nullptr;
   uint4 N=0;
-  int4 B, E, curB, curE, stripe_right, right_bound_idx, left_bound_idx;
-  uint4 stage = _Stages::split_down;
+  int4 B, E, curB, curE, stripe_left, stripe_right, right_bound_idx, left_bound_idx;
+  uint4 stage = _Stages::stage_split;
 
   uint4 cur_seg_idx = 0xFFFFFFFF, cur_point_idx= 0xFFFFFFFF;
   uint4 cur_point_seg = 0xFFFFFFFF, active_end_idx = 0xFFFFFFFF;

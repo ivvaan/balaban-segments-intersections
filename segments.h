@@ -368,18 +368,20 @@ public:
     auto point_pos(TIntegerVect v) const { //return negative if segment placed under point v
       return (v - org) % shift;
     };
-    auto under(TIntegerVect v) const { //segment placed under point v
+ 
+    auto under(TIntegerVect v) const { //segment placed under point v, true == -1, false == 1
       return (v - org) % shift <=> 0;
     };
     bool exact_under(TIntegerVect v) const { //segment placed under point v
       return (v - org) % shift < 0;
     };
-    auto upper(TIntegerVect v) const {
-      return 0 <=>(v - org) % shift;
+    auto upper(TIntegerVect v) const {//segment placed above point v, true == -1, false == 1
+      return 0 <=> (v - org) % shift;
     };
     bool exact_upper(TIntegerVect v) const {
-      return (v - org) % shift > 0;
+      return 0 < (v - org) % shift;
     };
+
     bool no_common_y(const TIntegerSegment& s2) const {
       decltype(org.y) min1, min2, max1, max2;
 
