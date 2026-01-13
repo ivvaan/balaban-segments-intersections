@@ -887,6 +887,10 @@ public:
     SegR = _SegR;
   };
 
+  void set_ends_arr(uint4* ends) {
+    ENDS = ends;
+  };
+
   void clone(CIntegerSegmentCollection &c, IntersectionRegistrator *r)
   {
       clone_of = &c;

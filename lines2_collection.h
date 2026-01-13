@@ -270,7 +270,14 @@ public:
 
   IntersectionRegistrator* GetRegistrator() { return registrator; };
 
-  void set_seg2end_arr(uint4* SegL, uint4* SegR) {};
+  void set_seg2end_arr(uint4* _SegL, uint4* _SegR) {
+    SegL = _SegL;
+    SegR = _SegR;
+  };
+
+  void set_ends_arr(uint4* ends) {
+    ENDS = ends;
+  };
 
   void Init(uint4 n, void* c, IntersectionRegistrator* r)
   {
@@ -327,4 +334,10 @@ private:
   TLineSegment2 cur_seg;
   TLineSegment2* collection = nullptr;
   REAL* ends = nullptr;
+
+  // moved arrays for endpoints
+  uint4* ENDS = nullptr;
+  uint4* SegL = nullptr;
+  uint4* SegR = nullptr;
+
 };

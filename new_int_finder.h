@@ -135,6 +135,7 @@ public:
         avr_segm_on_vline += nsegm_on_vline;
       }
       avr_segm_on_vline /= N * 2;
+      segments.set_ends_arr(ENDS);
       segments.set_seg2end_arr(SegL, SegR);
       LR_len = max_segm_on_vline + 3;//+3 for sentinels(guards) to have some space
       nTotSegm = N;
