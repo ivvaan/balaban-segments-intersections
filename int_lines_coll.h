@@ -481,67 +481,78 @@ public:
   };
 
   int4 UpperThanRStump(int4 s_) const { // s_  is_upper than cur_seg right stump
-    return RStump2CurSeg<false>(s_);
+    return RStump_IsCurSegInt<false>(s_);
   };
   int4 UnderRStump(int4 s_) const { // s_  is_upper than cur_seg right stump
-    return RStump2CurSeg<true>(s_);
+    return RStump_IsCurSegInt<true>(s_);
   };
 
   template<bool check_way_up_s_is_under_cur_seg>// s_  is_under or is_upper than cur_seg right stump
-  int4 RStump2CurSeg(int4 s_) const { 
+  int4 RStump_IsCurSegInt_strip_non_zero(int4 s_) const {
+    auto& s = collection[s_];
+    auto cmpB = s.YAtX_frac(B) <=> cur_seg.YAtX_frac(B);// 1 is >
+    if (cmpB == std::strong_ordering::equal)// inresection on left bound
+      return _Int_reg::int_reg;// and must be registered
+
+    auto cmpE = s.YAtX_frac(E) <=> cur_seg.YAtX_frac(E);// cmpE==1 is s.YAtX_frac(E) > cur_seg.YAtX_frac(E)
+    if (cmpE == std::strong_ordering::equal) {// inresection on right bound
+      //  but no registration except right bound is defined last point of s
+      return _Int_reg::int_no_reg + (stripe_right == last_point(s_));
+    }
+
+    if constexpr (check_way_up_s_is_under_cur_seg)
+      return (cmpE == std::strong_ordering::less) * _Int_reg::int_reg; //s < cur_seg
+    else //check_way_down_s_is_upper_cur_seg
+      return (cmpE == std::strong_ordering::greater) * _Int_reg::int_reg; //s > cur_seg
+  }
+
+  template<bool check_way_up_s_is_under_cur_seg>// s_  is_under or is_upper than cur_seg right stump
+  int4 RStump_IsCurSegInt_zero_strip_sr_eq_lp(int4 s_) const {
+    auto& s = collection[s_];
+    auto cmp_last = cur_seg.upper(pts[stripe_right]);// 1 == false: last p of s is above cur_seg (s>cur_seg), remember last_point(s_)==stripe_right
+    if (s.is_vertical()) {
+      auto cmp_first = cur_seg.upper(pts[first_point(s_)]);// 1 == false:  beg. of s is above cur_seg
+      assert(check_way_up_s_is_under_cur_seg ? cmp_first <= 0 : cmp_last >= 0);
+      assert((cmp_first != 0) || (cmp_last != 0));
+        return (cmp_first != cmp_last)*_Int_reg::int_reg;
+    }
+    if constexpr (check_way_up_s_is_under_cur_seg)
+      return (cmp_last <= 0) * _Int_reg::int_reg; //s <= cur_seg
+    else //check_way_down_s_is_upper_cur_seg
+      return (cmp_last >= 0) * _Int_reg::int_reg; //s >= cur_seg -> int_reg
+  }
+
+  template<bool check_way_up_s_is_under_cur_seg>// s_  is_under or is_upper than cur_seg right stump
+  int4 RStump_IsCurSegInt_zero_strip(int4 s_) const {
+    auto& s = collection[s_];
+    if (s.is_vertical()) {
+      auto cmp_last = cur_seg.upper(pts[last_point(s_)]);// -1 if end of s is bellow cur_seg
+      if constexpr (check_way_up_s_is_under_cur_seg)
+        return (cmp_last <= 0); //s <= cur_seg
+      else //check_way_down_s_is_upper_cur_seg
+        return (cmp_last >= 0); //s >= cur_seg -> int_reg
+    }
+    // int_no_reg
+    auto cmpE = s.YAtX_frac(E) <=> cur_seg.YAtX_frac(E);
+    assert(check_way_up_s_is_under_cur_seg ? cmpE >= 0 : cmpE <= 0);
+    return cmpE == std::strong_ordering::equal;
+    /* if constexpr (check_way_up_s_is_under_cur_seg)
+       return (cmpE <= 0); //s <= cur_seg
+     else //check_way_down_s_is_upper_cur_seg
+       return (cmpE >= 0); //s >= cur_seg -> int_no_reg*/
+
+  }
+
+
+  template<bool check_way_up_s_is_under_cur_seg>// s_  is_under or is_upper than cur_seg right stump
+  int4 RStump_IsCurSegInt(int4 s_) const { 
     assert(stage == _Stages::stage_split);
     assert(!cur_seg.is_vertical());
-    auto &s = collection[s_];
-    if (is_cur_strip_non_zero()) {
-      auto cmpB = s.YAtX_frac(B) <=> cur_seg.YAtX_frac(B);// 1 is >
-      if (cmpB == std::strong_ordering::equal)// inresection on left bound
-        return _Int_reg::int_reg;// and must be registered
-
-      auto cmpE = s.YAtX_frac(E) <=> cur_seg.YAtX_frac(E);// cmpE==1 is s.YAtX_frac(E) > cur_seg.YAtX_frac(E)
-      if (cmpE == std::strong_ordering::equal) {// inresection on right bound
-        //  but no registration except right bound is defined last point of s
-        return _Int_reg::int_no_reg + (stripe_right == last_point(s_));
-      }
-
-      if constexpr (check_way_up_s_is_under_cur_seg)
-        return (cmpE == std::strong_ordering::less) * _Int_reg::int_reg; //s < cur_seg
-      else //check_way_down_s_is_upper_cur_seg
-        return (cmpE == std::strong_ordering::greater) * _Int_reg::int_reg; //s > cur_seg
-    }
-    else {// cur strip is zero
-      if (stripe_right == last_point(s_)) {// the right bound defined by s last point
-        auto cmp_last = cur_seg.upper(pts[stripe_right]);// 1 == false: last p of s is above cur_seg (s>cur_seg), remember last_point(s_)==stripe_right
-        if (s.is_vertical()) {
-          auto cmp_first = cur_seg.upper(pts[first_point(s_)]);// 1 == false:  beg. of s is above cur_seg
-          assert( check_way_up_s_is_under_cur_seg ? cmp_first <= 0 : cmp_last >= 0);
-          assert((cmp_first != 0) || (cmp_last != 0));
-          if (cmp_first != cmp_last) {
-            return _Int_reg::int_reg;
-          }
-        }
-        if constexpr (check_way_up_s_is_under_cur_seg) 
-          return (cmp_last <= 0) * _Int_reg::int_reg; //s <= cur_seg
-        else //check_way_down_s_is_upper_cur_seg
-          return (cmp_last >= 0) * _Int_reg::int_reg; //s >= cur_seg -> int_reg
-      }
-      else {// cur strip is zero and its right bound IS NOT defined by s last point
-        if (s.is_vertical()) {
-          auto cmp_last = cur_seg.upper(pts[last_point(s_)]);// -1 if end of s is bellow cur_seg
-          if constexpr (check_way_up_s_is_under_cur_seg)
-            return (cmp_last <= 0) * _Int_reg::int_reg; //s <= cur_seg
-          else //check_way_down_s_is_upper_cur_seg
-            return (cmp_last >= 0) * _Int_reg::int_reg; //s >= cur_seg -> int_reg
-        }
-        // int_no_reg
-        auto cmpE = s.YAtX_frac(E) <=> cur_seg.YAtX_frac(E);
-        assert(check_way_up_s_is_under_cur_seg ? cmpE >= 0 : cmpE <= 0);
-        return cmpE == std::strong_ordering::equal; 
-       /* if constexpr (check_way_up_s_is_under_cur_seg)
-          return (cmpE <= 0); //s <= cur_seg
-        else //check_way_down_s_is_upper_cur_seg
-          return (cmpE >= 0); //s >= cur_seg -> int_no_reg*/
-      }
-    }
+    if (is_cur_strip_non_zero())
+      return RStump_IsCurSegInt_strip_non_zero<check_way_up_s_is_under_cur_seg>(s_);
+    if (stripe_right == last_point(s_))// the right bound defined by s last point
+      return RStump_IsCurSegInt_zero_strip_sr_eq_lp<check_way_up_s_is_under_cur_seg>(s_);
+    return RStump_IsCurSegInt_zero_strip<check_way_up_s_is_under_cur_seg>(s_);
   };
 
   constexpr bool static left_bound = false;
