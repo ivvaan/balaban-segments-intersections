@@ -486,5 +486,11 @@ T* set_size(std::vector<T>& v, size_t new_size) {
   return v.data();
 };
 
+struct PrepareResult {
+  uint4 ends_len = 0;
+  uint4 max_segm_on_vline = 0;
+  double avr_segm_on_vline = 0.0;
+};
+
 
 #endif

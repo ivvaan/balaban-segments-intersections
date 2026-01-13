@@ -46,22 +46,23 @@ public:
     DECL_RAII_ARR(R, LR_len+1);
     ++R;//to have one cell before R for sentinel
     DECL_RAII_ARR(Q, len_of_Q);
-    constexpr int4 bottom_index = 0;
-    ProgramStackRec stack_rec(bottom_index, 2 * nTotSegm); //need to be initialized this way
 
     bool not_parallel = false;
     if (to == 0) {
       from = 0;
-      to = 2 * nTotSegm - 1;
+      to = nTotX - 1;
       not_parallel = true;
     }
+    constexpr int4 bottom_index = 0;
+    ProgramStackRec stack_rec(bottom_index, nTotX); //need to be initialized this way
     if (from == 0) {
-      InsDel(segments, 0, &stack_rec);
+      InsDel(segments,0,&stack_rec);
     }
     else
       L_size = CalcLAt(segments, from);
+    return FindR(*this, segments, bottom_index, from, to, &stack_rec/*, 0, get_max_call(to - from)*/);
 
-    if (avr_segm_on_vline < 35)
+    if (avr_segm_on_vline < 35)      
       return SISFindR(*this, segments, bottom_index, from, to, &stack_rec);
     if (not_parallel) 
       return MultipleCutting(*this, segments, bottom_index, from, to, &stack_rec, GetDivPow(to - from));
@@ -118,7 +119,7 @@ public:
 
   template<class SegmentsColl>
   void InsDel(SegmentsColl& segments, uint4 end_rank, ProgramStackRec* stack_pos) {
-    auto pt = ENDS[end_rank];
+    auto pt = segments.PointAtRank(end_rank);
     auto sn = SegmentsColl::get_segm(pt);
     if (SegmentsColl::is_last(pt)) // if endpoint - delete
     {
@@ -130,7 +131,7 @@ public:
     {
       if (stack_pos->prev) {
         segments.SetCurSegAndPoint(sn);
-        FindIntI(segments, SegR[sn], stack_pos);// get internal intersections
+        FindIntI(segments, sn, stack_pos);// get internal intersections
       }
       else {
         segments.SetCurPointAtBeg(sn);//sets collection current point at the begin of the segment sn
@@ -161,7 +162,7 @@ public:
     {
       if (segments.RBelow(cur_seg, *cur_stair))
       {
-        if (SegL[cur_seg]>LBoundIdx)
+        if (segments.GetSegL(cur_seg) >LBoundIdx)
         {
           segments.SetCurSegCutEnd(cur_seg);
           {
@@ -179,7 +180,7 @@ public:
     }
     for (auto last_Q = top_Q - 1; cur_R_pos < Size;)
     {
-      if (SegL[cur_seg]>LBoundIdx)
+      if (segments.GetSegL(cur_seg) > LBoundIdx)
       {
         segments.SetCurSegCutEnd(cur_seg);
         segments.FindCurSegIntDownWith(last_Q,bot_Q);
@@ -202,7 +203,7 @@ public:
     assert(Q_tail > _Q + L_size);
     auto const last_L = L + L_size;
  //at first, place all lowest segments not covering current stripe to R (and implicitly L)
-    while ((new_L_pos < last_L) && (SegR[*new_L_pos] < RBoundIdx)) {
+    while ((new_L_pos < last_L) && (segments.GetSegR(*new_L_pos) < RBoundIdx)) {
             *(R_pos++) = *(new_L_pos++);//place segment in  R
             //storing segment position in Q_tail 
   //we have the empty ledder so current position is 0 and position above is 1
@@ -232,7 +233,7 @@ public:
       }
 
       //segment doesn't intersect the ladder stairs
-      if (SegR[cur_seg] >= RBoundIdx) {//segment is covering current stripe 
+      if (segments.GetSegR(cur_seg) >= RBoundIdx) {//segment is covering current stripe 
         *++_Q_pos = cur_seg; //place segment in Q
         continue;
       }
@@ -278,7 +279,7 @@ public:
       auto cur_seg = *L_pos;
       segments.SetCurSegCutBE(cur_seg);
       auto cur_Q = segments.FindCurSegIntDownWith(_Q_pos, _Q);
-      if ((cur_Q == _Q_pos) && (SegR[cur_seg] >= RBoundIdx)) //segment doesn't intersect ladder stairs
+      if ((cur_Q == _Q_pos) && (segments.GetSegR(cur_seg) >= RBoundIdx)) //segment doesn't intersect ladder stairs
         //and is covering current stripe and doesn't intersect ladder stairs
           *++_Q_pos = cur_seg;
       else {   //segment  intersects ladder stairs or is not covering 
@@ -333,9 +334,6 @@ public:
       nTotSegm = master->nTotSegm;
       LR_len = master->LR_len;
       len_of_Q = LR_len;
-      SegL = master->SegL;
-      SegR = master->SegR;
-      ENDS = master->ENDS;
       avr_segm_on_vline = master->avr_segm_on_vline;
       clone_of = master;
   };
@@ -343,9 +341,6 @@ public:
   void unclone()
   {
       if (clone_of != nullptr) {
-          SegL = nullptr;
-          SegR = nullptr;
-          ENDS = nullptr;
           clone_of = nullptr;
       }
   };
@@ -359,10 +354,10 @@ public:
   template<class SegmentsColl>
   uint4 CalcLAt(SegmentsColl& segments, uint4 end_rank)
   {
-      uint4 i, Size = 0;
-      for (i = 0; i < nTotSegm; i++)
-          if ((SegL[i] <= end_rank) && (SegR[i] > end_rank))
-              L[Size++] = i;
+      uint4 Size = 0;
+      for (uint4 cur_seg = 0; cur_seg < nTotSegm; ++cur_seg)
+          if ((segments.GetSegL(cur_seg) <= end_rank) && (segments.GetSegR(cur_seg) > end_rank))
+              L[Size++] = cur_seg;
       segments.SortAt(end_rank, Size, L);
       return Size;
   };

@@ -43,9 +43,9 @@ public:
     DECL_RAII_ARR(Q, len_of_Q);
     from_begin = true;
     constexpr int4 bottom_index = 0;
-    ProgramStackRec stack_rec(bottom_index, 2 * nTotSegm); //need to be initialized this way
+    ProgramStackRec stack_rec(bottom_index, nTotX); //need to be initialized this way
     InsDel(segments, 0, &stack_rec);
-    MultipleCutting(*this, segments, bottom_index, 0, 2 * nTotSegm - 1, &stack_rec, GetDivPow(2 * nTotSegm - 1));
+    MultipleCutting(*this, segments, bottom_index, 0, nTotX - 1, &stack_rec, GetDivPow(nTotX - 1));
   }
 
   template<class SegmentsColl>
@@ -79,7 +79,7 @@ public:
 
   template<class SegmentsColl>
   void InsDel(SegmentsColl& segments, uint4 end_rank, ProgramStackRec* stack_pos) {
-    auto pt = ENDS[end_rank];
+    auto pt = segments.PointAtRank(end_rank);
     int4 i;
     auto sn = SegmentsColl::get_segm(pt);
     if (from_begin)
@@ -97,7 +97,7 @@ public:
           L[i + 1] = L[i];
         L[i + 1] = sn;
         ++L_size;
-        FindIntI(segments, SegR[sn], stack_pos); // get internal intersections
+        FindIntI(segments, sn, stack_pos); // get internal intersections
       }
 
     }
@@ -122,7 +122,7 @@ public:
         L[i - 1] = sn;
         ++L_size;
 
-        FindIntI(segments, SegR[sn], stack_pos); // get internal intersections
+        FindIntI(segments, sn, stack_pos); // get internal intersections
       }
     }
   };
@@ -142,7 +142,7 @@ public:
       cur_seg = _R[cur_R_pos];
       while ((cur_stair > QB) && (cur_R_pos > _Size)) {
         if (segments.RBelow(Q[cur_stair], cur_seg)) {
-          if (SegL[cur_seg] > LBoundIdx) {
+          if (segments.GetSegL(cur_seg) > LBoundIdx) {
             segments.SetCurSegCutEnd(cur_seg);
             FindInt(segments, bot_Q, top_Q, Q+cur_stair);
           }
@@ -153,7 +153,7 @@ public:
           _L[new_size--] = Q[cur_stair--];
       }
       while (cur_R_pos > _Size) {
-        if (SegL[cur_seg] > LBoundIdx) {
+        if (segments.GetSegL(cur_seg) > LBoundIdx) {
           segments.SetCurSegCutEnd(cur_seg);
           for (auto c = QB + 1; (c <= QE) && segments.FindCurSegIntUpWith(Q[c]); ++c); // get intersections above
         }
@@ -171,7 +171,7 @@ public:
     cur_seg = _R[cur_R_pos];
     while ((cur_stair < QE) && (cur_R_pos < Size)) {
       if (segments.RBelow(cur_seg, Q[cur_stair + 1])) {
-        if (SegL[cur_seg] > LBoundIdx) {
+        if (segments.GetSegL(cur_seg) > LBoundIdx) {
           segments.SetCurSegCutEnd(cur_seg);
           FindInt(segments, bot_Q, top_Q, Q+cur_stair);
         }
@@ -182,7 +182,7 @@ public:
         L[new_size++] = Q[++cur_stair];
     }
     while (cur_R_pos < Size) {
-      if (SegL[cur_seg] > LBoundIdx) {
+      if (segments.GetSegL(cur_seg) > LBoundIdx) {
         segments.SetCurSegCutEnd(cur_seg);
         for (auto c = QE; (c > QB) && segments.FindCurSegIntDownWith(Q[c]); --c); //get intersections below
       }
@@ -212,7 +212,7 @@ public:
 
       if (_Q_pos == step)
       {
-        if (SegR[cur_seg] >= RBoundIdx) //segment is covering current stripe and doesn't intersect ladder stairs
+        if (segments.GetSegR(cur_seg) >= RBoundIdx) //segment is covering current stripe and doesn't intersect ladder stairs
           _Q[++_Q_pos] = cur_seg;
         else {
           //place segment in L

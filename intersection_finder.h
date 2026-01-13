@@ -252,13 +252,13 @@ class CIntersectionFinder
    int4 InsDel(uint4 n, ProgramStackRec * stack_pos, int4 Size);
    int4 Merge(uint4 LBoundIdx, int4 QB, int4 QE, int4 Size);
    int4 Split(int4 &step_index,int4 Size);
-   int4 FindR(int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec* stack_pos, int4 Size, uint4 call_numb, uint4 _max_call = 18);
+   int4 FindR(int4 ladder_start_index, uint4 interval_left_rank, uint4 interval_right_rank, ProgramStackRec* stack_pos, int4 Size, uint4 call_numb, uint4 _max_call = 18);
 
    int4 msSearchInStrip(int4 QP, int4 Size);
    int4 msInsDel(uint4 n, ProgramStackRec* stack_pos, int4 Size);
    int4 msMerge(uint4 LBoundIdx, int4 QB, int4 QE, int4 Size);
    int4 msSplit(int4 &step_index, int4 Size);
-   int4 msFindR(int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec *stack_pos, int4 Size, uint4 call_numb,uint4 _max_call=18);
+   int4 msFindR(int4 ladder_start_index, uint4 interval_left_rank, uint4 interval_right_rank, ProgramStackRec *stack_pos, int4 Size, uint4 call_numb,uint4 _max_call=18);
 
   //same for optimal algorithm
    void optFindInt(int4 QB,int4 QE,int4 l,PSeg s);
@@ -266,7 +266,7 @@ class CIntersectionFinder
    int4 optInsDel(uint4 n,ProgramStackRec *stack_pos,int4 Size);
    int4 optMerge(uint4 LBoundIdx, int4 QB,int4 QE,int4 Size);
   int4 optSplit(int4 father_first_step, int4 &step_index,int4 Size);
-   int4 optFindR(int4 father_first_step,int4 ladder_start_index,uint4 interval_left_index,uint4 interval_right_index,
+   int4 optFindR(int4 father_first_step,int4 ladder_start_index,uint4 interval_left_rank,uint4 interval_right_rank,
       ProgramStackRec *stack_pos,int4 Size,int4 call_numb);
 
 //functions for no_ip algorithm
@@ -278,7 +278,7 @@ class CIntersectionFinder
   int4 no_ipMerge(uint4 LBoundIdx, int4 QB,int4 QE,int4 Size);
   int4 no_ipSplit(int4 &step_index,int4 Size,int4 stripe_divided);
   int4 no_ipSearchInStrip(int4 QP,int4 Size);
-  int4 no_ipFindR(int4 ladder_start_index,uint4 interval_left_index,uint4 interval_right_index,ProgramStackRec *stack_pos,int4 Size, uint4 call_numb, uint4 _max_call);
+  int4 no_ipFindR(int4 ladder_start_index,uint4 interval_left_rank,uint4 interval_right_rank,ProgramStackRec *stack_pos,int4 Size, uint4 call_numb, uint4 _max_call);
 
   
   //functions for space saving algorithm; instead of L and R ring buffer on L used

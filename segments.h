@@ -26,6 +26,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <cstddef>
 
 
+
 class TLineSegment1
 {
 public:

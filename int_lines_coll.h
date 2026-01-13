@@ -360,14 +360,62 @@ private:
 public:
 
 
+  PrepareResult Prepare()
+  {
+    //Reset();
+    uint4 Nn = GetSegmNumb();
+    if (Nn == 0) return {};
+    uint4 NN = Nn << 1;
+    ENDS = new uint4[NN];
+    PrepareEndpointsSortedList(ENDS);
+    SegL = new uint4[Nn];
+    SegR = new uint4[Nn];
+    uint4 max_segm_on_vline = 0, nsegm_on_vline = 0;
+    double avr = 0;
+    for (uint4 i = 0; i < NN; ++i) {
+      if (is_last(ENDS[i])) {
+        SegR[get_segm(ENDS[i])] = i;
+        --nsegm_on_vline;
+      }
+      else {
+        SegL[get_segm(ENDS[i])] = i;
+        ++nsegm_on_vline;
+        if (nsegm_on_vline > max_segm_on_vline) max_segm_on_vline = nsegm_on_vline;
+      }
+      avr += nsegm_on_vline;
+    }
+    avr /= (double)NN;
+    return { NN, max_segm_on_vline, avr };
+  }
+
+  void Reset()
+  {
+    MY_FREE_ARR_MACRO(ENDS);
+    MY_FREE_ARR_MACRO(SegL);
+    MY_FREE_ARR_MACRO(SegR);
+  }
+
+
+
   static void reg_pair(CIntegerSegmentCollection* c, uint4 s1, uint4 s2) {
     c->remaper.registrator->register_pair(s1, s2);
   };
   static void reg_remapped_pair(CIntegerSegmentCollection* c, uint4 s1, uint4 s2) {
     c->remaper.register_pair(s1, s2);
   };
-  //TPlaneVect
-  uint4  GetSegmNumb() { return N; };
+  uint4  GetSegmNumb() const {
+    return N;
+  };
+  uint4 GetSegR(uint4 sn) const {
+    return SegR[sn];
+  };
+  uint4 GetSegL(uint4 sn) const {
+    return SegL[sn];
+  };
+  uint4 PointAtRank(uint4 rank) const {
+    return ENDS[rank];
+  }
+
   uint4 get_right_pt_idx(uint4 right_pt) {
     return SegR[get_segm(right_pt)];
   }
@@ -412,8 +460,9 @@ public:
 
   void SetCurStripeRight(uint4 right_rank) {
     auto right = ENDS[right_rank];
-    E = GetX(stripe_right = right);
+    E = GetX(stripe_right=right);
   };
+
 
 
   /*void SetCurPoint(uint4 pt){
@@ -893,10 +942,6 @@ public:
     SegR = _SegR;
   };
 
-  void set_ends_arr(uint4* ends) {
-    ENDS = ends;
-  };
-
   void clone(CIntegerSegmentCollection &c, IntersectionRegistrator *r)
   {
       clone_of = &c;
@@ -918,9 +963,9 @@ public:
 
   };
 
-  void SortAt(uint4 pt_rank, uint4 n, int4 *L)
+  void SortAt(uint4 rank, uint4 n, int4 *L)
   {
-    SetCurStripeLeft(pt_rank);
+    SetCurStripeLeft(rank);
     std::sort(L, L + n, [this](int4 s1, int4 s2) {return LBelow(s1, s2); });
   };
 
@@ -1002,6 +1047,7 @@ public:
   ~CIntegerSegmentCollection()
   {
     unclone();
+    Reset();
    // MY_FREE_ARR_MACRO(SegR);
   }
 

@@ -50,9 +50,9 @@ public:
     std::fill_n(father_loc, len_of_Q, undef_loc);
 
     constexpr int4 bottom_index = inherit_each + 1;
-    ProgramStackRec stack_rec(bottom_index, 2 * nTotSegm);  //need to be initialized this way 
+    ProgramStackRec stack_rec(bottom_index, nTotX);  //need to be initialized this way 
     InsDel(segments, 0, &stack_rec);
-    FindR(segments, bottom_index + 1, bottom_index, 0, 2 * nTotSegm - 1, &stack_rec, 0);
+    FindR(segments, bottom_index + 1, bottom_index, 0, nTotX - 1, &stack_rec, 0);
  }
 
 
@@ -107,8 +107,9 @@ private:
   };
 
   template<class SegmentsColl>
-  void FindIntI(SegmentsColl& segments, uint4 r_index, ProgramStackRec* stack_pos) const
+  void FindIntI(SegmentsColl& segments, int4 cur_seg, ProgramStackRec* stack_pos) const
   {
+    auto r_index = segments.GetSegR(cur_seg);
     while (stack_pos->right_bound <= r_index)stack_pos = stack_pos->prev;// go from bottom to top and find staircase to start
     if (stack_pos->prev == nullptr)return;
     int4  l = undef_loc, r, m, QE = stack_pos->Q_pos + 1;
@@ -152,8 +153,8 @@ private:
   };
 
   template<class SegmentsColl>
-  void InsDel(SegmentsColl& segments, uint4 end_rank, ProgramStackRec* stack_pos) {
-    auto pt = ENDS[end_rank];
+  void InsDel(SegmentsColl& segments, uint4 end_rank, ProgramStackRec* stack_pos)  {
+    auto pt = segments.PointAtRank(end_rank);
     auto sn = SegmentsColl::get_segm(pt);
     if (SegmentsColl::is_last(pt)) // if endpoint - delete
     {
@@ -165,7 +166,7 @@ private:
     {
       if (stack_pos->prev) {
         segments.SetCurSegAndPoint(sn);
-        FindIntI(segments, SegR[sn], stack_pos);// get internal intersections
+        FindIntI(segments, sn, stack_pos);// get internal intersections
       }
       else {
         segments.SetCurPointAtBeg(sn);//sets collection current point at the begin of the segment sn
@@ -190,7 +191,7 @@ private:
     {
       if (segments.RBelow(cur_seg, Q[cur_stair + 1]))
       {
-        if (SegL[cur_seg]>LBoundIdx)
+        if (segments.GetSegL(cur_seg) >LBoundIdx)
         {
           segments.SetCurSegCutEnd(cur_seg);
           FindInt(segments, QB, QE, cur_stair);
@@ -204,7 +205,7 @@ private:
     }
     while (cur_R_pos<Size)
     {
-      if (SegL[cur_seg]>LBoundIdx)
+      if (segments.GetSegL(cur_seg) >LBoundIdx)
       {
         segments.SetCurSegCutEnd(cur_seg);
         FindInt(segments, QB, QE, QE);
@@ -234,7 +235,7 @@ private:
       segments.SetCurSegCutBE(cur_seg);
       if (segments.LBelow( cur_seg, Q[cur_father_pos])) // current segment below candidate to inherit
       {
-        if ((SegR[cur_seg] < RBoundIdx)// current segment not covering strip
+        if ((segments.GetSegR(cur_seg) < RBoundIdx)// current segment not covering strip
           || (step_index>father_last_step) && segments.IsIntersectsCurSegDown(Q[step_index])// or intersects last stair
           || segments.IsIntersectsCurSegUp(Q[cur_father_pos])) //or intersects candidate to inherit 
         {
@@ -267,7 +268,7 @@ private:
     {
       cur_seg = L[cur_L_pos];
       segments.SetCurSegCutBE(cur_seg);
-      if ((SegR[cur_seg] < RBoundIdx) ||//segment is not covering current stripe
+      if ((segments.GetSegR(cur_seg) < RBoundIdx) ||//segment is not covering current stripe
         (step_index>father_last_step) && segments.IsIntersectsCurSegDown(Q[step_index]))// if it intesects last stair
       {
         //place segment in L
@@ -303,10 +304,10 @@ private:
   };
 
   template<class SegmentsColl>
-  void FindR(SegmentsColl &segments, int4 father_first_step, int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec *stack_pos, uint4 call_numb,uint4 _max_call=max_call)
+  void FindR(SegmentsColl &segments, int4 father_first_step, int4 ladder_start_index, uint4 interval_left_rank, uint4 interval_right_rank, ProgramStackRec *stack_pos, uint4 call_numb,uint4 _max_call=max_call)
   {
-    segments.SetCurStripe(interval_left_index, interval_right_index);
-    if (interval_right_index - interval_left_index == 1) {
+    segments.SetCurStripe(interval_left_rank, interval_right_rank);
+    if (interval_right_rank - interval_left_rank == 1) {
       if (L_size > 1) CFAST::SearchInStrip(segments, ladder_start_index);
       return;
     }
@@ -316,65 +317,65 @@ private:
     bool use_opt =  (ladder_start_index - father_first_step > big_staircase_threshold);
     if (use_opt)
     {// use optimal variant if father staircase is big
-//      segments.SetCurVLine(ENDS[interval_left_index]);
-      Split(segments, interval_right_index, father_first_step, stack_rec.Q_pos);
-      stack_pos = stack_rec.Set(stack_pos, interval_right_index);
+//      segments.SetCurVLine(ENDS[interval_left_rank]);
+      Split(segments, interval_right_rank, father_first_step, stack_rec.Q_pos);
+      stack_pos = stack_rec.Set(stack_pos, interval_right_rank);
       father_first_step = ladder_start_index + inherit_offset;
     }
     else
     {// use fast variant if new staircase is small 
-      stack_rec.Q_pos+=CFAST::Split(segments,Q+ stack_rec.Q_pos,interval_right_index);
+      stack_rec.Q_pos+=CFAST::Split(segments,Q+ stack_rec.Q_pos,interval_right_rank);
       if ((ladder_start_index < stack_rec.Q_pos))
       {
         for (int4 i = ladder_start_index + 1; i <= stack_rec.Q_pos; ++i)
           father_loc[i] = undef_loc;
-        stack_pos = stack_rec.Set(stack_pos, interval_right_index);
+        stack_pos = stack_rec.Set(stack_pos, interval_right_rank);
         father_first_step = ladder_start_index + inherit_offset;
       }
     }
     if (dont_cut_stripe && (call_numb < _max_call)) //if found a lot of intersections repeat optFindR
-      FindR(segments,father_first_step, stack_rec.Q_pos, interval_left_index, interval_right_index, stack_pos, call_numb + 1,_max_call);
+      FindR(segments,father_first_step, stack_rec.Q_pos, interval_left_rank, interval_right_rank, stack_pos, call_numb + 1,_max_call);
     else //cut stripe 
     {
-      uint4 m = (interval_left_index + interval_right_index) >>1;
+      uint4 m = (interval_left_rank + interval_right_rank) >>1;
       if (call_numb > 1)
       {
         _max_call -=  (_max_call > 4) * 2;
         // if L contains a lot of segments then cut on two parts
-        FindR(segments,father_first_step, stack_rec.Q_pos, interval_left_index, m, stack_pos, 0, _max_call);
+        FindR(segments,father_first_step, stack_rec.Q_pos, interval_left_rank, m, stack_pos, 0, _max_call);
         InsDel(segments,m, stack_pos);
-        FindR(segments,father_first_step, stack_rec.Q_pos, m, interval_right_index, stack_pos, 0, _max_call);
+        FindR(segments,father_first_step, stack_rec.Q_pos, m, interval_right_rank, stack_pos, 0, _max_call);
       }
       else
       {// if L contains not so many segments than cut on four parts (works faster for some segment distributions)
         _max_call -=  (_max_call > 8) * 4;
 
-        uint4 q = (interval_left_index + m) >>1;
-        if (interval_left_index != q) {
-          FindR(segments,father_first_step, stack_rec.Q_pos, interval_left_index, q, stack_pos, 0, _max_call);
+        uint4 q = (interval_left_rank + m) >>1;
+        if (interval_left_rank != q) {
+          FindR(segments,father_first_step, stack_rec.Q_pos, interval_left_rank, q, stack_pos, 0, _max_call);
           InsDel(segments, q, stack_pos);
         }
         if (q != m) {
           FindR(segments, father_first_step, stack_rec.Q_pos, q, m, stack_pos, 0, _max_call);
           InsDel(segments, m, stack_pos);
         }
-        q = (interval_right_index + m) / 2;
+        q = (interval_right_rank + m) / 2;
         if (q != m) {
           FindR(segments, father_first_step, stack_rec.Q_pos, m, q, stack_pos, 0, _max_call);
           InsDel(segments, q, stack_pos);
         }
-        FindR(segments, father_first_step, stack_rec.Q_pos, q, interval_right_index, stack_pos, 0, _max_call);
+        FindR(segments, father_first_step, stack_rec.Q_pos, q, interval_right_rank, stack_pos, 0, _max_call);
       }
 
     }
     if (ladder_start_index >= stack_rec.Q_pos) return;
     
-    segments.SetCurStripeLeft(ENDS[interval_left_index]);
+    segments.SetCurStripeLeft(interval_left_rank);
 
     if(use_opt)
-      Merge(segments, interval_left_index, ladder_start_index, stack_rec.Q_pos);
+      Merge(segments, interval_left_rank, ladder_start_index, stack_rec.Q_pos);
     else
-      CFAST::Merge(segments, interval_left_index, ladder_start_index, stack_rec.Q_pos);
+      CFAST::Merge(segments, interval_left_rank, ladder_start_index, stack_rec.Q_pos);
   };
 
 };

@@ -34,7 +34,40 @@ public:
     return _Coll_flag_state::state_unimplemented;
   }
 
-  //static constexpr bool is_line_segments = true;
+  PrepareResult Prepare()
+  {
+    //Reset();
+    uint4 Nn = GetSegmNumb();
+    if (Nn == 0) return {};
+    uint4 NN = Nn << 1;
+    ENDS = new uint4[NN];
+    PrepareEndpointsSortedList(ENDS);
+    SegL = new uint4[Nn];
+    SegR = new uint4[Nn];
+    uint4 max_segm_on_vline = 0, nsegm_on_vline = 0;
+    double avr = 0;
+    for (uint4 i = 0; i < NN; ++i) {
+      if (is_last(ENDS[i])) {
+        SegR[get_segm(ENDS[i])] = i;
+        --nsegm_on_vline;
+      }
+      else {
+        SegL[get_segm(ENDS[i])] = i;
+        ++nsegm_on_vline;
+        if (nsegm_on_vline > max_segm_on_vline) max_segm_on_vline = nsegm_on_vline;
+      }
+      avr += nsegm_on_vline;
+    }
+    avr /= (double)NN;
+    return { NN, max_segm_on_vline, avr };
+  }
+
+  void Reset()
+  {
+    MY_FREE_ARR_MACRO(ENDS);
+    MY_FREE_ARR_MACRO(SegL);
+    MY_FREE_ARR_MACRO(SegR);
+  }
 
   static bool is_last(uint4 pt){
     return pt & 2;
@@ -43,8 +76,18 @@ public:
     return pt >> 2;
   };
 
-  //TPlaneVect
-  uint4  GetSegmNumb() const { return N; };
+  uint4  GetSegmNumb() const {
+    return N;
+  };
+  uint4 GetSegR(uint4 sn) const {
+    return SegR[sn];
+  };
+  uint4 GetSegL(uint4 sn) const {
+    return SegL[sn];
+  };
+  uint4 PointAtRank(uint4 rank) const {
+    return ENDS[rank];
+  }
 
   void SetCurStripe(uint4 left_rank, uint4 right_rank) {
     auto left = ENDS[left_rank];
@@ -63,7 +106,7 @@ public:
     auto right = ENDS[right_rank];
     E = GetX(right);
   };
-
+  
   void SetCurPointAtBeg(uint4 s) {
     cur_point = collection[s].BegPoint();
   }
@@ -269,9 +312,9 @@ public:
   };
 
   void unclone() { if (clone_of == nullptr)return; collection = nullptr; clone_of = nullptr; };
-  void SortAt(uint4 pt_rank, uint4 n, int4* L)
+  void SortAt(uint4 rank, uint4 n, int4* L)
   {
-    SetCurStripeLeft(pt_rank);
+    SetCurStripeLeft(rank);
     std::sort(L, L + n, [this](int4 s1, int4 s2) {return LBelow(s1, s2); });
   };
   void SetRegistrator(IntersectionRegistrator* r)
@@ -282,14 +325,7 @@ public:
 
   IntersectionRegistrator* GetRegistrator() { return registrator; };
 
-  void set_seg2end_arr(uint4* _SegL, uint4* _SegR) {
-    SegL = _SegL;
-    SegR = _SegR;
-  };
-
-  void set_ends_arr(uint4* ends) {
-    ENDS = ends;
-  };
+  void set_seg2end_arr(uint4* SegL, uint4* SegR) {};
 
   void Init(uint4 n, void* c, IntersectionRegistrator* r)
   {
@@ -318,6 +354,7 @@ public:
   ~CLine2SegmentCollection()
   {
     unclone();
+    Reset();
   }
 
 
