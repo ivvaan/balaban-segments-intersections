@@ -395,20 +395,26 @@ public:
     return left_bound_idx >= SegL[s];
   }
 
-  void SetCurStripe(uint4 left, uint4 right){//left,right: #points - bounds of the stripe 
+  void SetCurStripe(uint4 left_rank, uint4 right_rank) {
+    auto left = ENDS[left_rank];
+    auto right = ENDS[right_rank];
+
     B = GetX(stripe_left = left);
     E = GetX(stripe_right = right);
     left_bound_idx = get_left_pt_idx(left);
     right_bound_idx = get_right_pt_idx(right);
   };
 
-  void SetCurStripeRight(uint4 right){ 
-    E = GetX(stripe_right=right); 
-  };
-
-  void SetCurStripeLeft(uint4 left) { 
+  void SetCurStripeLeft(uint4 left_rank) {
+    auto left = ENDS[left_rank];
     B = GetX(stripe_left = left);
   };
+
+  void SetCurStripeRight(uint4 right_rank) {
+    auto right = ENDS[right_rank];
+    E = GetX(stripe_right = right);
+  };
+
 
   /*void SetCurPoint(uint4 pt){
     cur_point = pts[pt];
@@ -912,9 +918,9 @@ public:
 
   };
 
-  void SortAt(uint4 pt, uint4 n, int4 *L)
+  void SortAt(uint4 pt_rank, uint4 n, int4 *L)
   {
-    SetCurStripeLeft(pt);
+    SetCurStripeLeft(pt_rank);
     std::sort(L, L + n, [this](int4 s1, int4 s2) {return LBelow(s1, s2); });
   };
 

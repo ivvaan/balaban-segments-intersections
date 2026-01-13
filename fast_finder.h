@@ -358,13 +358,13 @@ public:
  
 
   template<class SegmentsColl>
-  uint4 CalcLAt(SegmentsColl& segments, uint4 end_index)
+  uint4 CalcLAt(SegmentsColl& segments, uint4 end_rank)
   {
       uint4 i, Size = 0;
       for (i = 0; i < nTotSegm; i++)
-          if ((SegL[i] <= end_index) && (SegR[i] > end_index))
+          if ((SegL[i] <= end_rank) && (SegR[i] > end_rank))
               L[Size++] = i;
-      segments.SortAt(ENDS[end_index], Size, L);
+      segments.SortAt(end_rank, Size, L);
       return Size;
   };
 

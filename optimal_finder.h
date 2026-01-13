@@ -306,7 +306,7 @@ private:
   template<class SegmentsColl>
   void FindR(SegmentsColl &segments, int4 father_first_step, int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec *stack_pos, uint4 call_numb,uint4 _max_call=max_call)
   {
-    segments.SetCurStripe(ENDS[interval_left_index], ENDS[interval_right_index]);
+    segments.SetCurStripe(interval_left_index, interval_right_index);
     if (interval_right_index - interval_left_index == 1) {
       if (L_size > 1) CFAST::SearchInStrip(segments, ladder_start_index);
       return;

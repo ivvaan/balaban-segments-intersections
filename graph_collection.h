@@ -80,14 +80,24 @@ public:
 
   //TPlaneVect
   uint4  GetSegmNumb() const { return nEdges; };
-  void SetCurStripe(uint4 left, uint4 right)
-  {
+  void SetCurStripe(uint4 left_rank, uint4 right_rank) {
 
-    SetCurStripeLeft(left);
-    SetCurStripeRight(right);
+    SetCurStripeLeft(left_rank);
+    SetCurStripeRight(right_rank);
   };
-  void SetCurStripeLeft(uint4 left) { ptB = left, idxB = vertex_idx[left]; B = vertices[idxB].x; };
-  void SetCurStripeRight(uint4 right) { ptE = right, idxE = vertex_idx[right]; E = vertices[idxE].x; };
+
+  void SetCurStripeLeft(uint4 left_rank) {
+    auto left = ENDS[left_rank];
+    idxB = vertex_idx[left];
+    B = vertices[idxB].x;
+  };
+
+  void SetCurStripeRight(uint4 right_rank) {
+    auto right = ENDS[right_rank];
+    idxE = vertex_idx[right];
+    E = vertices[idxE].x;
+  };
+
   void SetCurPointAtBeg(uint4 s)
   {
     cur_pt = get_first_pt(s);
@@ -286,9 +296,9 @@ public:
     clone_of = nullptr;
   };
 
-  void SortAt(uint4 pt, uint4 n, int4 *L)
+  void SortAt(uint4 pt_rank, uint4 n, int4 *L)
   {
-    SetCurStripeLeft(pt);
+    SetCurStripeLeft(pt_rank);
     std::sort(L, L + n, [this](int4 s1, int4 s2) {return LBelow(s1, s2); });
   };
 
@@ -404,7 +414,7 @@ private:
   uint4 *vertex_idx=nullptr;
   //SegmEndIndexes *se_index;
   REAL B, E, curB, curE;
-  uint4 ptB, ptE, idxB, idxE;
+  uint4 idxB, idxE;
   uint4 cur_pt= 0xFFFFFFFF;
   uint4 cur_pt_idx = 0xFFFFFFFF;
   TPlaneVect cur_point;

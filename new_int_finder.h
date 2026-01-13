@@ -190,18 +190,15 @@ protected:
   template <class IntersectionFinder, class SegmentsColl>
   static void SISFindR(IntersectionFinder& i_f, SegmentsColl& segments, int4 ladder_start_index, uint4 interval_left_index, uint4 interval_right_index, ProgramStackRec* stack_pos)
   {
-    auto ENDS = i_f.ENDS;
-    for (auto i = interval_left_index + 1, prev_pt = ENDS[interval_left_index]; i != interval_right_index; ++i) {
-      auto pt = ENDS[i];
+    for (auto i = interval_left_index + 1; i != interval_right_index; ++i) {
       if (i_f.L_size > 1) {
-        segments.SetCurStripe(prev_pt, pt);
+        segments.SetCurStripe(i-1, i);
         i_f.SearchInStrip(segments, ladder_start_index);
       }
-      prev_pt = pt;
       i_f.InsDel(segments, i, stack_pos);
     }
     //the stripe right bound needs to be installed correctly even if i_f.L_size <= 1
-    segments.SetCurStripe(ENDS[interval_right_index - 1], ENDS[interval_right_index]);
+    segments.SetCurStripe(interval_right_index - 1, interval_right_index);
     if (i_f.L_size > 1)i_f.SearchInStrip(segments, ladder_start_index);
   }
 
@@ -225,7 +222,7 @@ protected:
       i_f.InsDel(segments, middle, &stack_rec);
       FindR(i_f, segments, Q_pos, middle, interval_right_index, &stack_rec);
       //actually works without SetCurStripeLeft, but it simplifies segment collection class protocol
-      //segments.SetCurStripeLeft(i_f.ENDS[interval_left_index]);
+      //segments.SetCurStripeLeft(interval_left_index);
     }
     i_f.Merge(segments, interval_left_index, ladder_start_index, Q_pos);
   };
@@ -236,7 +233,7 @@ protected:
     if (interval_right_index < interval_left_index + min_strip_width) {//end of recursion for narrow stripes
       SISFindR(i_f, segments, ladder_start_index, interval_left_index, interval_right_index, stack_pos);
     } else {// normal step
-      segments.SetCurStripe(i_f.ENDS[interval_left_index], i_f.ENDS[interval_right_index]);
+      segments.SetCurStripe(interval_left_index, interval_right_index);
       FindRNoChecks(i_f, segments, ladder_start_index, interval_left_index, interval_right_index, stack_pos);
     }
   }
@@ -256,19 +253,15 @@ protected:
     if (interval_right_index < left_bound + (min_strip_width << divide_pow)) // end of recursion for narrow stripes
       return SISFindR(i_f, segments, ladder_start_index, left_bound, interval_right_index, stack_pos);  //if strip narrow just apply SISFindR
 
-    auto ENDS = i_f.ENDS;
     uint8 step = interval_right_index - left_bound, rb = (uint8)left_bound << divide_pow;
     uint4 right_bound = (rb += step) >> divide_pow;
-    auto stripe_left = ENDS[left_bound], stripe_right = ENDS[right_bound];
-    segments.SetCurStripe(stripe_left, stripe_right);
+    segments.SetCurStripe(left_bound, right_bound);
     FindRNoChecks(i_f, segments, ladder_start_index, left_bound, right_bound, stack_pos);
     do {
       left_bound = right_bound;
       right_bound = (rb += step) >> divide_pow;
       i_f.InsDel(segments, left_bound, stack_pos);
-      stripe_left = stripe_right;
-      stripe_right = ENDS[right_bound];
-      segments.SetCurStripe(stripe_left, stripe_right);
+      segments.SetCurStripe(left_bound, right_bound);
       FindRNoChecks(i_f, segments, ladder_start_index, left_bound, right_bound, stack_pos);
     } while (right_bound != interval_right_index);
   }

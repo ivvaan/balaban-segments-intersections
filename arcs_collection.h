@@ -47,13 +47,23 @@ public:
 
   //TPlaneVect
   uint4  GetSegmNumb() const { return N; };
-  void SetCurStripe(uint4 left, uint4 right)
-  {
+  void SetCurStripe(uint4 left_rank, uint4 right_rank) {
+    auto left = ENDS[left_rank];
+    auto right = ENDS[right_rank];
+
     B = GetX(left);
     E = GetX(right);
   };
-  void SetCurStripeRight(uint4 right) { E = GetX(right); };
-  void SetCurStripeLeft(uint4 left) { B = GetX(left); };
+
+  void SetCurStripeLeft(uint4 left_rank) {
+    auto left = ENDS[left_rank];
+    B = GetX(left);
+  };
+
+  void SetCurStripeRight(uint4 right_rank) {
+    auto right = ENDS[right_rank];
+    E = GetX(right);
+  };
 
   void SetCurPointAtBeg(uint4 s) {
     collection[s].BegPoint(cur_point.x, cur_point.y);
@@ -223,9 +233,9 @@ public:
     SetRegistrator(r);
   };
 
-  void SortAt(uint4 pt, uint4 n, int4* L)
+  void SortAt(uint4 pt_rank, uint4 n, int4* L)
   {
-    SetCurStripeLeft(pt);
+    SetCurStripeLeft(pt_rank);
     std::sort(L, L + n, [this](int4 s1, int4 s2) {return LBelow(s1, s2); });
   };
 
