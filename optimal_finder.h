@@ -51,8 +51,7 @@ public:
 
     constexpr int4 bottom_index = inherit_each + 1;
     ProgramStackRec stack_rec(bottom_index, 2 * nTotSegm);  //need to be initialized this way 
-    L[0] = SegmentsColl::get_segm(ENDS[0]);
-    L_size = 1;
+    InsDel(segments, 0, &stack_rec);
     FindR(segments, bottom_index + 1, bottom_index, 0, 2 * nTotSegm - 1, &stack_rec, 0);
  }
 

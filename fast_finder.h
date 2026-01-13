@@ -46,6 +46,8 @@ public:
     DECL_RAII_ARR(R, LR_len+1);
     ++R;//to have one cell before R for sentinel
     DECL_RAII_ARR(Q, len_of_Q);
+    constexpr int4 bottom_index = 0;
+    ProgramStackRec stack_rec(bottom_index, 2 * nTotSegm); //need to be initialized this way
 
     bool not_parallel = false;
     if (to == 0) {
@@ -54,14 +56,11 @@ public:
       not_parallel = true;
     }
     if (from == 0) {
-      L[0]=SegmentsColl::get_segm(ENDS[0]);
-      L_size = 1;
+      InsDel(segments, 0, &stack_rec);
     }
     else
       L_size = CalcLAt(segments, from);
 
-    constexpr int4 bottom_index = 0;
-    ProgramStackRec stack_rec(bottom_index, 2 * nTotSegm); //need to be initialized this way
     if (avr_segm_on_vline < 35)
       return SISFindR(*this, segments, bottom_index, from, to, &stack_rec);
     if (not_parallel) 

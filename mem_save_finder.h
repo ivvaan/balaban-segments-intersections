@@ -41,12 +41,10 @@ public:
     len_of_Q = LR_len;
     DECL_RAII_ARR(L, LR_len);
     DECL_RAII_ARR(Q, len_of_Q);
-
-    L[0]=SegmentsColl::get_segm(ENDS[0]);
-    L_size = 1;
     from_begin = true;
     constexpr int4 bottom_index = 0;
     ProgramStackRec stack_rec(bottom_index, 2 * nTotSegm); //need to be initialized this way
+    InsDel(segments, 0, &stack_rec);
     MultipleCutting(*this, segments, bottom_index, 0, 2 * nTotSegm - 1, &stack_rec, GetDivPow(2 * nTotSegm - 1));
   }
 
