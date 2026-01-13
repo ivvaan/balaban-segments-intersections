@@ -366,7 +366,7 @@ public:
     }
     *SVG_text << "<svg height='100%' width='100%' viewBox='";
     *SVG_text << xmin << " " << ymin << " "
-      << xmax - xmin << " " << ymax - ymin << "'>\n";
+      << xmax - xmin << " " << ymax - ymin << "' transform='scale(1, -1)'>\n";
     for (uint4 s = 0; s != n; ++s)
     {
       auto& bp = vertices[get_first_idx(s)];

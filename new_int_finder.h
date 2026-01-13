@@ -196,7 +196,8 @@ protected:
         segments.SetCurStripe(prev_pt, pt);
         i_f.SearchInStrip(segments, ladder_start_index);
       }
-      i_f.InsDel(segments, prev_pt=pt, stack_pos);
+      prev_pt = pt;
+      i_f.InsDel(segments, i, stack_pos);
     }
     //the stripe right bound needs to be installed correctly even if i_f.L_size <= 1
     segments.SetCurStripe(ENDS[interval_right_index - 1], ENDS[interval_right_index]);
@@ -220,7 +221,7 @@ protected:
     }else{// cut at the middle into two substrips 
       uint4 middle = (interval_left_index + interval_right_index) / 2;
       FindR(i_f, segments, Q_pos, interval_left_index, middle, &stack_rec);
-      i_f.InsDel(segments, i_f.ENDS[middle], &stack_rec);
+      i_f.InsDel(segments, middle, &stack_rec);
       FindR(i_f, segments, Q_pos, middle, interval_right_index, &stack_rec);
       //actually works without SetCurStripeLeft, but it simplifies segment collection class protocol
       //segments.SetCurStripeLeft(i_f.ENDS[interval_left_index]);
@@ -263,8 +264,10 @@ protected:
     do {
       left_bound = right_bound;
       right_bound = (rb += step) >> divide_pow;
-      i_f.InsDel(segments, stripe_left = stripe_right, stack_pos);
-      segments.SetCurStripe(stripe_left, stripe_right = ENDS[right_bound]);
+      i_f.InsDel(segments, left_bound, stack_pos);
+      stripe_left = stripe_right;
+      stripe_right = ENDS[right_bound];
+      segments.SetCurStripe(stripe_left, stripe_right);
       FindRNoChecks(i_f, segments, ladder_start_index, left_bound, right_bound, stack_pos);
     } while (right_bound != interval_right_index);
   }

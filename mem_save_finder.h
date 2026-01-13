@@ -80,8 +80,8 @@ public:
   };
 
   template<class SegmentsColl>
-  void InsDel(SegmentsColl& segments, uint4 pt, ProgramStackRec* stack_pos)
-  {
+  void InsDel(SegmentsColl& segments, uint4 end_rank, ProgramStackRec* stack_pos) {
+    auto pt = ENDS[end_rank];
     int4 i;
     auto sn = SegmentsColl::get_segm(pt);
     if (from_begin)

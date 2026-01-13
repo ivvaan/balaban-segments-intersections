@@ -372,7 +372,7 @@ public:
     auto mmr = get_mmrect01(collection, n);
     *SVG_stream << "<svg height='100%' width='100%' viewBox='";
     *SVG_stream << mmr.ld.x << " " << mmr.ld.y << " "
-      << mmr.rt.x - mmr.ld.x << " " << mmr.rt.y - mmr.ld.y << "'>\n";
+      << mmr.rt.x - mmr.ld.x << " " << mmr.rt.y - mmr.ld.y << "' transform='scale(1, -1)'>\n";
     for (int4 i = 0; i < n; ++i)collection[i].write_SVG(i, SVG_stream);
   };
 
