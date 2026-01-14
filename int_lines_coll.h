@@ -93,17 +93,22 @@ public:
   {
     return (s << 1) + 1;
   };
+  static  uint4 other_point(uint4 pt)
+  {
+    return pt^1;
+  };
 
 
 private:
 
   //===========================================================================
+  struct ListBounds {
+    uint4 beg = 0;
+    uint4 end = 0;
+  };
+
   class CRemaper {
 
-    struct RemappedRecord {
-      uint4 beg = 0;
-      uint4 end = 0;
-    };
 
     static REAL get_rot_angle(uint4 n, TLineSegment1 sc[]) {
       REAL* arr;
@@ -348,7 +353,7 @@ private:
     uint4 remapped_SN = 0;
     uint4 remap_size = 0;
     int4 range = 1;
-    std::vector<RemappedRecord> rrec_v;
+    std::vector<ListBounds> rrec_v;
     std::vector<uint4> remap_v;
     std::vector<TIntegerSegment> seg_v;//if remapped original int segments are stored here
     TIntegerSegment* remapped_segs = nullptr;
@@ -359,6 +364,43 @@ private:
 
 public:
 
+  ListBounds* x_collide_points=nullptr;
+  int4* tmp = nullptr;
+
+  std::pair<uint4, uint4> get_dublicate_stat(uint4 len, uint4* arr) const {
+    uint4 unique_count = 0;
+    uint4 duplicated_elements_count = 0;
+    
+    for (uint4 i = 0,j; i < len; i = j) {
+      j = i + 1;
+      while (j < len && pts[arr[j]].x == pts[arr[i]].x) 
+        ++j;
+      ++unique_count;
+      if (j >  i + 1) {
+        ++duplicated_elements_count;
+      }
+    }
+    return { unique_count , duplicated_elements_count };
+  }
+
+  bool operator ()(uint4 pt1, uint4 pt2) {
+    if (pts[pt1].x != pts[pt2].x)
+      return pts[pt1].x < pts[pt2].x;
+    if (pts[pt1].y != pts[pt2].y)
+      return pts[pt1].y < pts[pt2].y;
+    auto le1 = is_last(pt1), le2 = is_last(pt2);
+    if (le1 != le2)
+      return le1 < le2;
+    return (pt1 < pt2);
+  }
+
+
+  void PrepareEndpointsSortedList(uint4* epoints)// endpoints allocated by caller and must contain space for at least 2*GetSegmNumb() points 
+  {
+    auto NN = N << 1;
+    for (uint4 i = 0; i < NN; ++i)  epoints[i] = i;
+    std::sort(epoints, epoints + NN, *this);
+  };
 
   PrepareResult Prepare()
   {
@@ -366,31 +408,187 @@ public:
     uint4 Nn = GetSegmNumb();
     if (Nn == 0) return {};
     uint4 NN = Nn << 1;
-    ENDS = new uint4[NN];
-    PrepareEndpointsSortedList(ENDS);
+    RAII_ARR(uint4,tmpENDS,NN);
+    tmp =new int4[NN];
+    PrepareEndpointsSortedList(tmpENDS);
+
+    auto [nX,nV]=get_dublicate_stat(NN, tmpENDS);
+    auto nAll = NN+nV;
+    //auto nD = nAll  - nX;
+    //nV - number of unique non unique X,e.g. for X={0,1,3,3,3,4,4} 3 and 4 are non unique, the number is 2
+    //nD - number of non unique non unique X, i.e. 5: 3,3,3,4,4
+    auto ENDS= new uint4[nAll];
+    x_collide_points=new ListBounds[nV];
+
+    if (nV != 0) {
+      for (uint4 i = 0, xcp_pos = 0, ne_pos = 0, j; i < NN; i = j) {
+        j = i + 1;
+        while (j < NN && pts[tmpENDS[j]].x == pts[tmpENDS[i]].x)
+          ++j;
+        if (j > i+1) {
+          x_collide_points[xcp_pos] = {nX+i,nX+j};
+          std::copy(tmpENDS + i, tmpENDS + j, ENDS + nX + i);
+          ENDS[ne_pos] = nX + xcp_pos;
+          std::fill(tmp + i, tmp + j, ne_pos);
+          ++xcp_pos; ++ne_pos;
+        }
+        else {
+          ENDS[ne_pos] = tmpENDS[i];
+          tmp[i] = ne_pos;
+          ++ne_pos;
+        }
+      }
+    }
+    else {
+      for (uint4 i = 0; i < NN; ++i)
+        tmp[i] = i;
+    }
+
     SegL = new uint4[Nn];
     SegR = new uint4[Nn];
     uint4 max_segm_on_vline = 0, nsegm_on_vline = 0;
     double avr = 0;
     for (uint4 i = 0; i < NN; ++i) {
-      if (is_last(ENDS[i])) {
-        SegR[get_segm(ENDS[i])] = i;
+      if (is_last(tmpENDS[i])) {
+        SegR[get_segm(tmpENDS[i])] = tmp[i];
         --nsegm_on_vline;
       }
       else {
-        SegL[get_segm(ENDS[i])] = i;
+        SegL[get_segm(tmpENDS[i])] = tmp[i];
         ++nsegm_on_vline;
         if (nsegm_on_vline > max_segm_on_vline) max_segm_on_vline = nsegm_on_vline;
       }
       avr += nsegm_on_vline;
     }
-    avr /= (double)NN;
-    return { NN, max_segm_on_vline, avr };
+    avr /= (double)nX;
+    nTotX = nX;
+    return { nX, max_segm_on_vline, avr };
+  }
+
+  bool is_multiple(uint4 pt) {
+    return pt >= nTotX;
+  }
+
+  ListBounds get_pt_list(uint4 pt) {
+    assert(is_multiple(pt));
+    return x_collide_points[pt];
   }
 
   template<class IntersectionFinder, class ProgramStackRec>
   void InsDel(IntersectionFinder& i_f, uint4& L_size, int4* L, uint4 end_rank, ProgramStackRec* stack_pos) {
     auto pt = PointAtRank(end_rank);
+    if (is_multiple(pt)) {
+      return InsDelMultiple(i_f, L_size, L, pt, stack_pos);
+    }
+    return InsDelOrdinary(i_f, L_size, L, pt, stack_pos);
+  }
+
+  template<class IntersectionFinder, class ProgramStackRec>
+  void InsDelMultiple(IntersectionFinder& i_f, uint4& L_size, int4* L, uint4 pt, ProgramStackRec* stack_pos) 
+  {
+    auto [f, l] = get_pt_list(pt);
+    DelStep(f, l, L_size, L);
+    VertIntCurStrip(f, l, L_size, L);
+    //auto first = ENDS + f, last = ENDS + l;
+  }
+
+  void DelStep(uint4 f, uint4 l, uint4& L_size, int4* L)
+  {
+    uint8_t* marker = (uint8_t*)(void*)tmp;//8 bit int to be more cache friendly, we need only 0,1 to store
+    for (uint4 i = 0; i < L_size; ++i) {
+      marker[L[i]] = 1;
+    }
+    for (uint4 i = f; i < l; ++i) {
+      auto cur_pt = ENDS[i];
+      if (is_last(cur_pt))
+        marker[get_segm(cur_pt)] = 0;
+    }
+    uint4 new_size = 0;
+    for (uint4 i = 0; i < L_size; ++i)
+      if (marker[L[i]]) {
+        L[new_size++] = L[i];
+      }
+    L_size = new_size;
+  }
+
+  void VertIntCurStrip(uint4 f, uint4 l, uint4& L_size, int4* L)
+  {
+    auto vertical_segments=tmp;
+    uint4 size=0;
+
+    for (uint4 i = f; i < l; ++i) {//vertical list
+      auto cur_pt = ENDS[i];
+      if (is_first(cur_pt)) {
+        auto s = get_segm(cur_pt);
+        if (collection[s].is_vertical())
+          vertical_segments[size++] = s;
+      }
+    }
+ 
+    auto prev_vert = vertical_segments[0];
+    for (uint4 i = 1; i < size; ++i) {//vertical - vertical intersections
+      auto cur_vert = vertical_segments[i];
+      if (pts[first_point(cur_vert)].y == pts[last_point(prev_vert)].y)
+        register_pair(this, prev_vert, cur_vert);
+      prev_vert = cur_vert;
+    }
+     
+    for (uint4 i = 0, j = 0; j < L_size && i < size; ++i) {// vertical - passing intersections
+      auto s = vertical_segments[i];
+      while (j < L_size && collection[L[j]].exact_under(pts[first_point(s)]))
+        j++;
+
+      while (j < L_size && collection[L[j]].exact_under(pts[last_point(s)])) {
+        register_pair(this, L[j], s);
+        j++;
+      }
+
+      while (j < L_size && collection[L[j]].exact_on(pts[last_point(s)])) {
+        register_pair(this, L[j], s);
+        if (i + 1 < size) {
+          auto q = vertical_segments[i + 1];
+          if (pts[last_point(s)].y == pts[first_point(q)].y)
+            register_pair(this, L[j], q);
+        }
+        j++;
+      }
+    };
+
+      
+    auto next_non_vertical = [coll=collection, ends=ENDS,l](uint4 c) {// next index of non vertical segment end
+      do {
+        if (l==++c) return 0U;
+      } while (coll[get_segm(ends[c])].is_vertical());
+      return c;
+      };
+
+    for (uint4 i = 0, j = next_non_vertical(f-1); j && i < size; ++i) {// vertical - segments having ends at cur X
+      auto s = vertical_segments[i];
+      while (j && collection[get_segm(ENDS[j])].exact_under(pts[first_point(s)]))
+        j= next_non_vertical(j);
+
+      while (j && collection[get_segm(ENDS[j])].exact_under(pts[last_point(s)])) {
+        register_pair(this, get_segm(ENDS[j]), s);
+        j = next_non_vertical(j);
+      }
+
+      while (j && collection[get_segm(ENDS[j])].exact_on(pts[last_point(s)])) {
+        register_pair(this, get_segm(ENDS[j]), s);
+        if (i + 1 < size) {
+          auto q = vertical_segments[i + 1];
+          if (pts[last_point(s)].y == pts[first_point(q)].y)
+            register_pair(this, get_segm(ENDS[j]), q);
+        }
+        j = next_non_vertical(j);
+      }
+    };
+
+  }
+
+
+  template<class IntersectionFinder, class ProgramStackRec>
+  void InsDelOrdinary(IntersectionFinder& i_f, uint4& L_size, int4* L, uint4 pt, ProgramStackRec* stack_pos) 
+  {
     auto sn = get_segm(pt);
     if (is_last(pt)) // if endpoint - remove
     {
@@ -919,48 +1117,12 @@ public:
     return is_right_pt_in_stripe(cur_seg_idx);
   };
 
-  bool operator ()(uint4 pt1, uint4 pt2) {
-    if (pts[pt1].x != pts[pt2].x)
-      return pts[pt1].x < pts[pt2].x;
-    if (pts[pt1].y != pts[pt2].y)
-      return pts[pt1].y < pts[pt2].y;
-    auto le1 = is_last (pt1), le2 = is_last(pt2);
-    if (le1 != le2) 
-      return le1 < le2;
-    return (pt1 < pt2);
-  }
-
-
-
-  void PrepareEndpointsSortedList(uint4 *epoints)// endpoints allocated by caller and must contain space for at least 2*GetSegmNumb() points 
+  /*void PrepareEndpointsSortedList(uint4* epoints)// endpoints allocated by caller and must contain space for at least 2*GetSegmNumb() points 
   {
     auto NN = N * 2;
     for (uint4 i = 0; i < NN; ++i)  epoints[i] = i;
-
-
-/*
-    static_assert(sizeof(TIntegerSegment) == 4 * sizeof(int4), "one segment should occupy 4 reals space");
-    static_assert(offsetof(TIntegerSegment, org.x) == 0, "TLineSegment1.org.x should have 0 offset");
-    static_assert(offsetof(TIntegerSegment, shift.x) == 2 * sizeof(int4), "TLineSegment1.shift.x should have 2 reals offset");
-*/
     std::sort(epoints, epoints + NN, *this);
-
-    ENDS = epoints;
-
-
-    /*SegR = new uint4[N];
-    for (uint4 i = 0, cur_end; i < NN; ++i) {
-      cur_end = ENDS[i] /= 2;
-      if (is_last(cur_end))
-        SegR[get_segm(cur_end)] = i;
-    };*/  
-
-  };
-
-  void set_seg2end_arr(uint4* _SegL, uint4* _SegR) {
-    SegL = _SegL;
-    SegR = _SegR;
-  };
+  };*/
 
   void clone(CIntegerSegmentCollection &c, IntersectionRegistrator *r)
   {
@@ -1101,7 +1263,7 @@ private:
   CRemaper remaper;
   decltype(reg_pair) *register_pair = reg_pair;
   CIntegerSegmentCollection *clone_of = nullptr;
-  uint4 N=0;
+  uint4 N=0,nTotX=0;
   int4 B, E, curB, curE, stripe_left, stripe_right, right_bound_idx, left_bound_idx;
   uint4 stage = _Stages::stage_split;
 

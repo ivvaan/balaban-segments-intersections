@@ -376,6 +376,9 @@ public:
     bool exact_under(TIntegerVect v) const { //segment placed under point v
       return (v - org) % shift < 0;
     };
+    bool exact_on(TIntegerVect v) const { //segment placed under point v
+      return (v - org) % shift == 0;
+    };
     auto upper(TIntegerVect v) const {//segment placed above point v, true == -1, false == 1
       return 0 <=> (v - org) % shift;
     };

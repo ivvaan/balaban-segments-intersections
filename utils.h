@@ -54,8 +54,12 @@ extern bool print_at_lineseg1_init;
 #endif
 
 #define DECL_RAII_ARR(L,len)\
-auto L##_ = std::make_unique<std::remove_pointer_t<decltype(L)>[]>(len);\
-L = L##_.get();
+auto __##L##__ = std::make_unique<std::remove_pointer_t<decltype(L)>[]>(len);\
+L = __##L##__.get();
+
+#define RAII_ARR(type,arr,len)\
+auto __##arr##__ = std::make_unique<type[]>(len);\
+type *arr = __##arr##__.get();
 
 #define MY_FREE_ARR_MACRO(a) if (a!=nullptr) {delete[] a; a = nullptr;}
 

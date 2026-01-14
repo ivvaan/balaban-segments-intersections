@@ -380,8 +380,6 @@ public:
 
   IntersectionRegistrator *GetRegistrator() { return registrator; };
 
-  void set_seg2end_arr(uint4* SegL, uint4* SegR) {};
-
   void Init(uint4 n, void * c, IntersectionRegistrator *r)
   {
     nVertices = n; nEdges=n;
