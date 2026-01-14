@@ -164,7 +164,7 @@ private:
     }
     else// if startpoint - insert
     {
-      if (stack_pos->prev) {
+      if (stack_pos->isnot_top()) {
         segments.SetCurSegAndPoint(sn);
         FindIntI(segments, sn, stack_pos);// get internal intersections
       }

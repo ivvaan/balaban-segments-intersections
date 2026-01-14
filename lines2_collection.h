@@ -36,7 +36,7 @@ public:
 
   PrepareResult Prepare()
   {
-    //Reset();
+    Reset();
     uint4 Nn = GetSegmNumb();
     if (Nn == 0) return {};
     uint4 NN = Nn << 1;
@@ -60,6 +60,32 @@ public:
     }
     avr /= (double)NN;
     return { NN, max_segm_on_vline, avr };
+  }
+
+  template<class IntersectionFinder, class ProgramStackRec>
+  void InsDel(IntersectionFinder& i_f, uint4& L_size, int4* L, uint4 end_rank, ProgramStackRec* stack_pos) {
+    auto pt = PointAtRank(end_rank);
+    auto sn = get_segm(pt);
+    if (is_last(pt)) // if endpoint - remove
+    {
+      auto last = std::remove(L, L + L_size, sn);
+      assert(last + 1 == L + L_size);
+      --L_size;
+    }
+    else// if startpoint - insert
+    {
+      if (stack_pos->isnot_top()) {
+        SetCurSegAndPoint(sn);
+        i_f.FindIntI(*this, sn, stack_pos);// get internal intersections
+      }
+      else {
+        SetCurPointAtBeg(sn);//sets collection current point at the begin of the segment sn
+      }
+      int4 i = L_size;
+      for (auto _L = L - 1; (i != 0) && (!UnderCurPoint(_L[i])); --i)
+        L[i] = _L[i];
+      L[i] = sn; ++L_size;
+    }
   }
 
   void Reset()

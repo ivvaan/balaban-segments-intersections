@@ -100,7 +100,7 @@ public:
     ProgramStackRec(int4 qp, uint4 rb) : Q_pos(qp), right_bound(rb) {};
     ProgramStackRec(int4 qp, uint4 rb, ProgramStackRec* pr) : Q_pos(qp), right_bound(rb), prev(pr) {};
     ProgramStackRec* Set(ProgramStackRec* p, uint4 rb) { prev = p, right_bound = rb; return this; };
-
+    bool isnot_top() { return prev!=nullptr; };
   };
 
 
@@ -122,6 +122,31 @@ public:
       avr_segm_on_vline = pr.avr_segm_on_vline;
       // перенести в collection до сюда
     };
+
+    template <class SegmentsColl>
+    void FindIntI(SegmentsColl& segments, int4 sn, ProgramStackRec* stack_pos) const
+    {
+      auto r_index = segments.GetSegR(sn);
+      while (stack_pos->right_bound <= r_index)
+        stack_pos = stack_pos->prev; // go from bottom to top and find staircase to start
+      int4  m, len;
+      int4* Qb, * Ql, * Qe = Q + (stack_pos->Q_pos + 1);
+      for (stack_pos = stack_pos->prev; stack_pos != nullptr; stack_pos = stack_pos->prev) {
+        Qb = Ql = Q + stack_pos->Q_pos;
+        len = Qe - Qb;
+        while (len > 1) // binary search
+        {
+          m = len / 2; //
+          if (segments.UnderCurPoint(Ql[m]))
+            Ql += m;
+          len -= m;
+        }
+        FindInt(segments, Qb, Qe, Ql);
+        Qe = Qb + 1; // move staircase bound to parent staircase
+      };
+    };
+
+
 
     ~CommonImpl() { FreeMem(); };
 protected:
@@ -260,29 +285,6 @@ protected:
     do {
       ++l;
     } while ((l != qe) && segments.FindCurSegIntUpWith(*l)); // get intersections above
-  };
-
-  template <class SegmentsColl>
-  void FindIntI(SegmentsColl& segments, int4 sn, ProgramStackRec* stack_pos) const
-  {
-    auto r_index = segments.GetSegR(sn);
-    while (stack_pos->right_bound <= r_index)
-      stack_pos = stack_pos->prev; // go from bottom to top and find staircase to start
-    int4  m, len;
-    int4 *Qb,  *Ql, *Qe = Q + (stack_pos->Q_pos + 1);
-    for (stack_pos = stack_pos->prev; stack_pos != nullptr; stack_pos = stack_pos->prev) {
-      Qb = Ql = Q + stack_pos->Q_pos;
-      len = Qe - Qb;
-      while (len > 1) // binary search
-      {
-        m = len / 2; //
-        if(segments.UnderCurPoint(Ql[m]))
-          Ql += m;
-        len -= m;
-      }
-      FindInt(segments, Qb, Qe, Ql);
-      Qe = Qb+1; // move staircase bound to parent staircase
-    };
   };
 
   template<class SegmentsColl>
