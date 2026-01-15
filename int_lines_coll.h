@@ -26,6 +26,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include "utils.h"
 #include <cassert>
 #include <algorithm>
+#include <numeric> 
 
 namespace {
   template<class T>
@@ -391,14 +392,20 @@ public:
     auto le1 = is_last(pt1), le2 = is_last(pt2);
     if (le1 != le2)
       return le1 < le2;
+    auto& s1 = collection[get_segm(pt1)];
+    auto& s2 = collection[get_segm(pt2)];
+    auto angle_like = s1.shift % s2.shift;
+    if (angle_like != 0) 
+      return 0 < angle_like;
     return (pt1 < pt2);
   }
 
 
   void PrepareEndpointsSortedList(uint4* epoints)// endpoints allocated by caller and must contain space for at least 2*GetSegmNumb() points 
   {
-    auto NN = N << 1;
-    for (uint4 i = 0; i < NN; ++i)  epoints[i] = i;
+    auto NN = GetSegmNumb() << 1;
+    std::iota(epoints, epoints+NN, 0);
+    //for (uint4 i = 0; i < NN; ++i)  epoints[i] = i;
     std::sort(epoints, epoints + NN, *this);
   };
 
@@ -425,24 +432,23 @@ public:
         j = i + 1;
         while (j < NN && pts[tmpENDS[j]].x == pts[tmpENDS[i]].x)
           ++j;
-        if (j > i+1) {
-          x_collide_points[xcp_pos] = {nX+i,nX+j};
+        if (j > i + 1) {
+          x_collide_points[xcp_pos] = { nX + i,nX + j };
           std::copy(tmpENDS + i, tmpENDS + j, ENDS + nX + i);
           ENDS[ne_pos] = nX + xcp_pos;
           std::fill(tmp + i, tmp + j, ne_pos);
-          ++xcp_pos; ++ne_pos;
+          ++xcp_pos;
         }
         else {
           ENDS[ne_pos] = tmpENDS[i];
           tmp[i] = ne_pos;
-          ++ne_pos;
         }
+        ++ne_pos;
       }
     }
     else {
-      for (uint4 i = 0; i < NN; ++i)
-        tmp[i] = i;
-    }
+      std::iota(tmp, tmp + NN, 0);
+    };
 
     SegL = new uint4[Nn];
     SegR = new uint4[Nn];
@@ -539,17 +545,21 @@ public:
         j++;
 
       while (j < L_size && collection[L[j]].exact_under(pts[last_point(s)])) {
-        register_pair(this, L[j], s);
+        register_pair(this, L[j], s); 
         j++;
       }
 
+      bool b=false;
+      int4 q;
+      if (i + 1 < size) {
+        q = vertical_segments[i + 1];
+        b = pts[last_point(s)].y == pts[first_point(q)].y;
+      }
+
+
       while (j < L_size && collection[L[j]].exact_on(pts[last_point(s)])) {
         register_pair(this, L[j], s);
-        if (i + 1 < size) {
-          auto q = vertical_segments[i + 1];
-          if (pts[last_point(s)].y == pts[first_point(q)].y)
-            register_pair(this, L[j], q);
-        }
+        if (b) register_pair(this, L[j], q);
         j++;
       }
     };
@@ -572,13 +582,16 @@ public:
         j = next_non_vertical(j);
       }
 
+      bool b = false;
+      int4 q;
+      if (i + 1 < size) {
+        q = vertical_segments[i + 1];
+        b = pts[last_point(s)].y == pts[first_point(q)].y;
+      }
+
       while (j && collection[get_segm(ENDS[j])].exact_on(pts[last_point(s)])) {
         register_pair(this, get_segm(ENDS[j]), s);
-        if (i + 1 < size) {
-          auto q = vertical_segments[i + 1];
-          if (pts[last_point(s)].y == pts[first_point(q)].y)
-            register_pair(this, get_segm(ENDS[j]), q);
-        }
+        if (b) register_pair(this, get_segm(ENDS[j]), q);
         j = next_non_vertical(j);
       }
     };
