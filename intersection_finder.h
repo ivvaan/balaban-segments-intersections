@@ -48,7 +48,7 @@ typedef void (*FRegIntersection)(PRegObj intersection_registrator,PSeg s1,PSeg s
 
 
 
-//uncomment line bellow to switch on counters
+//uncomment line below to switch on counters
 //#define COUNTERS_ON
 
 #ifdef COUNTERS_ON

@@ -453,7 +453,7 @@ struct frac64 {// represents proper fraction num/denum (denum>0)
   int64_t num, denum;
 
   auto operator<=>(const frac64& other) const {
-    assert((denum > 0) && (other.denum > 0));
+    assert((denum > 0) == (other.denum > 0));
     return comp_prod(num, other.denum, other.num, denum);
   };
 };

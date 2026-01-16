@@ -150,8 +150,8 @@ private:
           if (s.shift.is_zero()) continue;
         }
         seg_v[i] = s;
-        points[first_point(i)] = seg_v[i].BegPoint();
-        points[last_point(i)] = seg_v[i].EndPoint();
+        points[first_point(i)] = s.BegPoint();
+        points[last_point(i)] = s.EndPoint();
         ++i;
       }
       return i;
@@ -283,6 +283,31 @@ private:
       return;
     };
 
+    template<bool remove_zero_seg = true>
+    auto FromIntSegVect(std::vector<TIntegerSegment>& v, IntersectionRegistrator* r, CTHIS& collection) {
+      auto n = nonzero_N = v.size();
+      std::vector<TIntegerVect> points(2 * n);
+      uint4 i = 0;
+      for(auto &s:v) {
+        if (s.shift.is_zero()) {
+          --nonzero_N;
+          continue;
+        }
+        seg_v.push_back(s);
+        points[first_point(i)] = s.BegPoint();
+        points[last_point(i)] = s.EndPoint();
+        ++i;
+      }
+      remapped_SN = nonzero_N;
+      if constexpr (remove_zero_seg)
+        initial_SN = nonzero_N;
+      registrator = r;
+
+      collection.segments = std::move(seg_v);
+      collection.points = std::move(points);
+      return;
+    };
+
     auto TurnRemapOn(CTHIS& collection) {
       auto points = std::move(collection.points);
       seg_v = std::move(collection.segments);
@@ -384,29 +409,38 @@ public:
     return { unique_count , duplicated_elements_count };
   }
 
-  bool operator ()(uint4 pt1, uint4 pt2) {
-    if (pts[pt1].x != pts[pt2].x)
-      return pts[pt1].x < pts[pt2].x;
-    if (pts[pt1].y != pts[pt2].y)
-      return pts[pt1].y < pts[pt2].y;
-    auto le1 = is_last(pt1), le2 = is_last(pt2);
-    if (le1 != le2)
-      return le1 < le2;
-    auto& s1 = collection[get_segm(pt1)];
-    auto& s2 = collection[get_segm(pt2)];
-    auto angle_like = s1.shift % s2.shift;
-    if (angle_like != 0) 
-      return 0 < angle_like;
-    return (pt1 < pt2);
-  }
-
 
   void PrepareEndpointsSortedList(uint4* epoints)// endpoints allocated by caller and must contain space for at least 2*GetSegmNumb() points 
   {
     auto NN = GetSegmNumb() << 1;
     std::iota(epoints, epoints+NN, 0);
-    //for (uint4 i = 0; i < NN; ++i)  epoints[i] = i;
-    std::sort(epoints, epoints + NN, *this);
+    auto is_below = [pts = pts, coll = collection](uint4 pt1, uint4 pt2) {
+      if (pts[pt1].x != pts[pt2].x)
+        return pts[pt1].x < pts[pt2].x;
+      if (pts[pt1].y != pts[pt2].y)
+        return pts[pt1].y < pts[pt2].y;
+      auto le1 = is_last(pt1), le2 = is_last(pt2);
+      if (le1 != le2)
+        return le1 < le2;
+      auto& s1 = coll[get_segm(pt1)];
+      auto& s2 = coll[get_segm(pt2)];
+      auto angle_like = s1.shift % s2.shift;
+      if (angle_like != 0)
+        return le1 != (0 < angle_like);
+      return (pt1 < pt2);
+      };
+      //    std::sort(epoints, epoints + NN, std::ref(*this));
+    std::sort(epoints, epoints + NN, is_below);
+  };
+
+  bool is_multiple(uint4 pt) {
+    return pt >= (N << 1);
+  };
+  auto mark_multiple(uint4 pt) {
+    return pt + (N << 1);
+  };
+  auto unmark_multiple(uint4 pt) {
+    return pt - (N << 1);
   };
 
   PrepareResult Prepare()
@@ -424,20 +458,23 @@ public:
     //auto nD = nAll  - nX;
     //nV - number of unique non unique X,e.g. for X={0,1,3,3,3,4,4} 3 and 4 are non unique, the number is 2
     //nD - number of non unique non unique X, i.e. 5: 3,3,3,4,4
-    auto ENDS= new uint4[nAll];
+    ENDS= new uint4[nAll];
     x_collide_points=new ListBounds[nV];
 
     if (nV != 0) {
+      uint4 D_last = nX;
       for (uint4 i = 0, xcp_pos = 0, ne_pos = 0, j; i < NN; i = j) {
         j = i + 1;
         while (j < NN && pts[tmpENDS[j]].x == pts[tmpENDS[i]].x)
           ++j;
-        if (j > i + 1) {
-          x_collide_points[xcp_pos] = { nX + i,nX + j };
-          std::copy(tmpENDS + i, tmpENDS + j, ENDS + nX + i);
-          ENDS[ne_pos] = nX + xcp_pos;
+        auto len = j - i;
+        if (len > 1) {
+          x_collide_points[xcp_pos] = { D_last,D_last + len };
+          std::copy(tmpENDS + i, tmpENDS + j, ENDS + D_last);
+          ENDS[ne_pos] = mark_multiple(xcp_pos);
           std::fill(tmp + i, tmp + j, ne_pos);
           ++xcp_pos;
+          D_last += len;
         }
         else {
           ENDS[ne_pos] = tmpENDS[i];
@@ -445,6 +482,7 @@ public:
         }
         ++ne_pos;
       }
+      assert(D_last == nAll);
     }
     else {
       std::iota(tmp, tmp + NN, 0);
@@ -471,31 +509,37 @@ public:
     return { nX, max_segm_on_vline, avr };
   }
 
-  bool is_multiple(uint4 pt) {
-    return pt >= nTotX;
-  }
 
-  ListBounds get_pt_list(uint4 pt) {
-    assert(is_multiple(pt));
-    return x_collide_points[pt];
-  }
 
   template<class IntersectionFinder, class ProgramStackRec>
   void InsDel(IntersectionFinder& i_f, uint4& L_size, int4* L, uint4 end_rank, ProgramStackRec* stack_pos) {
     auto pt = PointAtRank(end_rank);
     if (is_multiple(pt)) {
-      return InsDelMultiple(i_f, L_size, L, pt, stack_pos);
+      auto actual_pt = unmark_multiple(pt);
+      auto [f, l] = get_pt_list_bounds(pt);
+      return InsDelMultiple(f,l,L_size, L);
+      for (auto i = f; i < l; ++i) {
+        auto cur_pt = ENDS[i];
+        if (is_first(cur_pt))
+          i_f.FindIntI(*this, get_segm(cur_pt), stack_pos);
+      }
+
     }
     return InsDelOrdinary(i_f, L_size, L, pt, stack_pos);
   }
 
-  template<class IntersectionFinder, class ProgramStackRec>
-  void InsDelMultiple(IntersectionFinder& i_f, uint4& L_size, int4* L, uint4 pt, ProgramStackRec* stack_pos) 
+  ListBounds get_pt_list_bounds(uint4 pt) {
+    return x_collide_points[pt];
+  }
+
+
+
+  void InsDelMultiple(uint4 f, uint4 l, uint4& L_size, int4* L)
   {
-    auto [f, l] = get_pt_list(pt);
     DelStep(f, l, L_size, L);
+    ReorderStep(pts[ENDS[f]].x,L_size, L);
     VertIntCurStrip(f, l, L_size, L);
-    //auto first = ENDS + f, last = ENDS + l;
+    InsStep(f, l, L_size, L);
   }
 
   void DelStep(uint4 f, uint4 l, uint4& L_size, int4* L)
@@ -516,6 +560,63 @@ public:
       }
     L_size = new_size;
   }
+
+  template <class Comp, class T>
+  static auto merge_two_ranges(
+    const T* first1, const T* last1,
+    const T* first2, const T* last2,
+    T* out,  Comp comp   // comp(x_from_1, y_from_2)
+  ) {
+    const T* it1 = first1;
+    const T* it2 = first2;
+    while (it1 != last1 && it2 != last2) {
+      *out++ = comp(*it1, *it2) ? *it1++ : *it2++;
+    }
+    while (it1 != last1)
+      *out++ = *it1++;
+    while (it2 != last2)
+      *out++ = *it2++;
+    return out; 
+  }
+
+  void InsStep(uint4 f, uint4 l, uint4& L_size, int4* L)
+  {
+    auto first_to_insert = tmp;
+    auto last_to_insert = first_to_insert;
+    auto first_L = tmp + GetSegmNumb();
+    auto last_L = std::copy(L, L + L_size, first_L);;
+    for (uint4 i = f; i < l; ++i) {
+      auto cur_pt = ENDS[i];
+      if (is_first(cur_pt)) {
+        auto s = get_segm(cur_pt);
+        if (!collection[s].is_vertical())
+          *(last_to_insert++)  = s;
+      }
+    }
+    auto is_below = [coll = this->collection, pts=this->pts](int4 sL, int4 sF) {
+      auto& s = coll[sL];
+      auto cmp = s.under(pts[first_point(sF)]);
+      if (cmp != std::strong_ordering::equal)
+        return cmp == std::strong_ordering::less;
+      return 0 < s.shift % coll[sF].shift;
+      };
+    
+    auto last_res = merge_two_ranges(first_L, last_L, first_to_insert, last_to_insert, L, is_below);
+    L_size = last_res - L;
+  }
+
+
+  void ReorderStep(int4 x, uint4 len, int4* arr) {
+    for (uint4 i = 0, j; i < len; i = j) {
+      j = i + 1;
+      while (j < len && 0==(collection[arr[i]].YAtX_frac(x) <=> collection[arr[j]].YAtX_frac(x)))
+        ++j;
+      if (j > i + 1) {//reverse order for sublists of equal Y segments (passing segments should be in reverse order)
+        std::reverse(arr + i, arr + j);
+      };
+    };
+
+  };
 
   void VertIntCurStrip(uint4 f, uint4 l, uint4& L_size, int4* L)
   {
@@ -812,7 +913,7 @@ public:
   int4 RStump_IsCurSegInt_zero_strip(int4 s_) const {
     auto& s = collection[s_];
     if (s.is_vertical()) {
-      auto cmp_last = cur_seg.upper(pts[last_point(s_)]);// -1 if end of s is bellow cur_seg
+      auto cmp_last = cur_seg.upper(pts[last_point(s_)]);// -1 if end of s is below cur_seg
       if constexpr (check_way_up_s_is_under_cur_seg)
         return (cmp_last <= 0); //s <= cur_seg
       else //check_way_down_s_is_upper_cur_seg
@@ -1188,6 +1289,21 @@ public:
 
   }
 
+  void FromIntSegVect(std::vector<TIntegerSegment> &v, IntersectionRegistrator* r)
+  {
+    assert(("integer collection registers only intersecting pairs:\n\
+       intersection points don't have integer coords ",
+      (IntersectionRegistrator::reg_type & _RegistrationType::point) == 0));
+    remaper.FromIntSegVect(v, r, *this);
+    is_collection_remapped = false;
+    register_pair = reg_pair;
+    N = remaper.get_N();
+    collection = segments.data();
+    pts = points.data();
+
+  }
+
+
   bool TurnRemapOn() {
     is_collection_remapped = remaper.TurnRemapOn(*this);
     register_pair = is_collection_remapped?reg_remapped_pair: reg_pair;
@@ -1256,6 +1372,9 @@ public:
     *SVG_stream << mmr.ld.x << " " << mmr.ld.y << " "
       << mmr.rt.x - mmr.ld.x << " " << mmr.rt.y - mmr.ld.y << "' transform='scale(1, -1)'>\n";
     for (int4 i = 0; i < n; ++i)collection[i].write_SVG(i, SVG_stream);
+  };
+  auto &get_segments() {
+    return segments;
   };
 
 private:
