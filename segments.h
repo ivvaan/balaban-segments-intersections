@@ -336,6 +336,9 @@ public:
     TIntegerVect EndPoint() const {
       return org + shift;
     };
+    bool operator==(const TIntegerSegment&) const {
+      return (org == org) && (shift == shift);
+    };
     auto PointX(bool is_last) const {
       return is_last ? org.x + shift.x : org.x;
     };

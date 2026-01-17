@@ -505,8 +505,20 @@ public:
       avr += nsegm_on_vline;
     }
     avr /= (double)nX;
-    nTotX = nX;
+    nTotX = nX; nCollideX = nV;
     return { nX, max_segm_on_vline, avr };
+  }
+
+  bool is_remapped() const {
+    return is_collection_remapped;
+  }
+
+  auto GetMaxCollideXIdx() const {
+    auto less=[](ListBounds a, ListBounds b) {
+      return (a.end - a.beg) < (b.end - b.beg);
+      };
+    return std::max_element(x_collide_points, x_collide_points + nCollideX,less)
+      - x_collide_points;
   }
 
 
@@ -518,8 +530,11 @@ public:
       DelStep(end_rank, L_size, L);
 
       auto actual_pt = unmark_multiple(pt);
-      auto [f, l] = get_pt_list_bounds(pt);
-      return InsDelMultiple(f,l,L_size, L);
+      auto [f, l] = get_pt_list_bounds(actual_pt);
+      ReorderStep(pts[ENDS[f]].x, L_size, L);
+      VertIntCurStrip(f, l, L_size, L);
+      InsStep(f, l, L_size, L);
+
       for (auto i = f; i < l; ++i) {
         auto cur_pt = ENDS[i];
         if (is_first(cur_pt))
@@ -536,12 +551,13 @@ public:
 
 
 
-  void InsDelMultiple(uint4 f, uint4 l, uint4& L_size, int4* L)
+  /*void InsDelMultiple(uint4 f, uint4 l, uint4& L_size, int4* L)
   {
     ReorderStep(pts[ENDS[f]].x,L_size, L);
     VertIntCurStrip(f, l, L_size, L);
     InsStep(f, l, L_size, L);
-  }
+  }*/
+
   uint4 rank_to_rank(uint4 multiple_rank) {
     auto pt = PointAtRank(multiple_rank);
     auto seg = get_segm(pt);
@@ -580,7 +596,7 @@ public:
     auto first_to_insert = tmp;
     auto last_to_insert = first_to_insert;
     auto first_L = tmp + GetSegmNumb();
-    auto last_L = std::copy(L, L + L_size, first_L);;
+    auto last_L = std::copy(L, L + L_size, first_L);
     for (uint4 i = f; i < l; ++i) {
       auto cur_pt = ENDS[i];
       if (is_first(cur_pt)) {
@@ -1391,7 +1407,7 @@ private:
   CRemaper remaper;
   decltype(reg_pair) *register_pair = reg_pair;
   CIntegerSegmentCollection *clone_of = nullptr;
-  uint4 N=0,nTotX=0;
+  uint4 N=0,nTotX=0,nCollideX=0;
   int4 B, E, curB, curE, stripe_left, stripe_right, right_bound_idx, left_bound_idx;
   uint4 stage = _Stages::stage_split;
 
