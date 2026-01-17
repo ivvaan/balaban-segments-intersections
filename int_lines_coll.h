@@ -515,6 +515,8 @@ public:
   void InsDel(IntersectionFinder& i_f, uint4& L_size, int4* L, uint4 end_rank, ProgramStackRec* stack_pos) {
     auto pt = PointAtRank(end_rank);
     if (is_multiple(pt)) {
+      DelStep(end_rank, L_size, L);
+
       auto actual_pt = unmark_multiple(pt);
       auto [f, l] = get_pt_list_bounds(pt);
       return InsDelMultiple(f,l,L_size, L);
@@ -536,26 +538,20 @@ public:
 
   void InsDelMultiple(uint4 f, uint4 l, uint4& L_size, int4* L)
   {
-    DelStep(f, l, L_size, L);
     ReorderStep(pts[ENDS[f]].x,L_size, L);
     VertIntCurStrip(f, l, L_size, L);
     InsStep(f, l, L_size, L);
   }
-
-  void DelStep(uint4 f, uint4 l, uint4& L_size, int4* L)
+  uint4 rank_to_rank(uint4 multiple_rank) {
+    auto pt = PointAtRank(multiple_rank);
+    auto seg = get_segm(pt);
+    return is_first(pt)?SegL[seg]:SegR[seg];
+  }
+  void DelStep(uint4 end_rank, uint4& L_size, int4* L)
   {
-    uint8_t* marker = (uint8_t*)(void*)tmp;//8 bit int to be more cache friendly, we need only 0,1 to store
-    for (uint4 i = 0; i < L_size; ++i) {
-      marker[L[i]] = 1;
-    }
-    for (uint4 i = f; i < l; ++i) {
-      auto cur_pt = ENDS[i];
-      if (is_last(cur_pt))
-        marker[get_segm(cur_pt)] = 0;
-    }
     uint4 new_size = 0;
     for (uint4 i = 0; i < L_size; ++i)
-      if (marker[L[i]]) {
+      if (SegR[L[i]]!= end_rank) {
         L[new_size++] = L[i];
       }
     L_size = new_size;
