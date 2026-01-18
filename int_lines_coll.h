@@ -605,12 +605,12 @@ public:
           *(last_to_insert++)  = s;
       }
     }
-    auto is_below = [coll = this->collection, pts=this->pts](int4 sL, int4 sF) {
+    auto is_below = [coll = this->collection, pts=this->pts](int4 sL, int4 sI) {
       auto& s = coll[sL];
-      auto cmp = s.under(pts[first_point(sF)]);
+      auto cmp = s.under(pts[first_point(sI)]);
       if (cmp != std::strong_ordering::equal)
         return cmp == std::strong_ordering::less;
-      return 0 < s.shift % coll[sF].shift;
+      return 0 < s.shift % coll[sI].shift;
       };
     
     auto last_res = merge_two_ranges(first_L, last_L, first_to_insert, last_to_insert, L, is_below);
@@ -632,81 +632,57 @@ public:
 
   void VertIntCurStrip(uint4 f, uint4 l, uint4& L_size, int4* L)
   {
-    auto vertical_segments=tmp;
-    uint4 size=0;
+    auto vertical_segments = tmp;//temporary storage for vertical segment indices
+    uint4 v_size=0;
+    auto non_vertical_pts = tmp + GetSegmNumb();//temporary storage for non vertical segment endpoints
+    uint4 nv_size = 0;
 
-    for (uint4 i = f; i < l; ++i) {//vertical list
+    for (uint4 i = f; i < l; ++i) {
       auto cur_pt = ENDS[i];
-      if (is_first(cur_pt)) {
-        auto s = get_segm(cur_pt);
-        if (collection[s].is_vertical())
-          vertical_segments[size++] = s;
+      auto s = get_segm(cur_pt);
+      if (collection[s].is_vertical()) {
+        if (is_first(cur_pt))
+            vertical_segments[v_size++] = s;
       }
-    }
+      else
+        non_vertical_pts[nv_size++] = cur_pt;
+    };
  
     auto prev_vert = vertical_segments[0];
-    for (uint4 i = 1; i < size; ++i) {//vertical - vertical intersections
+    for (uint4 i = 1; i < v_size; ++i) {//vertical - vertical intersections
       auto cur_vert = vertical_segments[i];
       if (pts[first_point(cur_vert)].y == pts[last_point(prev_vert)].y)
         register_pair(this, prev_vert, cur_vert);
       prev_vert = cur_vert;
     }
      
-    for (uint4 i = 0, j = 0; j < L_size && i < size; ++i) {// vertical - passing intersections
+    for (uint4 i = 0, j = 0; j < L_size && i < v_size; ++i) {// vertical - passing intersections
       auto s = vertical_segments[i];
+      //skip segments below the vertical segment
       while (j < L_size && collection[L[j]].exact_under(pts[first_point(s)]))
         j++;
-
-      while (j < L_size && collection[L[j]].exact_under(pts[last_point(s)])) {
+      //register segments intersecting the vertical segment except those exactly ending at its upper end
+      for (; j < L_size && collection[L[j]].exact_under(pts[last_point(s)]);++j)
         register_pair(this, L[j], s); 
-        j++;
-      }
-
-      bool b=false;
-      int4 q;
-      if (i + 1 < size) {
-        q = vertical_segments[i + 1];
-        b = pts[last_point(s)].y == pts[first_point(q)].y;
-      }
-
-
-      while (j < L_size && collection[L[j]].exact_on(pts[last_point(s)])) {
-        register_pair(this, L[j], s);
-        if (b) register_pair(this, L[j], q);
-        j++;
-      }
+      //register segments passing exactly through the upper end of the vertical segment
+      //keep j unchanged for the next vertical segment beginning at the same point
+      for (auto k = j; k < L_size && collection[L[k]].exact_on(pts[last_point(s)]);++k) 
+        register_pair(this, L[k], s);
     };
 
-      
-    auto next_non_vertical = [coll=collection, ends=ENDS,l](uint4 c) {// next index of non vertical segment end
-      do {
-        if (l==++c) return 0U;
-      } while (coll[get_segm(ends[c])].is_vertical());
-      return c;
-      };
 
-    for (uint4 i = 0, j = next_non_vertical(f-1); j && i < size; ++i) {// vertical - segments having ends at cur X
+    for (uint4 i = 0, j = 0; j < nv_size && i < v_size; ++i) {// vertical - endpoint intersections
       auto s = vertical_segments[i];
-      while (j && collection[get_segm(ENDS[j])].exact_under(pts[first_point(s)]))
-        j= next_non_vertical(j);
-
-      while (j && collection[get_segm(ENDS[j])].exact_under(pts[last_point(s)])) {
-        register_pair(this, get_segm(ENDS[j]), s);
-        j = next_non_vertical(j);
-      }
-
-      bool b = false;
-      int4 q;
-      if (i + 1 < size) {
-        q = vertical_segments[i + 1];
-        b = pts[last_point(s)].y == pts[first_point(q)].y;
-      }
-
-      while (j && collection[get_segm(ENDS[j])].exact_on(pts[last_point(s)])) {
-        register_pair(this, get_segm(ENDS[j]), s);
-        if (b) register_pair(this, get_segm(ENDS[j]), q);
-        j = next_non_vertical(j);
-      }
+      //skip segments below the vertical segment
+      while (j < nv_size && pts[non_vertical_pts[j]].y<pts[first_point(s)].y)
+        j++;
+      //register segments intersecting the vertical segment except those exactly ending at its upper end
+      for (; j < nv_size && pts[non_vertical_pts[j]].y < pts[last_point(s)].y; ++j)
+        register_pair(this, get_segm(non_vertical_pts[j]), s);
+      //register segments exactly ending at the upper end of the vertical segment
+      //keep j unchanged for the next vertical segment beginning at the same point
+      for (auto k=j; k < nv_size && pts[non_vertical_pts[k]].y == pts[last_point(s)].y; ++k)
+        register_pair(this, get_segm(non_vertical_pts[k]), s);
     };
 
   }

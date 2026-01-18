@@ -295,7 +295,7 @@ public:
     TIntegerVect org;
     TIntegerVect shift;
 
-    void Refine()
+    void Refine() noexcept
     {
       if ((shift.x < 0) || ((shift.x == 0) && (shift.y < 0)))
       {
@@ -348,6 +348,7 @@ public:
     void EndPoint(int4& x, int4& y) const {
       x = org.x + shift.x; y = org.y + shift.y;
     };
+
     auto bx() const {
       return org.x;
     }
@@ -366,27 +367,37 @@ public:
     auto sy() const {
       return shift.y;
     }
+
     bool is_vertical() const {
       return sx() == 0;
     }
+
     auto point_pos(TIntegerVect v) const { //return negative if segment placed under point v
       return (v - org) % shift;
     };
- 
     auto under(TIntegerVect v) const { //segment placed under point v, true == -1, false == 1
-      return (v - org) % shift <=> 0;
-    };
-    bool exact_under(TIntegerVect v) const { //segment placed under point v
-      return (v - org) % shift < 0;
-    };
-    bool exact_on(TIntegerVect v) const { //segment placed under point v
-      return (v - org) % shift == 0;
+      return point_pos(v) <=> 0;
     };
     auto upper(TIntegerVect v) const {//segment placed above point v, true == -1, false == 1
-      return 0 <=> (v - org) % shift;
+      return 0 <=> point_pos(v);
+    };
+    static bool exact_true(std::strong_ordering o) {
+      return o == std::strong_ordering::less;
+    }
+    static bool exact_false(std::strong_ordering o) {
+      return o == std::strong_ordering::greater;
+    }
+    static bool no_true_no_false(std::strong_ordering o) {
+      return o == std::strong_ordering::equal;
+    }
+    bool exact_under(TIntegerVect v) const { //segment placed under point v
+      return point_pos(v) < 0;
+    };
+    bool exact_on(TIntegerVect v) const { //segment placed under point v
+      return point_pos(v) == 0;
     };
     bool exact_upper(TIntegerVect v) const {
-      return 0 < (v - org) % shift;
+      return 0 < point_pos(v);
     };
 
     bool no_common_y(const TIntegerSegment& s2) const {
