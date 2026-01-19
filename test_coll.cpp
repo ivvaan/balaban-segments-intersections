@@ -389,7 +389,7 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
         return find_int(n, coll, alg, stat);
       };
       case intline: {
-        CIntegerSegmentCollection<Counter> coll(n, segs, &reg, range);
+        CIntegerSegmentCollection<Counter> coll(n, (TLineSegment1*) segs, &reg, range);
         return find_int(n, coll, alg, stat);
       };
       case line2: {

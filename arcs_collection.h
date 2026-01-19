@@ -43,17 +43,17 @@ public:
     uint4 NN = Nn << 1;
     ENDS = new uint4[NN];
     PrepareEndpointsSortedList(ENDS);
-    SegL = new uint4[Nn];
-    SegR = new uint4[Nn];
+    seg_L_rank = new uint4[Nn];
+    seg_R_rank = new uint4[Nn];
     uint4 max_segm_on_vline = 0, nsegm_on_vline = 0;
     double avr = 0;
     for (uint4 i = 0; i < NN; ++i) {
       if (is_last(ENDS[i])) {
-        SegR[get_segm(ENDS[i])] = i;
+        seg_R_rank[get_segm(ENDS[i])] = i;
         --nsegm_on_vline;
       }
       else {
-        SegL[get_segm(ENDS[i])] = i;
+        seg_L_rank[get_segm(ENDS[i])] = i;
         ++nsegm_on_vline;
         if (nsegm_on_vline > max_segm_on_vline) max_segm_on_vline = nsegm_on_vline;
       }
@@ -93,8 +93,8 @@ public:
   void Reset()
   {
     MY_FREE_ARR_MACRO(ENDS);
-    MY_FREE_ARR_MACRO(SegL);
-    MY_FREE_ARR_MACRO(SegR);
+    MY_FREE_ARR_MACRO(seg_L_rank);
+    MY_FREE_ARR_MACRO(seg_R_rank);
   }
 
   static bool is_last(uint4 pt)
@@ -110,10 +110,10 @@ public:
     return N; 
   };
   uint4 GetSegR(uint4 sn) const {
-    return SegR[sn];
+    return seg_R_rank[sn];
   };
   uint4 GetSegL(uint4 sn) const {
-    return SegL[sn];
+    return seg_L_rank[sn];
   };
   uint4 PointAtRank(uint4 rank) const {
     return ENDS[rank];
@@ -360,8 +360,8 @@ private:
 
   // moved arrays for endpoints
   uint4* ENDS = nullptr;
-  uint4* SegL = nullptr;
-  uint4* SegR = nullptr;
+  uint4* seg_L_rank = nullptr;
+  uint4* seg_R_rank = nullptr;
 
 };
 

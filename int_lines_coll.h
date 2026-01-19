@@ -267,9 +267,8 @@ private:
     };
 
     template<bool remove_zero_seg = true>
-    auto NoRemapInit(uint4 n, void* c, IntersectionRegistrator* r, int4 range, CTHIS& collection) {
+    auto NoRemapInit(uint4 n, TLineSegment1* sc, IntersectionRegistrator* r, int4 range, CTHIS& collection) {
       initial_SN = n;
-      auto sc = reinterpret_cast<TLineSegment1*>(c);
       std::vector<TIntegerVect> points(2 * n);
 
       this->range = range;
@@ -433,13 +432,13 @@ public:
     std::sort(epoints, epoints + NN, is_below);
   };
 
-  bool is_multiple(uint4 pt) {
+  bool is_multiple(uint4 pt) const {
     return pt >= (N << 1);
   };
-  auto mark_multiple(uint4 pt) {
+  auto mark_multiple(uint4 pt) const {
     return pt + (N << 1);
   };
-  auto unmark_multiple(uint4 pt) {
+  auto unmark_multiple(uint4 pt) const {
     return pt - (N << 1);
   };
 
@@ -449,7 +448,9 @@ public:
     uint4 Nn = GetSegmNumb();
     if (Nn == 0) return {};
     uint4 NN = Nn << 1;
-    RAII_ARR(uint4,tmpENDS,NN);
+    //RAII_ARR(uint4,tmpENDS,NN);
+    auto __tmpENDS__ = std::make_unique<uint4[]>(NN); 
+      uint4* tmpENDS = __tmpENDS__.get();
     tmp =new int4[NN];
     PrepareEndpointsSortedList(tmpENDS);
 
@@ -458,10 +459,10 @@ public:
     //auto nD = nAll  - nX;
     //nV - number of unique non unique X,e.g. for X={0,1,3,3,3,4,4} 3 and 4 are non unique, the number is 2
     //nD - number of non unique non unique X, i.e. 5: 3,3,3,4,4
-    ENDS= new uint4[nAll];
-    x_collide_points=new ListBounds[nV];
 
     if (nV != 0) {
+      ENDS = new uint4[nAll];
+      x_collide_points = new ListBounds[nV];
       uint4 D_last = nX;
       for (uint4 i = 0, xcp_pos = 0, ne_pos = 0, j; i < NN; i = j) {
         j = i + 1;
@@ -486,19 +487,21 @@ public:
     }
     else {
       std::iota(tmp, tmp + NN, 0);
+      ENDS = tmpENDS;
+      __tmpENDS__.release();
     };
 
-    SegL = new uint4[Nn];
-    SegR = new uint4[Nn];
+    seg_L_rank = new uint4[Nn];
+    seg_R_rank = new uint4[Nn];
     uint4 max_segm_on_vline = 0, nsegm_on_vline = 0;
     double avr = 0;
     for (uint4 i = 0; i < NN; ++i) {
       if (is_last(tmpENDS[i])) {
-        SegR[get_segm(tmpENDS[i])] = tmp[i];
+        seg_R_rank[get_segm(tmpENDS[i])] = tmp[i];
         --nsegm_on_vline;
       }
       else {
-        SegL[get_segm(tmpENDS[i])] = tmp[i];
+        seg_L_rank[get_segm(tmpENDS[i])] = tmp[i];
         ++nsegm_on_vline;
         if (nsegm_on_vline > max_segm_on_vline) max_segm_on_vline = nsegm_on_vline;
       }
@@ -545,20 +548,20 @@ public:
     return InsDelOrdinary(i_f, L_size, L, pt, stack_pos);
   }
 
-  ListBounds get_pt_list_bounds(uint4 pt) {
+  ListBounds get_pt_list_bounds(uint4 pt) const {
     return x_collide_points[pt];
   }
 
   uint4 rank_to_rank(uint4 multiple_rank) {
     auto pt = PointAtRank(multiple_rank);
     auto seg = get_segm(pt);
-    return is_first(pt)?SegL[seg]:SegR[seg];
+    return is_first(pt)?seg_L_rank[seg]:seg_R_rank[seg];
   }
   void DelStep(uint4 end_rank, uint4& L_size, int4* L)
   {
     uint4 new_size = 0;
     for (uint4 i = 0; i < L_size; ++i)
-      if (SegR[L[i]]!= end_rank) {
+      if (seg_R_rank[L[i]]!= end_rank) {
         L[new_size++] = L[i];
       }
     L_size = new_size;
@@ -724,8 +727,8 @@ public:
   void Reset()
   {
     MY_FREE_ARR_MACRO(ENDS);
-    MY_FREE_ARR_MACRO(SegL);
-    MY_FREE_ARR_MACRO(SegR);
+    MY_FREE_ARR_MACRO(seg_L_rank);
+    MY_FREE_ARR_MACRO(seg_R_rank);
   }
 
 
@@ -740,62 +743,41 @@ public:
     return N;
   };
   uint4 GetSegR(uint4 sn) const {
-    return SegR[sn];
+    return seg_R_rank[sn];
   };
   uint4 GetSegL(uint4 sn) const {
-    return SegL[sn];
+    return seg_L_rank[sn];
   };
   uint4 PointAtRank(uint4 rank) const {
     return ENDS[rank];
   }
 
-  uint4 get_right_pt_idx(uint4 right_pt) {
-    return SegR[get_segm(right_pt)];
-  }
-  uint4 get_left_pt_idx(uint4 left_pt) {
-    return SegL[get_segm(left_pt)];
-  }
-
-  bool is_right_pt_in_stripe(uint4 s) const {
-    return right_bound_idx <= SegR[s];
-  }
-  bool is_left_pt_in_stripe(uint4 s) const {
-    return left_bound_idx >= SegL[s];
-  }
-  bool is_right_pt_inside(uint4 s) const {
-    return right_bound_idx < SegR[s];
-  }
-  bool is_left_pt_inside(uint4 s) const {
-    return left_bound_idx > SegL[s];
-  }
- 
   bool is_right_pt_on_bound(uint4 s) const {
-    return stripe_right == SegR[s];
+    return stripe_right_rank == seg_R_rank[s];
   }
   bool is_left_pt_on_bound(uint4 s) const {
-    return stripe_left == SegL[s];
+    return stripe_left_rank == seg_L_rank[s];
   }
 
   void SetCurStripe(uint4 left_rank, uint4 right_rank) {
-    auto left = ENDS[left_rank];
-    auto right = ENDS[right_rank];
-
-    B = GetX(stripe_left = left);
-    E = GetX(stripe_right = right);
-    left_bound_idx = get_left_pt_idx(left);
-    right_bound_idx = get_right_pt_idx(right);
+    stripe_left_rank = left_rank;
+    stripe_right_rank = right_rank;
+    auto left = PointAtRank(left_rank);
+    auto right = PointAtRank(right_rank);
+    B = GetXEx(left);
+    E = GetXEx(right);
   };
 
   void SetCurStripeLeft(uint4 left_rank) {
+    stripe_left_rank = left_rank;
     auto left = ENDS[left_rank];
-    B = GetX(stripe_left = left);
-    left_bound_idx = get_left_pt_idx(left);
+    B = GetXEx(left);
   };
 
   void SetCurStripeRight(uint4 right_rank) {
-    auto right = ENDS[right_rank];
-    E = GetX(stripe_right=right);
-    right_bound_idx = get_right_pt_idx(right);
+    stripe_right_rank = right_rank;
+    auto right = PointAtRank(right_rank);
+    E = GetXEx(right);
   };
 
 
@@ -817,11 +799,12 @@ public:
     SetCurSeg(s);
     stage = _Stages::stage_split;
     curB = MAX(B, curB);// possibly curB=B; !!!!!
-    if (E < curE) {//means cur_seg.is_vertical()==false otherwise curE<=E
+    if (E < curE) {
         curE = E;
         is_rstump = true;
     }
     active_end = cur_seg.EndPoint();
+    //cur_seg_pt_on_right_bound = is_right_pt_on_bound(s);
   };
 
   void SetCurSegCutBeg(uint4 s) {
@@ -847,14 +830,6 @@ public:
     stage = _Stages::stage_bubble;
     active_end = pts[last_point(s)];
   };
-
-  bool is_cur_strip_zero() const {
-    return B == E;
-  }
-
-  bool is_cur_strip_non_zero() const {
-    return !is_cur_strip_zero();
-  }
 
   enum _Int_reg {
     // segments are not intersecting
@@ -984,7 +959,7 @@ public:
   bool IsCurSegIntWith(int4 s_) {//checks if cur_seg and s intersects
     auto cs = cur_seg_idx;
     int4 is_intersect;
-    if (is_rstump) //always must be in stage_split
+    if (is_rstump) // can be in stage_split only
       return BoundIntersect(s_) || RStumpIntersect<is_way_up>(s_);
     if (stage != _Stages::stage_bubble) 
       return BoundIntersect(s_) || ActiveEndIntersect<is_way_up>(s_);
@@ -1007,7 +982,7 @@ public:
   auto FindCurSegIntWith(int4 s_){//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
     auto cs = cur_seg_idx;
     int4 is_intersect;
-    if (is_rstump) {//always must be in stage_split
+    if (is_rstump) {//can be in stage_split only
       if ((is_intersect = BoundIntersect(s_)) || (is_intersect = RStumpIntersect<is_way_up>(s_))) {
         if (is_intersect == _Int_reg::int_reg)
           register_pair(this, cs, s_);
@@ -1037,7 +1012,7 @@ public:
     auto cs = cur_seg_idx;
     int4 is_intersect;
     int4 increment = is_way_up ? 1 : -1;
-    if (is_rstump) {//always must be in stage_split
+    if (is_rstump) {//can be in stage_split only
       while ((s_ != last) && ((is_intersect = BoundIntersect(*s_)) ||
         (is_intersect = RStumpIntersect<is_way_up>(*s_)))) {
         if (is_intersect == _Int_reg::int_reg)
@@ -1117,7 +1092,8 @@ public:
       clone_of = &c;
       N = c.N;
       ENDS = c.ENDS;
-      SegR = c.SegR;
+      seg_L_rank = c.seg_L_rank;
+      seg_R_rank = c.seg_R_rank;
       collection = c.collection;
       //!!!!!clone remaper!!!!!!!!!!!!
       SetRegistrator(r);
@@ -1128,7 +1104,8 @@ public:
     collection = nullptr; 
     clone_of = nullptr; 
     ENDS = nullptr;
-    SegR = nullptr;
+    seg_L_rank = nullptr;
+    seg_R_rank = nullptr;
     //unclone remaper !!!!!!!!
 
   };
@@ -1149,17 +1126,18 @@ public:
 
   IntersectionRegistrator* GetRegistrator() { return  remaper.registrator; };
 
-  CIntegerSegmentCollection(uint4 n, void* c, IntersectionRegistrator *r, int4 range)
+  CIntegerSegmentCollection(uint4 n, TLineSegment1* c, IntersectionRegistrator *r, int4 range)
   {
     assert(("integer collection registers only intersecting pairs:\n\
        intersection points don't have integer coords ",
       (IntersectionRegistrator::reg_type & _RegistrationType::point) == 0));
     remaper.NoRemapInit(n, c, r, range, *this);
-    is_collection_remapped = false;
+    TurnRemapOn();
+   /* is_collection_remapped = false;
     register_pair = reg_pair;
     N = remaper.get_N();
     collection = segments.data();
-    pts = points.data();
+    pts = points.data();*/
 
   }
 
@@ -1252,14 +1230,23 @@ public:
   };
 
 private:
+  auto GetXEx(uint4 pt) const {
+    if (is_multiple(pt)){
+      auto [f, l] = get_pt_list_bounds(unmark_multiple(pt));
+      return pts[ENDS[f]].x;
+    };
+    return GetX(pt);
+  };
+
   auto GetX(uint4 pt) const {
+    assert(pt < 2 * N);
     return pts[pt].x;
   };
 
   TIntegerSegment* collection = nullptr;
   TIntegerVect* pts = nullptr;
   //uint4* SegL = nullptr; 
-  uint4* SegL = nullptr, * SegR = nullptr, * ENDS = nullptr;
+  uint4* seg_L_rank = nullptr, * seg_R_rank = nullptr, * ENDS = nullptr;
 
   TIntegerSegment cur_seg;
   TIntegerVect cur_point, active_end;
@@ -1270,7 +1257,7 @@ private:
   decltype(reg_pair) *register_pair = reg_pair;
   CIntegerSegmentCollection *clone_of = nullptr;
   uint4 N=0,nTotX=0,nCollideX=0;
-  int4 B, E, curB, curE, stripe_left, stripe_right, right_bound_idx, left_bound_idx;
+  int4 B, E, curB, curE, stripe_left_rank, stripe_right_rank, right_bound_idx, left_bound_idx;
   uint4 stage = _Stages::stage_split;
 
   uint4 cur_seg_idx = 0xFFFFFFFF, cur_point_idx= 0xFFFFFFFF;
