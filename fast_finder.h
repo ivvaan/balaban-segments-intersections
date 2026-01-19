@@ -60,7 +60,10 @@ public:
     }
     else
       L_size = CalcLAt(segments, from);
+#if defined(DEBUG)|| defined(_DEBUG)
     return FindR(*this, segments, bottom_index, from, to, &stack_rec/*, 0, get_max_call(to - from)*/);
+#endif // DEBUG
+
 
     if (avr_segm_on_vline < 35)      
       return SISFindR(*this, segments, bottom_index, from, to, &stack_rec);

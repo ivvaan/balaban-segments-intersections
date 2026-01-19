@@ -826,7 +826,7 @@ public:
 
   void SetCurSegCutBeg(uint4 s) {
     SetCurSeg(s);
-    stage = _Stages::split_up;
+    stage = _Stages::stage_split;
     curB = MAX(B, curB);// possibly curB=B; !!!!!
     active_end = cur_seg.EndPoint();
   };
