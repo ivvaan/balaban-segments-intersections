@@ -532,7 +532,7 @@ public:
       auto actual_pt = unmark_multiple(pt);
       auto [f, l] = get_pt_list_bounds(actual_pt);
       ReorderStep(pts[ENDS[f]].x, L_size, L);
-      VertIntCurStrip(f, l, L_size, L);
+      AllIntCurLine(f, l, L_size, L);
       InsStep(f, l, L_size, L);
 
       for (auto i = f; i < l; ++i) {
@@ -618,7 +618,7 @@ public:
 
   };
 
-  void VertIntCurStrip(uint4 f, uint4 l, uint4& L_size, int4* L)//all intersections with vertical segments in the current line are registered
+  void AllIntCurLine(uint4 f, uint4 l, uint4& L_size, int4* L)//all intersections with vertical segments in the current line are registered
   {
     auto vertical_segments = tmp;//temporary storage for vertical segment indices
     uint4 v_size=0;
@@ -672,9 +672,28 @@ public:
       for (auto k=j; k < nv_size && pts[non_vertical_pts[k]].y == pts[last_point(s)].y; ++k)
         register_pair(this, get_segm(non_vertical_pts[k]), s);
     };
-
+    LastFirstInt(nv_size, non_vertical_pts);
   }
 
+
+  void LastFirstInt(uint4 len, int4 * nv_pts)//all intersections with vertical segments in the current line are registered
+  {
+    for (uint4 i = 0, j; i < len; i = j) {
+      j = i + 1;
+      while (j < len && pts[nv_pts[j]].y == pts[nv_pts[i]].y)
+        ++j;
+      if (j > i + 1) {
+        auto first_beg = nv_pts + i;
+        auto all_ends = nv_pts + j;
+        auto first_end = std::find_if(first_beg, all_ends, +[](uint4 pt) { return is_last(pt); });
+        assert(all_ends == std::find_if(first_end, all_ends, +[](uint4 pt) { return is_first(pt); }));
+        if (first_end != all_ends)
+          for (auto beg_pt = first_beg; beg_pt < first_end; ++beg_pt)
+            for (auto end_pt = first_end; end_pt < all_ends; ++end_pt)
+              register_pair(this, get_segm(*beg_pt), get_segm(*end_pt));
+      };
+    };
+  };
 
   template<class IntersectionFinder, class ProgramStackRec>
   void InsDelOrdinary(IntersectionFinder& i_f, uint4& L_size, int4* L, uint4 pt, ProgramStackRec* stack_pos) 
