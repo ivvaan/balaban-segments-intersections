@@ -425,16 +425,20 @@ public:
       return (min2 > max1) || (min1 > max2);
     }
 
-    void write_SVG(int4 id, chostream* SVG_text) const {
+    void write_SVG(int4 id, chostream* SVG_text,int4 type=0) const {
       if (SVG_text) {
-        auto bp = BegPoint();
-        auto ep = EndPoint();
         *SVG_text << "<line id='seg" << id;
-        *SVG_text << "' x1='" << bp.x;
-        *SVG_text << "' y1='" << bp.y;
-        *SVG_text << "' x2='" << ep.x;
-        *SVG_text << "' y2='" << ep.y;
-        *SVG_text << "' class='line1'/>\n";
+        *SVG_text << "' x1='" << bx();
+        *SVG_text << "' y1='" << by();
+        *SVG_text << "' x2='" << ex();
+        *SVG_text << "' y2='" << ey();
+        if (type == 0)
+          *SVG_text << "' class='int_line'/>\n";
+        else {
+          *SVG_text << "' class='int_line";
+          *SVG_text << type;
+          *SVG_text << "'/>\n";
+        }
       }
     };
 

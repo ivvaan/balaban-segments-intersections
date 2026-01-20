@@ -516,12 +516,40 @@ public:
     return is_collection_remapped;
   }
 
-  auto GetMaxCollideXIdx() const {
+  int4 GetMaxCollideXIdx() const {
+    if (nCollideX < 1)
+      return -1;
     auto less=[](ListBounds a, ListBounds b) {
       return (a.end - a.beg) < (b.end - b.beg);
       };
     return std::max_element(x_collide_points, x_collide_points + nCollideX,less)
       - x_collide_points;
+  }
+
+  template<class IntersectionFinder, class ProgramStackRec>
+  void InsDelOrdinary(IntersectionFinder& i_f, uint4& L_size, int4* L, uint4 pt, ProgramStackRec* stack_pos)
+  {
+    auto sn = get_segm(pt);
+    if (is_last(pt)) // if endpoint - remove
+    {
+      auto last = std::remove(L, L + L_size, sn);
+      assert(last + 1 == L + L_size);
+      --L_size;
+    }
+    else// if startpoint - insert
+    {
+      if (stack_pos->isnot_top()) {
+        SetCurSegAndPoint(sn);
+        i_f.FindIntI(*this, sn, stack_pos);// get internal intersections
+      }
+      else {
+        SetCurPointAtBeg(sn);//sets collection current point at the begin of the segment sn
+      }
+      int4 i = L_size;
+      for (auto _L = L - 1; (i != 0) && (!UnderCurPoint(_L[i])); --i)
+        L[i] = _L[i];
+      L[i] = sn; ++L_size;
+    }
   }
 
 
@@ -537,15 +565,18 @@ public:
       ReorderStep(pts[ENDS[f]].x, L_size, L);
       AllIntCurLine(f, l, L_size, L);
       InsStep(f, l, L_size, L);
-
-      for (auto i = f; i < l; ++i) {
-        auto cur_pt = ENDS[i];
-        if (is_first(cur_pt))
-          i_f.FindIntI(*this, get_segm(cur_pt), stack_pos);
-      }
-
+      if (stack_pos->isnot_top())
+        for (auto i = f; i < l; ++i) {
+          auto cur_pt = ENDS[i];
+          if (is_first(cur_pt)) {
+            auto sn = get_segm(cur_pt);
+            SetCurSegAndPoint(sn);
+            i_f.FindIntI(*this, sn, stack_pos);
+          }
+        }
     }
-    return InsDelOrdinary(i_f, L_size, L, pt, stack_pos);
+    else
+      InsDelOrdinary(i_f, L_size, L, pt, stack_pos);
   }
 
   ListBounds get_pt_list_bounds(uint4 pt) const {
@@ -609,13 +640,13 @@ public:
   }
 
 
-  void ReorderStep(int4 x, uint4 len, int4* arr) {
-    for (uint4 i = 0, j; i < len; i = j) {
+  void ReorderStep(int4 x, uint4 L_size, int4* L) {
+    for (uint4 i = 0, j; i < L_size; i = j) {
       j = i + 1;
-      while (j < len && 0==(collection[arr[i]].YAtX_frac(x) <=> collection[arr[j]].YAtX_frac(x)))
+      while (j < L_size && 0==(collection[L[i]].YAtX_frac(x) <=> collection[L[j]].YAtX_frac(x)))
         ++j;
       if (j > i + 1) {//reverse order for sublists of equal Y segments (passing segments should be in reverse order)
-        std::reverse(arr + i, arr + j);
+        std::reverse(L + i, L + j);
       };
     };
 
@@ -697,32 +728,6 @@ public:
       };
     };
   };
-
-  template<class IntersectionFinder, class ProgramStackRec>
-  void InsDelOrdinary(IntersectionFinder& i_f, uint4& L_size, int4* L, uint4 pt, ProgramStackRec* stack_pos) 
-  {
-    auto sn = get_segm(pt);
-    if (is_last(pt)) // if endpoint - remove
-    {
-      auto last = std::remove(L, L + L_size, sn);
-      assert(last + 1 == L + L_size);
-      --L_size;
-    }
-    else// if startpoint - insert
-    {
-      if (stack_pos->isnot_top()) {
-        SetCurSegAndPoint(sn);
-        i_f.FindIntI(*this, sn, stack_pos);// get internal intersections
-      }
-      else {
-        SetCurPointAtBeg(sn);//sets collection current point at the begin of the segment sn
-      }
-      int4 i = L_size;
-      for (auto _L = L - 1; (i != 0) && (!UnderCurPoint(_L[i])); --i)
-        L[i] = _L[i];
-      L[i] = sn; ++L_size;
-    }
-  }
 
   void Reset()
   {
@@ -963,8 +968,8 @@ public:
       return BoundIntersect(s_) || RStumpIntersect<is_way_up>(s_);
     if (stage != _Stages::stage_bubble) 
       return BoundIntersect(s_) || ActiveEndIntersect<is_way_up>(s_);
-    // no need to check BoundIntersect in stage_bubble
-    return ActiveEndIntersect<is_way_up>(s_);
+    // no need to check BoundIntersect in stage_bubble but check cur_point intersection
+    return CurPointIntersect(s_)||ActiveEndIntersect<is_way_up>(s_);
   };
 
   bool IsIntersectsCurSegDown(int4 s_) //check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
@@ -998,8 +1003,8 @@ public:
       };
       return false;
     };
-    // no need to check BoundIntersect in stage_bubble
-    if (is_intersect = ActiveEndIntersect<is_way_up>(s_)) {
+    // no need to check BoundIntersect in stage_bubble but check cur_point intersection
+    if ((is_intersect = CurPointIntersect(s_))||(is_intersect = ActiveEndIntersect<is_way_up>(s_))) {
       if (is_intersect == _Int_reg::int_reg)
         register_pair(this, cs, s_);
       return true;
@@ -1031,7 +1036,8 @@ public:
       return s_;
     }
     // no need to check BoundIntersect in stage_bubble
-    while ((s_ != last) && (is_intersect = ActiveEndIntersect<is_way_up>(*s_))) {
+    while ((s_ != last) && ((is_intersect = CurPointIntersect(*s_)) || 
+      (is_intersect = ActiveEndIntersect<is_way_up>(*s_)))) {
       if (is_intersect == _Int_reg::int_reg)
         register_pair(this, cs, *s_);
       s_ += increment;
@@ -1086,6 +1092,11 @@ public:
     else
       return (pp >= 0)*_Int_reg::int_reg;//s_ placed over active_end
   };
+
+  auto CurPointIntersect(int4 s_) const { //
+    return (collection[s_].point_pos(cur_point) == 0) * _Int_reg::int_reg;//current point placed on  s_
+  };
+
 
   void clone(CIntegerSegmentCollection &c, IntersectionRegistrator *r)
   {
@@ -1158,7 +1169,14 @@ public:
 
   bool TurnRemapOn() {
     is_collection_remapped = remaper.TurnRemapOn(*this);
-    register_pair = is_collection_remapped?reg_remapped_pair: reg_pair;
+
+#ifdef DEBUG_INTERSECTION_SET
+    register_pair = reg_pair;
+    is_collection_remapped = false;
+#else
+    register_pair = is_collection_remapped ? reg_remapped_pair : reg_pair;
+#endif
+
     N = remaper.get_N();
     collection = segments.data();
     pts = points.data();
@@ -1227,6 +1245,11 @@ public:
   };
   auto &get_segments() {
     return segments;
+  };
+
+  auto XAtRank(uint4 rank) const {
+    auto pt = PointAtRank(rank);
+    return GetXEx(pt);
   };
 
 private:

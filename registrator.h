@@ -162,7 +162,10 @@ public:
   static constexpr uint4 reg_type = _RegistrationType::count + _RegistrationType::segments;
 
   PairRegistrator() {
+    intersections.reserve(1024 * 1024);
   };
+  PairRegistrator(const  PairRegistrator&) = default;
+
 
   ~PairRegistrator() {
   };
@@ -170,8 +173,6 @@ public:
 
 
   void register_pair(uint4 s1, uint4 s2) {
-      if (counter == 0)
-      intersections.reserve(1024 * 1024);
     ++counter;
 #ifdef NDEBUG
     if (s1 < s2)
@@ -301,6 +302,7 @@ public:
   static constexpr uint4 reg_type = _RegistrationType::count + _RegistrationType::segments + _RegistrationType::point;
 
   PairAndPointRegistrator() {
+    intersections.reserve(1024 * 1024);
   };
 
   ~PairAndPointRegistrator() {
@@ -309,13 +311,9 @@ public:
  
 
   void register_pair(uint4 s1, uint4 s2) noexcept {
-    if (counter == 0)
-      intersections.reserve(1024 * 1024);
     ++counter;
   };
   void register_pair_and_point(uint4 s1, uint4 s2, const ipoint& p) {
-    if (counter == 0)
-      intersections.reserve(1024 * 1024);
     ++counter;
     if (s1 < s2)
       intersections.emplace_back(s1, s2, p);
