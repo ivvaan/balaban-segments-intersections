@@ -110,25 +110,6 @@ double ICT = -1;
 
 unsigned random_seed = 317;
 
-void search_problem(uint4 n) {
-  uint8 nfast = 0;
-  uint8 ntriv = 0;
-  uint4 r_seed = 1;
-  CRandomValueGen rv(r_seed);
-  auto find_intersections = get_find_intersections_func(_Registrator::just_count);
-  while (nfast == ntriv) {
-    rv.SetSeed(++r_seed);
-    auto seg_coll = create_test_collection(_Segment::arc, n, _Distribution::random, 1.0, rv, nullptr);
-    nfast = find_intersections(_Segment::arc, n, seg_coll, _Algorithm::fast, _Registrator::just_count);
-    ntriv = find_intersections(_Segment::arc, n, seg_coll, _Algorithm::simple_sweep, _Registrator::just_count);
-    if (r_seed % 1000000 == 0)printf("%i ", r_seed/1000000);
-    
-    delete_test_collection(_Segment::arc, seg_coll, nullptr);
-
-  }
-  printf("\nfound %i \n", r_seed);
-  {printf("\npress 'Enter' to continue"); getchar(); }
-};
 
 
 double _benchmark_old(char* counters_string, int4 n, PSeg* seg_ptr_coll, int4 s_type, int4 alg, double& res, bool dont_need_ip = false)

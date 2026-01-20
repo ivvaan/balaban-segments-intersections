@@ -465,7 +465,7 @@ public:
 
 
     friend std::ostream& operator<<(std::ostream& os, const TIntegerSegment& s) {
-      os <<"["<<s.org.x << "," << s.org.y << ";" << s.shift.x << "," << s.shift.y << "]"; //" " <<double(s.shift.y)/ s.shift.x<< std::endl;
+      os <<"{"<<s.bx() << "," << s.by() << "," << s.sx() << "," << s.sy() << "}"; //" " <<double(s.shift.y)/ s.shift.x<< std::endl;
       return os;
     };
 

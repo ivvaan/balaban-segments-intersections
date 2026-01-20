@@ -52,7 +52,7 @@ PSeg create_test_collection(int4 seg_type, int4 n, int4 distr, REAL par, CRandom
   if (seg_ptr_coll_ptr != nullptr)colls = new PSeg[n];
   if (distr != _Distribution::param_defined)par /= n / 33.0;
   if (distr == _Distribution::parallel)par /= 2.4;
-  PSeg result;
+  PSeg result=nullptr;
   switch (seg_type)
   {
   case _Segment::line1:

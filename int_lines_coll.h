@@ -565,7 +565,8 @@ public:
       ReorderStep(pts[ENDS[f]].x, L_size, L);
       AllIntCurLine(f, l, L_size, L);
       InsStep(f, l, L_size, L);
-      if (stack_pos->isnot_top())
+      if (stack_pos->isnot_top())// find intersections for all inserted and vertical  
+        //segments in the staircases above (in the stack)
         for (auto i = f; i < l; ++i) {
           auto cur_pt = ENDS[i];
           if (is_first(cur_pt)) {
@@ -1068,7 +1069,7 @@ public:
     auto pp = s.point_pos(cur_point);
     if(pp != 0)
       return pp < 0;//s_ placed under current point
-    auto prod = cur_seg.shift % s.shift;
+    auto prod = collection[cur_point_seg].shift % s.shift;
     assert(prod != 0);
     return prod < 0;//if prod<0 then s_ is clockwise from cur_seg at cur_point, 
     // taking into account that cur_seg must be on the right of cur_point 

@@ -60,16 +60,17 @@ public:
     }
     else
       L_size = CalcLAt(segments, from);
-#if defined(DEBUG)|| defined(_DEBUG)
-    return FindR(*this, segments, bottom_index, from, to, &stack_rec/*, 0, get_max_call(to - from)*/);
-#endif // DEBUG
-
-
-    if (avr_segm_on_vline < 35)      
-      return SISFindR(*this, segments, bottom_index, from, to, &stack_rec);
-    if (not_parallel) 
-      return MultipleCutting(*this, segments, bottom_index, from, to, &stack_rec, GetDivPow(to - from));
-    FindR(*this, segments, bottom_index, from, to, &stack_rec/*, 0, get_max_call(to - from)*/);
+    if (avr_segm_on_vline < 35) {
+      SISFindR(*this, segments, bottom_index, from, to, &stack_rec);
+      InsDel(segments, to, &stack_rec);
+      return;
+    };
+    if (not_parallel) {
+      MultipleCutting(*this, segments, bottom_index, from, to, &stack_rec, GetDivPow(to - from));
+    }
+    else
+      FindR(*this, segments, bottom_index, from, to, &stack_rec/*, 0, get_max_call(to - from)*/);
+    InsDel(segments, to, &stack_rec);
   }
 
  template<template <class> class SegmentsColl, class CIntRegistrator >

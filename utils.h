@@ -27,7 +27,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <intrin.h>
 #include <algorithm>
 #include <vector>
-#define DEBUG_INTERSECTION_SET
+//#define DEBUG_INTERSECTION_SET
 
 typedef int int4;
 typedef unsigned int uint4;
