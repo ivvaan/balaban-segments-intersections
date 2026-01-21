@@ -50,11 +50,58 @@ public:
     std::fill_n(father_loc, len_of_Q, undef_loc);
 
     constexpr int4 bottom_index = inherit_each + 1;
-    ProgramStackRec stack_rec(bottom_index, nTotX);  //need to be initialized this way 
+    ProgramStackRec stack_rec(bottom_index, nTotX);  //need to be initialized this way
+    segments.SetCurStripeRight(0);
     InsDel(segments, 0, &stack_rec);
     FindR(segments, bottom_index + 1, bottom_index, 0, nTotX - 1, &stack_rec, 0);
+    InsDel(segments, nTotX - 1, &stack_rec);
  }
 
+  template<class SegmentsColl>
+  void FindIntI(SegmentsColl& segments, int4 cur_seg, ProgramStackRec* stack_pos) const
+  {
+    auto r_index = segments.GetSegR(cur_seg);
+    while (stack_pos->right_bound <= r_index)stack_pos = stack_pos->prev;// go from bottom to top and find staircase to start
+    if (stack_pos->prev == nullptr)return;
+    int4  l = undef_loc, r, m, QE = stack_pos->Q_pos + 1;
+    int4 QB = undef_loc + 1;//just to differ from l at first loop
+    for (stack_pos = stack_pos->prev; stack_pos != nullptr; stack_pos = stack_pos->prev)// for all staircases above
+    {
+      if ((big_staircase_threshold > inherit_each) && (l == QB)) //if location is below first stair we don't have data in father_loc for that location
+        // because the number of locations is greater (by one) than number of stairs 
+        // (for example one stair has two locations (below and above), but we keep in father_loc data for only one (above))
+        // so we use data from next location QE==l+1
+      {
+        l = QB = stack_pos->Q_pos;// set lower location bound to the location below first step of current staircase
+        r = father_loc[QE] ? QB + inherit_each : QE;// father_loc[QE] !=undef_loc (i.e. 0) means staircase was created by optSplit 
+        //and we use range [QB;QB+inherit_each] to search, otherwise it was created by Split and full range search [QB;QE] is used
+      }
+      else
+      {
+        QB = stack_pos->Q_pos;
+        m = abs(father_loc[l]);//using father_loc get approximate location in parent staircase; 
+        // line above sometimes executed when l == undef_loc, so we must initialize father_loc[undef_loc]=undef_loc in AllocMem()
+        //to keep l unchanged in this case; undef_loc was chosen to be zero so abs(undef_loc)==undef_loc
+        //otherwise we need additional checks
+        l = MAX(QB, m);//here we use a fact that always undef_loc < QB and if m==undef_loc or m<QB l should be QB
+        r = l + inherit_each;
+        if ((m == undef_loc) || (r > QE))r = QE;
+        //if m == undef_loc we use [QB;QE] as a range
+      }
+      auto len = r - l;
+      auto Ql = Q + l;
+      while (len > 1) // binary search
+      {
+        m = len / 2; // 
+        if (segments.UnderCurPoint(Ql[m]))
+          Ql += m;
+        len -= m;
+      }
+      l = Ql - Q;
+      FindInt(segments, QB, QE - 1, l);
+      QE = QB + 1; //set upper location bound to the location above last step of prev (which will be current) staircase
+    };
+  };
 
 
 private:
@@ -106,77 +153,10 @@ private:
     return l-c;
   };
 
-  template<class SegmentsColl>
-  void FindIntI(SegmentsColl& segments, int4 cur_seg, ProgramStackRec* stack_pos) const
-  {
-    auto r_index = segments.GetSegR(cur_seg);
-    while (stack_pos->right_bound <= r_index)stack_pos = stack_pos->prev;// go from bottom to top and find staircase to start
-    if (stack_pos->prev == nullptr)return;
-    int4  l = undef_loc, r, m, QE = stack_pos->Q_pos + 1;
-    int4 QB = undef_loc + 1;//just to differ from l at first loop
-    for (stack_pos = stack_pos->prev; stack_pos != nullptr; stack_pos = stack_pos->prev)// for all staircases above
-    {
-      if ((big_staircase_threshold > inherit_each) && (l == QB)) //if location is below first stair we don't have data in father_loc for that location
-          // because the number of locations is greater (by one) than number of stairs 
-          // (for example one stair has two locations (below and above), but we keep in father_loc data for only one (above))
-          // so we use data from next location QE==l+1
-      {
-        l = QB = stack_pos->Q_pos;// set lower location bound to the location below first step of current staircase
-        r = father_loc[QE] ? QB + inherit_each : QE;// father_loc[QE] !=undef_loc (i.e. 0) means staircase was created by optSplit 
-        //and we use range [QB;QB+inherit_each] to search, otherwise it was created by Split and full range search [QB;QE] is used
-      }
-      else
-      {
-        QB = stack_pos->Q_pos;
-        m = abs(father_loc[l]);//using father_loc get approximate location in parent staircase; 
-        // line above sometimes executed when l == undef_loc, so we must initialize father_loc[undef_loc]=undef_loc in AllocMem()
-        //to keep l unchanged in this case; undef_loc was chosen to be zero so abs(undef_loc)==undef_loc
-        //otherwise we need additional checks
-        l = MAX(QB, m);//here we use a fact that always undef_loc < QB and if m==undef_loc or m<QB l should be QB
-        r = l + inherit_each;
-        if ((m == undef_loc) || (r > QE))r = QE;
-        //if m == undef_loc we use [QB;QE] as a range
-      }
-      auto len = r - l;
-      auto Ql = Q + l;
-      while (len > 1) // binary search
-      {
-        m = len / 2; // 
-        if (segments.UnderCurPoint(Ql[m]))
-          Ql +=  m;
-        len -= m;
-      }
-      l = Ql - Q;
-      FindInt(segments, QB, QE - 1, l);
-      QE = QB + 1; //set upper location bound to the location above last step of prev (which will be current) staircase
-    };
-  };
 
   template<class SegmentsColl>
   void InsDel(SegmentsColl& segments, uint4 end_rank, ProgramStackRec* stack_pos)  {
-    auto pt = segments.PointAtRank(end_rank);
-    auto sn = SegmentsColl::get_segm(pt);
-    if (SegmentsColl::is_last(pt)) // if endpoint - delete
-    {
-      auto last = L + (--L_size);
-      for (auto cur = *last; cur != sn;)
-        std::swap(*--last, cur);
-    }
-    else// if startpoint - insert
-    {
-      if (stack_pos->isnot_top()) {
-        segments.SetCurSegAndPoint(sn);
-        FindIntI(segments, sn, stack_pos);// get internal intersections
-      }
-      else {
-        segments.SetCurPointAtBeg(sn);//sets collection current point at the begin of the segment sn
-      }
-      auto i = L_size++;
-      auto L_ = L;
-      for (auto _L = L_ - 1; (i != 0) && (!segments.UnderCurPoint(_L[i])); --i)
-        L_[i] = _L[i];
-      L_[i] = sn;
-    }
+    segments.InsDel(*this, L_size, L, end_rank, stack_pos);
   }
 
   template<class SegmentsColl>
