@@ -252,14 +252,14 @@ public:
   void InsDelOrdinary(IntersectionFinder& i_f, uint4& L_size, int4* L, uint4 pt, ProgramStackRec* stack_pos)
   {
     auto sn = get_segm(pt);
-    if (is_last(pt)) // if endpoint - remove
-    {
+    if (is_last(pt)){ // if endpoint - remove
       auto last = std::remove(L, L + L_size, sn);
       assert(last + 1 == L + L_size);
       --L_size;
+      ReorderStep(E, L_size, L);
     }
-    else// if startpoint - insert
-    {
+    else{// if startpoint - insert
+      ReorderStep(E, L_size, L);
       if (stack_pos->isnot_top()) {
         SetCurSegAndPoint(sn);
         i_f.FindIntI(*this, sn, stack_pos);// get internal intersections
@@ -284,7 +284,8 @@ public:
 
       auto actual_pt = unmark_multiple(pt);
       auto [f, l] = get_pt_list_bounds(actual_pt);
-      ReorderStep(pts[ENDS[f]].x, L_size, L);
+      assert(E == XAtRank(end_rank));
+      ReorderStep(E, L_size, L);
       AllIntCurLine(f, l, L_size, L);
       InsStep(f, l, L_size, L);
       if (stack_pos->isnot_top())// find intersections for all inserted and vertical  
@@ -546,53 +547,34 @@ public:
     active_end = pts[last_point(s)];
   };
 
-  enum _Int_reg {
-    // segments are not intersecting
-    no_int = 0,
-    // segments are intersecting, but no registration
-    int_no_reg = 1,
-    //Segments are intersecting and must be registered
-    int_reg = int_no_reg + true //i.e. int_reg == 2 
-  };
-
   constexpr bool static way_up = true;
   constexpr bool static way_down = false;
-  // RStump - right stump of cur_seg
-  int4 WayDownRStumpIntersect(int4 s_) const { // s_  is_upper than cur_seg right stump
-    return RStumpIntersect<way_down>(s_);
-  };
-  int4 WayUpRStumpIntersect(int4 s_) const { // s_  is_under  cur_seg right stump
-    return RStumpIntersect<way_up>(s_);
-  };
 
-  int4 BoundIntersect(int4 s_) const {
+  bool BoundIntersect(int4 s_) const {
     assert(stage == _Stages::stage_split || stage == _Stages::stage_merge);
     bool is_left_bound = (stage == _Stages::stage_split);
     auto X = is_left_bound ? B : E;
     auto cmp = collection[s_].YAtX_frac(X) <=> cur_seg.YAtX_frac(X);
     //  on the left bound always must be registered
     // on the right bound no registration except when the bound is defined by the right point of s_
-    bool need_reg = is_left_bound || cur_seg_pt_on_right_bound || is_right_pt_on_bound(s_);
-    if (cmp == std::strong_ordering::equal)
-      return  _Int_reg::int_no_reg + need_reg;// and must be registered
-    return _Int_reg::no_int;
+    return cmp == std::strong_ordering::equal && 
+      (is_left_bound || cur_seg_pt_on_right_bound || is_right_pt_on_bound(s_));
   };
 
   template<bool check_way_up_s_is_under_cur_seg>// s_  is_under or is_upper than cur_seg right stump
-  int4 RStumpIntersect(int4 s_) const {
+  bool RStumpIntersect(int4 s_) const {
     assert(stage == _Stages::stage_split);
     auto& s = collection[s_];
 
     auto cmpE = s.YAtX_frac(E) <=> cur_seg.YAtX_frac(E);// cmpE==1 is s.YAtX_frac(E) > cur_seg.YAtX_frac(E)
     if (cmpE == std::strong_ordering::equal) {// inresection on the right bound
-      //but no registration except when right bound is defined by the right point of s_
-      return _Int_reg::int_no_reg + is_right_pt_on_bound(s_);
+      return is_right_pt_on_bound(s_);
     }
 
     if constexpr (check_way_up_s_is_under_cur_seg)
-      return (cmpE == std::strong_ordering::less) * _Int_reg::int_reg; //s < cur_seg
+      return (cmpE == std::strong_ordering::less); //s < cur_seg
     else //check_way_down_s_is_upper_cur_seg
-      return (cmpE == std::strong_ordering::greater) * _Int_reg::int_reg; //s > cur_seg
+      return (cmpE == std::strong_ordering::greater); //s > cur_seg
   };
 
   constexpr bool static left_bound = false;
@@ -696,26 +678,22 @@ public:
   template<bool is_way_up>
   auto FindCurSegIntWith(int4 s_){//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
     auto cs = cur_seg_idx;
-    int4 is_intersect;
     if (is_rstump) {//can be in stage_split only
-      if ((is_intersect = BoundIntersect(s_)) || (is_intersect = RStumpIntersect<is_way_up>(s_))) {
-        if (is_intersect == _Int_reg::int_reg)
-          register_pair(this, cs, s_);
+      if (BoundIntersect(s_) || RStumpIntersect<is_way_up>(s_)) {
+        register_pair(this, cs, s_);
         return true;
       };
       return false;
     };
     if (stage != _Stages::stage_bubble) {
-      if ((is_intersect = BoundIntersect(s_)) || (is_intersect = ActiveEndIntersect<is_way_up>(s_))) {
-        if (is_intersect == _Int_reg::int_reg)
+      if (BoundIntersect(s_) || ActiveEndIntersect<is_way_up>(s_)) {
           register_pair(this, cs, s_);
         return true;
       };
       return false;
     };
     // no need to check BoundIntersect in stage_bubble but check cur_point intersection
-    if ((is_intersect = CurPointIntersect(s_))||(is_intersect = ActiveEndIntersect<is_way_up>(s_))) {
-      if (is_intersect == _Int_reg::int_reg)
+    if (CurPointIntersect(s_)||ActiveEndIntersect<is_way_up>(s_)) {
         register_pair(this, cs, s_);
       return true;
     };
@@ -725,30 +703,23 @@ public:
   template<bool is_way_up>
   auto FindCurSegIntWith(int4* s_, int4* last) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
     auto cs = cur_seg_idx;
-    int4 is_intersect;
     int4 increment = is_way_up ? 1 : -1;
     if (is_rstump) {//can be in stage_split only
-      while ((s_ != last) && ((is_intersect = BoundIntersect(*s_)) ||
-        (is_intersect = RStumpIntersect<is_way_up>(*s_)))) {
-        if (is_intersect == _Int_reg::int_reg)
+      while ((s_ != last) && (BoundIntersect(*s_) || RStumpIntersect<is_way_up>(*s_))) {
           register_pair(this, cs, *s_);
         s_ += increment;
       }
       return s_;
     }
     if (stage != _Stages::stage_bubble) {
-      while ((s_ != last) && ((is_intersect = BoundIntersect(*s_)) ||
-        (is_intersect = ActiveEndIntersect<is_way_up>(*s_)))) {
-        if (is_intersect == _Int_reg::int_reg)
+      while ((s_ != last) && (BoundIntersect(*s_) || ActiveEndIntersect<is_way_up>(*s_))) {
           register_pair(this, cs, *s_);
         s_ += increment;
       }
       return s_;
     }
     // no need to check BoundIntersect in stage_bubble
-    while ((s_ != last) && ((is_intersect = CurPointIntersect(*s_)) || 
-      (is_intersect = ActiveEndIntersect<is_way_up>(*s_)))) {
-      if (is_intersect == _Int_reg::int_reg)
+    while ((s_ != last) && (CurPointIntersect(*s_) || ActiveEndIntersect<is_way_up>(*s_))) {
         register_pair(this, cs, *s_);
       s_ += increment;
     }
@@ -786,25 +757,17 @@ public:
     //s_ is under cur_seg
   };
 
-  auto WayUpIntersect(int4 s_) const { //returns true if s is under active end
-    return ActiveEndIntersect<way_up>(s_);
-  };
-
-  auto WayDownIntersect(int4 s_) const { //returns true if s is upper active end
-    return ActiveEndIntersect<way_down>(s_);
-  };
-
   template<bool is_way_up>
-  auto ActiveEndIntersect(int4 s_) const { //
+  bool ActiveEndIntersect(int4 s_) const { //
     auto pp = collection[s_].point_pos(active_end);
     if constexpr(is_way_up)
-      return (pp <= 0)*_Int_reg::int_reg;//s_ placed under active_end
+      return (pp <= 0);//s_ placed under active_end
     else
-      return (pp >= 0)*_Int_reg::int_reg;//s_ placed over active_end
+      return (pp >= 0);//s_ placed over active_end
   };
 
-  auto CurPointIntersect(int4 s_) const { //
-    return (collection[s_].point_pos(cur_point) == 0) * _Int_reg::int_reg;//current point placed on  s_
+  bool CurPointIntersect(int4 s_) const { //
+    return (collection[s_].point_pos(cur_point) == 0);//current point placed on  s_
   };
 
 

@@ -56,6 +56,7 @@ public:
     constexpr int4 bottom_index = 0;
     ProgramStackRec stack_rec(bottom_index, nTotX); //need to be initialized this way
     if (from == 0) {
+      segments.SetCurStripeRight(0);
       InsDel(segments,0,&stack_rec);
     }
     else
