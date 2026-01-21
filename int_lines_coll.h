@@ -110,7 +110,6 @@ private:
 
 public:
 
-  ListBounds* x_collide_points=nullptr;
   int4* tmp = nullptr;
 
   std::pair<uint4, uint4> get_dublicate_stat(uint4 len, uint4* arr) const {
@@ -134,7 +133,7 @@ public:
   {
     auto NN = GetSegmNumb() << 1;
     std::iota(epoints, epoints+NN, 0);
-    auto is_below = [pts, coll = collection](uint4 pt1, uint4 pt2) {
+    auto is_below = [pts = pts, coll = collection](uint4 pt1, uint4 pt2) {
       if (pts[pt1].x != pts[pt2].x)
         return pts[pt1].x < pts[pt2].x;
       if (pts[pt1].y != pts[pt2].y)
@@ -162,6 +161,8 @@ public:
     return pt - (nSegments << 1);
   };
 
+  constexpr const static uint4 list_stop = std::numeric_limits<uint4>::max();
+
   PrepareResult Prepare()
   {
     Reset();
@@ -181,21 +182,19 @@ public:
     //nD - number of non unique non unique X, i.e. 5: 3,3,3,4,4
 
     if (nV != 0) {
-      ENDS = new uint4[nAll];
-      x_collide_points = new ListBounds[nV];
+      ENDS = new uint4[nAll+nV];
       uint4 D_last = nX;
-      for (uint4 i = 0, xcp_pos = 0, ne_pos = 0, j; i < nEnds; i = j) {
+      for (uint4 i = 0, ne_pos = 0, j; i < nEnds; i = j) {
         j = i + 1;
         while (j < nEnds && pts[tmpENDS[j]].x == pts[tmpENDS[i]].x)
           ++j;
         auto len = j - i;
         if (len > 1) {
-          x_collide_points[xcp_pos] = { D_last,D_last + len };
           std::copy(tmpENDS + i, tmpENDS + j, ENDS + D_last);
-          ENDS[ne_pos] = mark_multiple(xcp_pos);
+          ENDS[ne_pos] = mark_multiple(D_last);
           std::fill(tmp + i, tmp + j, ne_pos);
-          ++xcp_pos;
           D_last += len;
+          ENDS[D_last++] = list_stop; //mark the end of the list
         }
         else {
           ENDS[ne_pos] = tmpENDS[i];
@@ -203,7 +202,6 @@ public:
         }
         ++ne_pos;
       }
-      assert(D_last == nAll);
     }
     else {
       std::iota(tmp, tmp + nEnds, 0);
@@ -234,16 +232,6 @@ public:
 
   bool is_remapped() const {
     return is_collection_remapped;
-  }
-
-  int4 GetMaxCollideXIdx() const {
-    if (nCollideX < 1)
-      return -1;
-    auto less=[](ListBounds a, ListBounds b) {
-      return (a.end - a.beg) < (b.end - b.beg);
-      };
-    return std::max_element(x_collide_points, x_collide_points + nCollideX,less)
-      - x_collide_points;
   }
 
   template<class IntersectionFinder, class ProgramStackRec>
@@ -280,16 +268,14 @@ public:
     if (is_multiple(pt)) {
       DelStep(end_rank, L_size, L);
 
-      auto actual_pt = unmark_multiple(pt);
-      auto [f, l] = get_pt_list_bounds(actual_pt);
+      auto f = unmark_multiple(pt);
       assert(E == XAtRank(end_rank));
       ReorderStep(E, L_size, L);
-      AllIntCurLine(f, l, L_size, L);
-      InsStep(f, l, L_size, L);
+      AllIntCurLine(f, L_size, L);
+      InsStep(f, L_size, L);
       if (stack_pos->isnot_top())// find intersections for all inserted and vertical  
         //segments in the staircases above (in the stack)
-        for (auto i = f; i < l; ++i) {
-          auto cur_pt = ENDS[i];
+        for (uint4 i = f, cur_pt = ENDS[f]; cur_pt != list_stop; cur_pt = ENDS[++i]) {
           if (is_first(cur_pt)) {
             auto sn = get_segm(cur_pt);
             SetCurSegAndPoint(sn);
@@ -301,15 +287,12 @@ public:
       InsDelOrdinary(i_f, L_size, L, pt, stack_pos);
   }
 
-  ListBounds get_pt_list_bounds(uint4 pt) const {
-    return x_collide_points[pt];
-  }
-
-  uint4 rank_to_rank(uint4 multiple_rank) {
+  uint4 test_rank_to_rank(uint4 multiple_rank) {
     auto pt = PointAtRank(multiple_rank);
     auto seg = get_segm(pt);
     return is_first(pt)?seg_L_rank[seg]:seg_R_rank[seg];
   }
+
   void DelStep(uint4 end_rank, uint4& L_size, int4* L)
   {
     uint4 new_size = 0;
@@ -335,14 +318,13 @@ public:
     return out; 
   }
 
-  void InsStep(uint4 f, uint4 l, uint4& L_size, int4* L)
+  void InsStep(uint4 f, uint4& L_size, int4* L)
   {
     auto first_to_insert = tmp;
     auto last_to_insert = first_to_insert;
     auto first_L = tmp + GetSegmNumb();
     auto last_L = std::copy(L, L + L_size, first_L);
-    for (uint4 i = f; i < l; ++i) {
-      auto cur_pt = ENDS[i];
+    for (uint4 i = f, cur_pt = ENDS[f]; cur_pt != list_stop; cur_pt = ENDS[++i]) {
       if (is_first(cur_pt)) {
         auto s = get_segm(cur_pt);
         if (!collection[s].is_vertical())
@@ -375,15 +357,14 @@ public:
 #endif
   };
 
-  void AllIntCurLine(uint4 f, uint4 l, uint4& L_size, int4* L)//all intersections with vertical segments in the current line are registered
+  void AllIntCurLine(uint4 f, uint4& L_size, int4* L)//all intersections with vertical segments in the current line are registered
   {
     auto vertical_segments = tmp;//temporary storage for vertical segment indices
     uint4 v_size=0;
     auto non_vertical_pts = tmp + GetSegmNumb();//temporary storage for non vertical segment endpoints
     uint4 nv_size = 0;
 
-    for (uint4 i = f; i < l; ++i) {
-      auto cur_pt = ENDS[i];
+    for (uint4 i = f, cur_pt = ENDS[f]; cur_pt!=list_stop; cur_pt = ENDS[++i]) {
       auto s = get_segm(cur_pt);
       if (collection[s].is_vertical()) {
         if (is_first(cur_pt))
@@ -927,7 +908,7 @@ public:
 private:
   auto GetXEx(uint4 pt) const {
     if (is_multiple(pt)){
-      auto [f, l] = get_pt_list_bounds(unmark_multiple(pt));
+      auto f = unmark_multiple(pt);
       return pts[ENDS[f]].x;
     };
     return GetX(pt);
@@ -955,7 +936,6 @@ private:
 
   uint4 cur_seg_idx = 0xFFFFFFFF;// , cur_point_idx = 0xFFFFFFFF;
   uint4 cur_point_seg = 0xFFFFFFFF;// , active_end_idx = 0xFFFFFFFF;
-  //TPlaneVect x_transf, y_transf;
   bool is_rstump = false;
   bool is_collection_remapped = false;
   bool cur_seg_pt_on_right_bound = false;
