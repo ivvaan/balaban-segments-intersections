@@ -490,27 +490,22 @@ public:
   void SetCurStripe(uint4 left_rank, uint4 right_rank) {
     stripe_left_rank = left_rank;
     stripe_right_rank = right_rank;
-    auto left = PointAtRank(left_rank);
-    auto right = PointAtRank(right_rank);
-    B = GetXEx(left);
-    E = GetXEx(right);
+    B = XAtRank(left_rank);
+    E = XAtRank(right_rank);
   };
 
   void SetCurStripeLeft(uint4 left_rank) {
     stripe_left_rank = left_rank;
-    auto left = ENDS[left_rank];
-    B = GetXEx(left);
+    B = XAtRank(left_rank);
   };
 
   void SetCurStripeRight(uint4 right_rank) {
     stripe_right_rank = right_rank;
-    auto right = PointAtRank(right_rank);
-    E = GetXEx(right);
+    E = XAtRank(right_rank);
   };
 
 
   void SetCurPointAtBeg(uint4 s) {
-    //cur_point_idx = first_point(s);
     cur_point_seg = s;
     cur_point = collection[s].BegPoint();
   };
@@ -518,18 +513,13 @@ public:
   void SetCurSeg(uint4 s){
     cur_seg_idx = s;
     cur_seg = collection[s];
-    //curB = cur_seg.bx();
-    //curE = cur_seg.ex();
     is_rstump=false;
   };
 
   void SetCurSegCutBE(uint4 s){
     SetCurSeg(s);
     stage = _Stages::stage_split;
-    //curB = MAX(B, curB);// possibly curB=B; !!!!!
     is_rstump = E < cur_seg.ex();
-
-    //if (E < curE) { curE = E; }
     active_end = cur_seg.EndPoint();
     //cur_seg_pt_on_right_bound = is_right_pt_on_bound(s);
   };
@@ -537,7 +527,6 @@ public:
   void SetCurSegCutBeg(uint4 s) {
     SetCurSeg(s);
     stage = _Stages::stage_split;
-    //curB = MAX(B, curB);// possibly curB=B; !!!!!
     active_end = cur_seg.EndPoint();
   };
 
@@ -545,7 +534,6 @@ public:
   {
     SetCurSeg(s);
     stage = _Stages::stage_merge;
-    //curE = MIN(E, curE);// possibly curE=E; !!!!!
     active_end = cur_seg.BegPoint();
     cur_seg_pt_on_right_bound = is_right_pt_on_bound(s);
   };
