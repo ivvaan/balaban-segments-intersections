@@ -377,12 +377,10 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
   };
 
   template<class Counter>
-  auto _find_int(int4 seg_type, int4 n, PSeg segs, int4 alg,uint4 stat)
+  auto _find_int(int4 seg_type, int4 n, PSeg segs, int4 alg,uint4 stat,int4 range)
   {
     Counter reg;
     reg.Alloc(n);
-    uint4 range = (seg_type < 0) ? degenerate_range : full_int_range;
-    seg_type = abs(seg_type);
     switch (seg_type) {
       case _Segment::line1: {
         CLine1SegmentCollection<Counter> coll(n, segs, &reg);

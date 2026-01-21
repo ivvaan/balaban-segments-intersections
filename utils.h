@@ -106,12 +106,16 @@ enum _Segment
   line1 = 0, line2, arc, graph, intline
 };
 
-constexpr uint4 full_int_range = 0x40000000;
-constexpr uint4 degenerate_range = 50;
+constexpr int4 range_margin = 16;
+//constexpr double sqrt3 = 1.7320508075688772935;
+//constexpr int4 full_int_range = double(std::numeric_limits<int4>::max()) / sqrt3 - range_margin;
+//static_assert(3. * double(full_int_range) * full_int_range < double(std::numeric_limits<int8>::max()));
+
+constexpr int4 full_int_range = std::numeric_limits<int4>::max() / 2 - range_margin;
 
 enum _Distribution
 {
-  random = 0, parallel, mixed, small, param_defined, circle, degenerate
+  random = 0, parallel, mixed, small, param_defined, circle
 };
 
 enum _Registrator

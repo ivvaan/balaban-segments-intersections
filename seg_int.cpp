@@ -148,7 +148,7 @@ double _benchmark_old(char* counters_string, int4 n, PSeg* seg_ptr_coll, int4 s_
   return mint; //tottime / n_call;
   }
 
-double _benchmark_new(int4 n, PSeg seg_coll, int4 s_type, int4 alg, double& res,uint4 reg_stat)
+double _benchmark_new(int4 n, PSeg seg_coll, int4 s_type, int4 alg, double& res,uint4 reg_stat,int4 range)
   {
   double timeit, tottime = 0;
   int4 n_call = 0;
@@ -161,7 +161,7 @@ double _benchmark_new(int4 n, PSeg seg_coll, int4 s_type, int4 alg, double& res,
   {
     auto find_intersections = get_find_intersections_func(reg_stat);
     auto start = high_resolution_clock::now();
-    res = find_intersections(s_type, n, seg_coll,alg,reg_stat);
+    res = find_intersections(s_type, n, seg_coll,alg,reg_stat,range);
     tottime += timeit = static_cast<duration<double>>(high_resolution_clock::now() - start).count();
 
     if (timeit < mint)
@@ -184,7 +184,7 @@ enum _Implementation
   impl_new = 2
 };
 
-void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr_type,REAL distr_param,bool print_less,bool rtime_printout,bool dont_need_ip,int4 n, PSeg seg_coll,PSeg *seg_ptr_coll,uint4 reg_stat) {
+void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr_type,REAL distr_param,bool print_less,bool rtime_printout,bool dont_need_ip,int4 n, PSeg seg_coll,PSeg *seg_ptr_coll,uint4 reg_stat,int4 range) {
   double exec_time[33], nInt[33];
   const char *ss = "Llag", *sd = "rlmspc";
   char counters_string[256],*counters_mute;
@@ -219,7 +219,7 @@ void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr
         if (impl == impl_old)
           exec_time[a] = _benchmark_old(use_counters?counters_mute:NULL, n, seg_ptr_coll, seg_type, alg_list[a], nInt[a], dont_need_ip);
         else
-          exec_time[a] = _benchmark_new(n, seg_coll, seg_type, alg_list[a], nInt[a],reg_stat);
+          exec_time[a] = _benchmark_new(n, seg_coll, seg_type, alg_list[a], nInt[a],reg_stat,range);
         
         if (print_less)
           printf("I%i;a%i;s%c;d%c;S%i;n%i;i%13.0f;t%6.5f;p%f;%s\n", impl, alg_list[a], ss[seg_type], sd[distr_type], random_seed, n, nInt[a], exec_time[a], distr_param, counters_mute);
@@ -269,10 +269,11 @@ int main(int argc, char* argv[])
   bool use_counters = false;
   char rpar[]="-r";
   int4 impl = _Implementation::impl_old + _Implementation::impl_new;
-  const char *ss = "Llag", *sd = "rlmspc",*sr="pPcrC";
+  const char *ss = "Llagi", *sd = "rlmspc",*sr="pPcrC";
   const char *alg_names[] = { "trivial","simple_sweep","fast","optimal","fast_parallel","bentley_ottmann","fast no inters points","fast 'no R'" };
   uint4 reg_stat = 2;
   const char* fname = nullptr;
+  int4 range_for_int_seg;
 
 #ifdef _DEBUG
   _CrtSetDbgFlag(_CRTDBG_CHECK_ALWAYS_DF);
@@ -380,7 +381,16 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
             case 'l':seg_type = _Segment::line2; break;
             case 'a':seg_type = _Segment::arc; break;
             case 'g':seg_type = _Segment::graph; break;
-            case 'i':seg_type = _Segment::intline; break;
+            case 'i': {
+              seg_type = _Segment::intline;
+              range_for_int_seg = atoi(argv[i] + 3);
+              if (range_for_int_seg == 0) range_for_int_seg = full_int_range;
+              if (range_for_int_seg<5 || range_for_int_seg>full_int_range) {
+                printf("some error in -si param. full_int_range used as a range.\n");
+                range_for_int_seg = full_int_range;
+              };
+            }; 
+              break;
             default:
             {
               printf("some error in -s param. l used instead.\n");
@@ -399,7 +409,6 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
             case 's':distr_type = _Distribution::small; break;
             case 'p':distr_type = _Distribution::param_defined; break;
             case 'c':distr_type = _Distribution::circle; break;
-            case 'd':distr_type = _Distribution::degenerate; break;
             default:
             {
               printf("some error in -distr_type param. r used instead.\n");
@@ -482,17 +491,16 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
     reg_stat = _Registrator::just_count;
     }
 
-  if (!print_less)printf("actual params is: -a%i -s%c -d%c -r%c -i%i -n%i -S%i -p%f -e%f\n", alg, ss[seg_type], sd[distr_type],sr[reg_stat], impl, n, random_seed, distr_param,ICT);
-  //search_problem(n);
-  //return 0;
+  if (!print_less) {
+    if(seg_type!=_Segment::intline)
+      printf("params are: -a%i -s%c -d%c -r%c -i%i -n%i -S%i -p%f\n", alg, ss[seg_type], sd[distr_type], sr[reg_stat], impl, n, random_seed, distr_param);
+    else
+      printf("actual params is: -a%i -si%i -d%c -r%c -i%i -n%i -S%i -p%f -e%f\n", alg, range_for_int_seg, sd[distr_type], sr[reg_stat], impl, n, random_seed, distr_param, ICT);
+  }
   PSeg *seg_ptr_coll = nullptr;
   PSeg seg_coll;
   CRandomValueGen rv(random_seed);
   int4 new_seg_type = seg_type;
-  if (distr_type == _Distribution::degenerate) {
-    new_seg_type = -seg_type;//use negative values to show degenerate distr !!!!
-    distr_type = _Distribution::random;
-  }
   if(impl&_Implementation::impl_old)
     seg_coll = create_test_collection(seg_type, n, distr_type, distr_param,rv, &seg_ptr_coll);
   else
@@ -500,7 +508,7 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
 
   bool dont_need_ip = (alg & fast_no_ip) != 0;
   if (impl&_Implementation::impl_old)
-    perform_tests(use_counters, _Implementation::impl_old, alg, seg_type, distr_type, distr_param, print_less, rtime_printout, dont_need_ip, n, seg_coll, seg_ptr_coll,reg_stat);
+    perform_tests(use_counters, _Implementation::impl_old, alg, seg_type, distr_type, distr_param, print_less, rtime_printout, dont_need_ip, n, seg_coll, seg_ptr_coll,reg_stat,range_for_int_seg);
   if (impl & _Implementation::impl_new) {
     std::ostrstream SVG_str;
     std::ofstream svgf;
@@ -516,7 +524,7 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
       svgf << "</svg>\n" << insert_pos;
       svgf.close();
     }
-    perform_tests(use_counters, _Implementation::impl_new, alg, new_seg_type, distr_type, distr_param, print_less, rtime_printout, dont_need_ip, n, seg_coll, seg_ptr_coll, reg_stat);
+    perform_tests(use_counters, _Implementation::impl_new, alg, new_seg_type, distr_type, distr_param, print_less, rtime_printout, dont_need_ip, n, seg_coll, seg_ptr_coll, reg_stat,range_for_int_seg);
   }
 
   

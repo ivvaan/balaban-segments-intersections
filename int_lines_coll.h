@@ -31,11 +31,6 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 namespace {
   template<class T>
   T& unmove(T&& t) { return t; };
-
-  enum _Stages {
-    stage_split=0, split_up, stage_bubble, stage_merge
-  };
-
 }
 
 template<typename Real>
@@ -72,6 +67,10 @@ public:
 
     return _Coll_flag_state::state_unimplemented;
   }
+
+  enum _Stages {
+    stage_split = 0, stage_bubble, stage_merge
+  };
 
   static  bool is_last(uint4 pt)
   {

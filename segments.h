@@ -471,7 +471,7 @@ public:
 
     auto YAtX_Numerator(int4 X) const {
       assert(X >= org.x);
-      return (int8)org.y * (int8)shift.x + (int8)(X - org.x) * (int8)shift.y;
+      return (int8)org.y * (int8)shift.x + ((int8)X - (int8)org.x) * (int8)shift.y;
     };
 
     frac64 YAtX_frac(int4 X) const {
