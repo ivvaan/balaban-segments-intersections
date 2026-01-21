@@ -107,7 +107,7 @@ enum _Segment
 };
 
 constexpr uint4 full_int_range = 0x40000000;
-constexpr uint4 degenerate_range = 0x4;
+constexpr uint4 degenerate_range = 50;
 
 enum _Distribution
 {
