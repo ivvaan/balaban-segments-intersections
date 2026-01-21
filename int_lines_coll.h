@@ -155,13 +155,13 @@ public:
   };
 
   bool is_multiple(uint4 pt) const {
-    return pt >= (N << 1);
+    return pt >= (nSegments << 1);
   };
   auto mark_multiple(uint4 pt) const {
-    return pt + (N << 1);
+    return pt + (nSegments << 1);
   };
   auto unmark_multiple(uint4 pt) const {
-    return pt - (N << 1);
+    return pt - (nSegments << 1);
   };
 
   PrepareResult Prepare()
@@ -468,7 +468,7 @@ public:
     c->remaper.register_pair(s1, s2);
   };
   uint4  GetSegmNumb() const {
-    return N;
+    return nSegments;
   };
   uint4 GetSegR(uint4 sn) const {
     return seg_R_rank[sn];
@@ -823,7 +823,7 @@ public:
   void clone(CIntegerSegmentCollection &c, IntersectionRegistrator *r)
   {
       clone_of = &c;
-      N = c.N;
+      nSegments = c.nSegments;
       ENDS = c.ENDS;
       seg_L_rank = c.seg_L_rank;
       seg_R_rank = c.seg_R_rank;
@@ -882,7 +882,7 @@ public:
     remaper.FromIntSegVect(v, r, *this);
     is_collection_remapped = false;
     register_pair = reg_pair;
-    N = remaper.get_N();
+    nSegments = remaper.get_N();
     collection = segments.data();
     pts = points.data();
 
@@ -899,7 +899,7 @@ public:
     register_pair = is_collection_remapped ? reg_remapped_pair : reg_pair;
 #endif
 
-    N = remaper.get_N();
+    nSegments = remaper.get_N();
     collection = segments.data();
     pts = points.data();
     return is_collection_remapped;
@@ -958,7 +958,7 @@ public:
  
   void coll_to_SVG(chostream* SVG_stream) {
     if (!SVG_stream)return;
-    int4 n = MIN(max_SVG_items, N);
+    int4 n = MIN(max_SVG_items, nSegments);
     auto mmr = get_mmrect01(collection, n);
     *SVG_stream << "<svg height='100%' width='100%' viewBox='";
     *SVG_stream << mmr.ld.x << " " << mmr.ld.y << " "
@@ -984,7 +984,7 @@ private:
   };
 
   auto GetX(uint4 pt) const {
-    assert(pt < 2 * N);
+    assert(pt < 2 * nSegments);
     return pts[pt].x;
   };
 
@@ -1000,7 +1000,7 @@ private:
   CRemaper remaper;
   decltype(reg_pair) *register_pair = reg_pair;
   CIntegerSegmentCollection *clone_of = nullptr;
-  uint4 N=0,nTotX=0,nCollideX=0;
+  uint4 nSegments=0,nTotX=0,nCollideX=0;
   int4 B, E,  stripe_left_rank, stripe_right_rank;
   uint4 stage = _Stages::stage_split;
 
