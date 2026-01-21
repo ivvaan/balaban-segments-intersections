@@ -134,7 +134,7 @@ public:
   {
     auto NN = GetSegmNumb() << 1;
     std::iota(epoints, epoints+NN, 0);
-    auto is_below = [pts = pts, coll = collection](uint4 pt1, uint4 pt2) {
+    auto is_below = [pts, coll = collection](uint4 pt1, uint4 pt2) {
       if (pts[pt1].x != pts[pt2].x)
         return pts[pt1].x < pts[pt2].x;
       if (pts[pt1].y != pts[pt2].y)
@@ -149,7 +149,6 @@ public:
         return le1 != (0 < angle_like);
       return (pt1 < pt2);
       };
-      //    std::sort(epoints, epoints + NN, std::ref(*this));
     std::sort(epoints, epoints + NN, is_below);
   };
 
@@ -166,17 +165,17 @@ public:
   PrepareResult Prepare()
   {
     Reset();
-    uint4 Nn = GetSegmNumb();
-    if (Nn == 0) return {};
-    uint4 NN = Nn << 1;
-    //RAII_ARR(uint4,tmpENDS,NN);
-    auto __tmpENDS__ = std::make_unique<uint4[]>(NN); 
+    uint4 nSeg = GetSegmNumb();
+    if (nSeg == 0) return {};
+    uint4 nEnds = nSeg * 2;
+    //RAII_ARR(uint4,tmpENDS,nEnds);
+    auto __tmpENDS__ = std::make_unique<uint4[]>(nEnds); 
       uint4* tmpENDS = __tmpENDS__.get();
-    tmp =new int4[NN];
+    tmp =new int4[nEnds];
     PrepareEndpointsSortedList(tmpENDS);
 
-    auto [nX,nV]=get_dublicate_stat(NN, tmpENDS);
-    auto nAll = NN+nV;
+    auto [nX,nV]=get_dublicate_stat(nEnds, tmpENDS);
+    auto nAll = nEnds+nV;
     //auto nD = nAll  - nX;
     //nV - number of unique non unique X,e.g. for X={0,1,3,3,3,4,4} 3 and 4 are non unique, the number is 2
     //nD - number of non unique non unique X, i.e. 5: 3,3,3,4,4
@@ -185,9 +184,9 @@ public:
       ENDS = new uint4[nAll];
       x_collide_points = new ListBounds[nV];
       uint4 D_last = nX;
-      for (uint4 i = 0, xcp_pos = 0, ne_pos = 0, j; i < NN; i = j) {
+      for (uint4 i = 0, xcp_pos = 0, ne_pos = 0, j; i < nEnds; i = j) {
         j = i + 1;
-        while (j < NN && pts[tmpENDS[j]].x == pts[tmpENDS[i]].x)
+        while (j < nEnds && pts[tmpENDS[j]].x == pts[tmpENDS[i]].x)
           ++j;
         auto len = j - i;
         if (len > 1) {
@@ -207,16 +206,16 @@ public:
       assert(D_last == nAll);
     }
     else {
-      std::iota(tmp, tmp + NN, 0);
+      std::iota(tmp, tmp + nEnds, 0);
       ENDS = tmpENDS;
       __tmpENDS__.release();
     };
 
-    seg_L_rank = new uint4[Nn];
-    seg_R_rank = new uint4[Nn];
+    seg_L_rank = new uint4[nSeg];
+    seg_R_rank = new uint4[nSeg];
     uint4 max_segm_on_vline = 0, nsegm_on_vline = 0;
     double avr = 0;
-    for (uint4 i = 0; i < NN; ++i) {
+    for (uint4 i = 0; i < nEnds; ++i) {
       if (is_last(tmpENDS[i])) {
         seg_R_rank[get_segm(tmpENDS[i])] = tmp[i];
         --nsegm_on_vline;
@@ -364,6 +363,7 @@ public:
 
 
   void ReorderStep(int4 x, uint4 L_size, int4* L) {
+#ifdef TURN_ON_ADDITIONAL_ORDER
     for (uint4 i = 0, j; i < L_size; i = j) {
       j = i + 1;
       while (j < L_size && 0==(collection[L[i]].YAtX_frac(x) <=> collection[L[j]].YAtX_frac(x)))
@@ -372,7 +372,7 @@ public:
         std::reverse(L + i, L + j);
       };
     };
-
+#endif
   };
 
   void AllIntCurLine(uint4 f, uint4 l, uint4& L_size, int4* L)//all intersections with vertical segments in the current line are registered
@@ -890,7 +890,7 @@ public:
     }
   }
 
-  CIntegerSegmentCollection() {};
+  CIntegerSegmentCollection() = default;
  
   CIntegerSegmentCollection(CIntegerSegmentCollection& coll, IntersectionRegistrator* r)
   {
@@ -940,7 +940,6 @@ private:
 
   TIntegerSegment* collection = nullptr;
   TIntegerVect* pts = nullptr;
-  //uint4* SegL = nullptr; 
   uint4* seg_L_rank = nullptr, * seg_R_rank = nullptr, * ENDS = nullptr;
 
   TIntegerSegment cur_seg;
