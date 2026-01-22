@@ -223,13 +223,13 @@ public:
       if (S != 0)//segments non parallel
         return S < 0;
       //segments parallel
-      auto shift = s1.shift + s2.shift;
+      auto shift = s1.shift;// +s2.shift;
+      assert(shift.is_non_zero());
       auto oo = pts[pt2] - pts[pt1];
       S = shift % oo;
       if (S != 0)// segments on different lines
         return  S < 0;
       //segments parallel and lies on one line
-      assert((shift.x > 0) || ((shift.x == 0) && (shift.y > 0)));
       auto prod = oo * shift;
       if (prod != 0)// points not coinside
         return  0 < prod;

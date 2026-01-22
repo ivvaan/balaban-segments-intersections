@@ -107,8 +107,8 @@ enum _Segment
 };
 
 constexpr int4 range_margin = 16;
-// sum of 4 coords should not exceed int4 max
-constexpr int4 full_int_range = std::numeric_limits<int4>::max() / 4 - range_margin;
+// sum of 2 coords should not exceed int4 max
+constexpr int4 full_int_range = std::numeric_limits<int4>::max() / 2 - range_margin;
 
 enum _Distribution
 {
