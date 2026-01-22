@@ -215,8 +215,8 @@ public:
     auto comparator = [segments = seg_v.data(), pts = points.data()](uint4 pt1, uint4 pt2) {
       auto i1 = get_segm(pt1);
       auto i2 = get_segm(pt2);
-      if (i1 == i2) // same segment
-        return pt1 < pt2; //beging first
+      if(i1==i2)
+        return pt1 < pt2; //same segment
       auto& s1 = segments[i1];
       auto& s2 = segments[i2];
       auto S = s1.shift % s2.shift;
@@ -240,6 +240,20 @@ public:
       };
 
     std::sort(indexes.begin(), indexes.end(), comparator);
+/*  std::vector<uint8_t> marks;
+    set_size(marks, n);
+    for (auto pt : indexes) {
+      if (is_first(pt))
+        marks[get_segm(pt)] = 1;
+      else
+        if (marks[get_segm(pt)] != 1) {
+          auto s = get_segm(pt);
+          auto& seg = seg_v[s];
+
+          int a = 0;
+        };
+    }*/
+
 
     bool not_remapped = prepare_remap(indexes, points.data(), collection.segments, collection.points);
     if (not_remapped) {

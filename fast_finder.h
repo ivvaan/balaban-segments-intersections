@@ -61,7 +61,7 @@ public:
     }
     else
       L_size = CalcLAt(segments, from);
-    if (avr_segm_on_vline < 35) {
+    if (avr_segm_on_vline < 20) {
       SISFindR(*this, segments, bottom_index, from, to, &stack_rec);
       InsDel(segments, to, &stack_rec);
       return;

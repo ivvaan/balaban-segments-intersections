@@ -306,7 +306,7 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
  S=L: line segments representation r=b+a*t,0<=t<=1; b,a - vectors
  S=a: arcs
  S=g: graph: test example is simple circle of N vertices and N edges
- S=i: same as L but vectors a and b have integer coords
+ S=i: same as L but vectors a and b have integer coords; if a number is appended, e.g. -si100, coordinates are in range -100 to 100; if not, range is 1/4 of int range
 -iI: implementation
  I=1: 'old' function pointers segment collection interface
  I=2: 'new' template based segment collection interface
