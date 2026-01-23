@@ -184,6 +184,7 @@ public:
         --nonzero_N;
         continue;
       }
+      assert(s.is_inside_int_range());
       seg_v.push_back(s);
       points[first_point(i)] = s.BegPoint();
       points[last_point(i)] = s.EndPoint();

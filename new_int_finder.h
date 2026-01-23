@@ -112,7 +112,6 @@ public:
     template <class SegmentsColl>
     void prepare_ends(SegmentsColl& segments)
     {
-      // перенести в collection отсюда
       // moved to SegmentsColl::Prepare() - it computes ENDS, SegL, SegR and statistics.
       auto pr = segments.Prepare();
       // set internal common statistics derived from collection Prepare result
@@ -120,7 +119,6 @@ public:
       nTotX = pr.ends_len;
       LR_len = pr.max_segm_on_vline + 3; // +3 for sentinels/guards
       avr_segm_on_vline = pr.avr_segm_on_vline;
-      // перенести в collection до сюда
     };
 
     template <class SegmentsColl>

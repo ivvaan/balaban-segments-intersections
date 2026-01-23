@@ -166,6 +166,7 @@ public:
   PrepareResult Prepare()
   {
     Reset();
+    TurnRemapOn();
     uint4 nSeg = GetSegmNumb();
     if (nSeg == 0) return {};
     uint4 nEnds = nSeg * 2;
@@ -796,12 +797,12 @@ public:
        intersection points don't have integer coords ",
       (IntersectionRegistrator::reg_type & _RegistrationType::point) == 0));
     remaper.NoRemapInit(n, c, r, range, *this);
-    TurnRemapOn();
-   /* is_collection_remapped = false;
+    //TurnRemapOn();
+    is_collection_remapped = false;
     register_pair = reg_pair;
-    N = remaper.get_N();
+    nSegments = remaper.get_N();
     collection = segments.data();
-    pts = points.data();*/
+    pts = points.data();
 
   }
 

@@ -400,6 +400,12 @@ public:
       return 0 < point_pos(v);
     };
 
+    //function to check if segment's coordinates lies inside full_int_range
+    bool is_inside_int_range() const {
+      return (bx() >= -full_int_range) && (abs(by()) <= full_int_range) &&
+        (ex() <= full_int_range) && (abs(ey()) <= full_int_range);
+    }
+
     bool no_common_y(const TIntegerSegment& s2) const {
       decltype(org.y) min1, min2, max1, max2;
 
@@ -456,11 +462,8 @@ public:
 
     auto get_int_type_beg(const TIntegerSegment& s) const {
       assert(shift.is_non_zero() && s.shift.is_non_zero());
-      uint4 res = _IntType::common_int;
       auto d = s.BegPoint() - BegPoint();
-      if (d % shift == 0) res += _IntType::s2_beg_int;
-      if (d % s.shift == 0) res += _IntType::s1_beg_int;
-      return res;
+      return _IntType::common_int + (d % shift == 0) * _IntType::s2_beg_int + (d % s.shift == 0) * _IntType::s1_beg_int;
     }
 
 
