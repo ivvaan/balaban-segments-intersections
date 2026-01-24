@@ -40,7 +40,7 @@ public:
   void find_intersections(SegmentsColl &segments) 
   {
     uint4 N = segments.GetSegmNumb();
-    for (uint4 i = 0; i < N; ++i)
+    for (uint4 i = 0; i + 1 < N; ++i)
     {
       segments.SetCurSeg(i);
       for (uint4 j = i + 1; j < N; ++j)
