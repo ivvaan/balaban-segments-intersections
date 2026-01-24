@@ -34,7 +34,7 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
 typedef uint8(*find_intersections_func)(int4, int4, PSeg, int4, uint4,int4);
 find_intersections_func get_find_intersections_func(uint4 reg_type);
 
-void write_SVG(chostream* SVG_stream, int4 seg_type, int4 n, PSeg segs, int4 algs, uint4 stat);
+void write_SVG(std::ostream* svg_stream, int4 seg_type, int4 n, PSeg segs, int4 algs, uint4 stat);
 
 //******************************************************************************************************
 

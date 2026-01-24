@@ -83,10 +83,7 @@ enum _Algorithm{
   simple_sweep = 2,
   fast = 4,
   optimal = 8,
-  fast_parallel = 16,
-  bentley_ottmann = 32,
-  fast_no_ip = 64,
-  mem_save = 128
+  fast_parallel = 16
 };
 
 enum _IntType {
@@ -98,8 +95,8 @@ enum _IntType {
 };
 
 
-constexpr int4 alg_list[] = { triv, simple_sweep, fast, optimal, fast_parallel, bentley_ottmann,fast_no_ip,mem_save };
-constexpr const char* alg_names[] = { "trivial","simple_sweep","fast","optimal","fast_parallel","bentley_ottmann","fast no inters points","fast 'no R'" };
+constexpr int4 alg_list[] = { triv, simple_sweep, fast, optimal, fast_parallel };
+constexpr const char* alg_names[] = { "trivial","simple_sweep","fast","optimal","fast_parallel" };
 
 enum _Segment
 {

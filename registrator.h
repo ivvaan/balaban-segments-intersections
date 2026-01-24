@@ -362,7 +362,6 @@ public:
         case _Algorithm::fast:*SVG_text << "' class='fast' id='f" << s1<<"_"<<s2<<"' />\n"; break;
         case _Algorithm::optimal:*SVG_text << "' class='optimal' id='o" << s1<<"_"<<s2<<"' />\n"; break;
         case _Algorithm::fast_parallel:*SVG_text << "' class='parallel' id='p" << s1<<"_"<<s2<<"' />\n"; break;
-        case _Algorithm::mem_save:*SVG_text << "' class='mem_save' id='m" << s1<<"_"<<s2<<"' />\n"; break;
         default:
           *SVG_text << "' class='algorithm' id='a" << s1<<"_"<<s2<<"' />\n";
           break;

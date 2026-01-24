@@ -258,8 +258,6 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
 				  case triv:intersection_finder.trivial(SN, colls); break;
 				  case simple_sweep:intersection_finder.simple_sweep(SN, colls); break;
 				  case fast: intersection_finder.balaban_fast(SN, colls); break;
-				  case mem_save: intersection_finder.balaban_memory_save(SN, colls); break;
-				  case fast_no_ip: intersection_finder.balaban_no_ip(SN, colls); break;
 				  case optimal:intersection_finder.balaban_optimal(SN, colls); break;
 				  case fast_parallel:
 					  {
@@ -273,7 +271,6 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
 						  for (int i = 0; i < n_threads - 1; i++)int_numb += *(double*)additional_reg_obj[i];
 					  }
 				  break;
-				  case bentley_ottmann:intersection_finder.bentley_ottmann(SN, colls); break;
 			  };
 		  memcpy(counters, intersection_finder.my_counter, sizeof(intersection_finder.my_counter));
       }
@@ -300,8 +297,6 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
 		  case triv:intersection_finder.trivial(SN, colls); break;
 		  case simple_sweep:intersection_finder.simple_sweep(SN, colls); break;
 		  case fast: intersection_finder.balaban_fast(SN, colls); break;
-      case mem_save:intersection_finder.balaban_memory_save(SN, colls);break;
-		  case fast_no_ip:  break;//incompatible
 		  case optimal:intersection_finder.balaban_optimal(SN, colls); break;
 		  case fast_parallel:
 		  {
@@ -315,7 +310,6 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
 			  for (int i = 0; i < n_threads - 1; i++)int_numb += *(double*)additional_reg_obj[i];
 		  }
 		  break;
-		  case bentley_ottmann:intersection_finder.bentley_ottmann(SN, colls); break;
 	  }
 
 	  memcpy(counters, intersection_finder.my_counter, sizeof(intersection_finder.my_counter));
@@ -343,12 +337,6 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
             fi.prepare_ends(coll);
             fi.find_intersections(coll);
         } break;
-        case mem_save:{
-            CMemSaveIntFinder fi;
-            fi.prepare_ends(coll);
-            fi.find_intersections(coll);
-        }
-            break;
         case optimal: {
           COptimalIntFinder fi;
           fi.prepare_ends(coll);
@@ -406,37 +394,40 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
     return 0ULL;
   };
 
-  void write_SVG(chostream* SVG_stream, int4 seg_type, int4 n, PSeg segs, int4 algs, uint4 stat)
+  void write_SVG(std::ostream* svg_stream, int4 seg_type, int4 n, PSeg segs, int4 algs, uint4 stat)
   {
+    if (!svg_stream)
+      return;
+
     auto apply_algs = [=](auto& coll) {
-      coll.coll_to_SVG(SVG_stream);
+      coll.coll_to_SVG(svg_stream);
       for (int4 a = sizeof(alg_list) / sizeof(alg_list[0]) - 1; a > -1; --a)
         if (algs & alg_list[a]) {
           auto alg = alg_list[a];
           TrueRegistrator reg;
           coll.SetRegistrator(&reg);
           find_int(n, coll, alg, stat);
-          reg.write_SVG(alg, SVG_stream);
+          reg.write_SVG(alg, svg_stream);
         }
     };
 
     switch (seg_type) {
-      case _Segment::line1: {
-        CLine1SegmentCollection<TrueRegistrator> coll(n, segs, nullptr);
-        apply_algs(coll);
-      }; break;
-      case _Segment::line2: {
-        CLine2SegmentCollection<TrueRegistrator> coll(n, segs, nullptr);
-        apply_algs(coll);
-      }; break;
-      case _Segment::arc: {
-        CArcSegmentCollection<TrueRegistrator>  coll(n, segs, nullptr);
-        apply_algs(coll);
-      }; break;
-      case _Segment::graph: {
-        CGraphSegmentCollection<TrueRegistrator> coll(n, segs, nullptr);
-        apply_algs(coll);
-      }; break;
+    case _Segment::line1: {
+      CLine1SegmentCollection<TrueRegistrator> coll(n, segs, nullptr);
+      apply_algs(coll);
+    }; break;
+    case _Segment::line2: {
+      CLine2SegmentCollection<TrueRegistrator> coll(n, segs, nullptr);
+      apply_algs(coll);
+    }; break;
+    case _Segment::arc: {
+      CArcSegmentCollection<TrueRegistrator>  coll(n, segs, nullptr);
+      apply_algs(coll);
+    }; break;
+    case _Segment::graph: {
+      CGraphSegmentCollection<TrueRegistrator> coll(n, segs, nullptr);
+      apply_algs(coll);
+    }; break;
     }
   };
 
@@ -451,6 +442,3 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
       return _find_int<TrueRegistrator>;
     return _find_int<PerSegmCounter>;
   };
-
-
- 
