@@ -111,43 +111,6 @@ double ICT = -1;
 unsigned random_seed = 317;
 
 
-
-double _benchmark_old(char* counters_string, int4 n, PSeg* seg_ptr_coll, int4 s_type, int4 alg, double& res, bool dont_need_ip = false)
-  {
-  double timeit,tottime=0;
-  double c[8] = {0,0,0,0,0,0,0,0};
-  int4 n_call=0;
-  using namespace std::chrono;
-  double mint = 1.0e10;
-  unsigned long thread_affinity_mask = alg & fast_parallel ? 0 : 8;
-
-  ON_BENCH_BEG
-    
-  do
-  {
-      auto start = high_resolution_clock::now();
-      res = find_intersections(s_type, n, seg_ptr_coll, alg, c, dont_need_ip);
-	  tottime+=timeit = static_cast<duration<double>>(high_resolution_clock::now() - start).count();
-      if (timeit < mint)
-          mint = timeit;
-	  n_call++;
-  }
-#ifndef _DEBUG  
-  while ((tottime < 3)||(n_call<3));
-#else
-  while (false);
-#endif
-
-  ON_BENCH_END
-
-  if(counters_string)
-   sprintf(counters_string,"%11.2f;%11.2f;%11.2f;%11.2f;%11.2f;%11.2f;%11.2f;%11.2f",c[0],c[1],c[2],c[3],c[4],c[5],c[6],c[7]);
-   //printf("avg Size %11.2f\n",c[3]/(c[4]+1));
-
-  //return (stop - start) / (n_call*CLOCKS_PER_SEC);
-  return mint; //tottime / n_call;
-  }
-
 double _benchmark_new(int4 n, PSeg seg_coll, int4 s_type, int4 alg, double& res,uint4 reg_stat,int4 range)
   {
   double timeit, tottime = 0;
@@ -178,13 +141,7 @@ double _benchmark_new(int4 n, PSeg seg_coll, int4 s_type, int4 alg, double& res,
   return mint; //tottime / n_call;
 }
 
-enum _Implementation
-{
-  impl_old = 1,
-  impl_new = 2
-};
-
-void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr_type,REAL distr_param,bool print_less,bool rtime_printout,bool dont_need_ip,int4 n, PSeg seg_coll,PSeg *seg_ptr_coll,uint4 reg_stat,int4 range) {
+void perform_tests(bool use_counters, int4 alg,int4 seg_type,int4 distr_type,REAL distr_param,bool print_less,bool rtime_printout,int4 n, PSeg seg_coll,uint4 reg_stat,int4 range) {
   double exec_time[33], nInt[33];
   const char *ss = "Llag", *sd = "rlmspc";
   char counters_string[256],*counters_mute;
@@ -198,31 +155,18 @@ void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr
   if(use_counters)strcpy(counters_string, "\ncounters:");
 #endif
   counters_mute = counters_string + strlen(counters_string);
-  if (impl == _Implementation::impl_old)
-  {
-    if (!print_less)printf("\nold implementation testing... ************************************************\n");
-    stat_names = stat_names_old;
-  }
-  else
     if (!print_less)printf("\nnew implementation testing... ************************************************\n");
 
-    if ((impl == impl_old)&& (seg_type == _Segment::graph)) { if (!print_less)printf("old implementation can't deal with graph segments\n"); return; }
     for (int4 a = sizeof(alg_list) / sizeof(alg_list[0]) - 1; a>-1; a--)
       //for (int4 a = 0;a<sizeof(alg_list) / sizeof(alg_list[0]); a++)
     {
       if (alg&alg_list[a])
       {
         exec_time[a]=-1;
-        if ((alg_list[a] == fast_no_ip) && (seg_type == _Segment::arc)) { if (!print_less)printf("fast no inters. points algorithm can handle only line segments\n"); continue; }
-        if ((alg_list[a] == bentley_ottmann) && (impl == impl_new)) { if (!print_less)printf("new implementation does't support functions nessesary for Bentley & Ottman algorithm\n"); continue; }
-        if ((alg_list[a] == fast_no_ip) && (impl == impl_new)) { if (!print_less)printf("new implementation does't support functions nessesary for no inters. points algorithm \n"); continue; }
-        if (impl == impl_old)
-          exec_time[a] = _benchmark_old(use_counters?counters_mute:NULL, n, seg_ptr_coll, seg_type, alg_list[a], nInt[a], dont_need_ip);
-        else
-          exec_time[a] = _benchmark_new(n, seg_coll, seg_type, alg_list[a], nInt[a],reg_stat,range);
+        exec_time[a] = _benchmark_new(n, seg_coll, seg_type, alg_list[a], nInt[a],reg_stat,range);
         
         if (print_less)
-          printf("I%i;a%i;s%c;d%c;S%i;n%i;i%13.0f;t%6.5f;p%f;%s\n", impl, alg_list[a], ss[seg_type], sd[distr_type], random_seed, n, nInt[a], exec_time[a], distr_param, counters_mute);
+          printf("a%i;s%c;d%c;S%i;n%i;i%13.0f;t%6.5f;p%f;%s\n", alg_list[a], ss[seg_type], sd[distr_type], random_seed, n, nInt[a], exec_time[a], distr_param, counters_mute);
         else
           printf("alg=%s; %s=%13.0f; exec time=%6.5f;%s\n", alg_names[a],stat_names[reg_stat],  nInt[a], exec_time[a], counters_string);
       }
@@ -263,14 +207,12 @@ void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr
 
 int main(int argc, char* argv[])
   {
-  int4 alg=255, seg_type=2, n = 20000, distr_type=0;
+  int4 alg=31, seg_type=2, n = 20000, distr_type=0;
   REAL distr_param=1.0;
   BOOL print_less=FALSE,print_counters=FALSE,wait=FALSE, rtime_printout=FALSE;
   bool use_counters = false;
-  char rpar[]="-r";
-  int4 impl = _Implementation::impl_old + _Implementation::impl_new;
   const char *ss = "Llagi", *sd = "rlmspc",*sr="pPcrC";
-  const char *alg_names[] = { "trivial","simple_sweep","fast","optimal","fast_parallel","bentley_ottmann","fast no inters points","fast 'no R'" };
+  const char *alg_names[] = { "trivial","simple_sweep","fast","optimal","fast_parallel" };
   uint4 reg_stat = 2;
   const char* fname = nullptr;
   int4 range_for_int_seg;
@@ -295,22 +237,14 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
  A=4: balaban fast
  A=8: balaban optimal
  A=16: balaban fast parallel for 6 treads
- A=32: bentley & ottmann
- A=64: balaban fast;  intersection points aren't reported
-  (only intersecting pairs)
- A=128: balaban fast; memory save algorithm 4 bytes less per segment
  if you want several algorithms to test just sum up their values
- i.e. A=255 (=1+2+4+8+16+32+64+128) all algorithms
+ i.e. A=31 (=1+2+4+8+16) all algorithms
 -sS: type of segments
  S=l: line segments representation y=a*x+b,x1<=x<=x2; a,b,x1,x2 - reals
  S=L: line segments representation r=b+a*t,0<=t<=1; b,a - vectors
  S=a: arcs
  S=g: graph: test example is simple circle of N vertices and N edges
  S=i: same as L but vectors a and b have integer coords; if a number is appended, e.g. -si100, coordinates are in range -100 to 100; if not, range is 1/2 of int range
--iI: implementation
- I=1: 'old' function pointers segment collection interface
- I=2: 'new' template based segment collection interface
- I=3: both
 -nN: number of segments
 -pP: parameter value, must be positive
 -dD: type of distribution
@@ -324,9 +258,7 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
  D=distr_param: random segment with  length multiplied by distr_param
  D=c: segments ends are on the opposite sides of unit circle, each
   segment intesect each
- D=d: appled only to integer segments; same as "r" but rounded to small integer range
-   creating a lot of degeneracies
--rR: type of registrator used in new implementation and type of result statistic
+-rR: type of registrar used in new implementation and type of result statistic
  R=c: total intersection counting registrator; total count statistic
  R=C: total intersection counting registrator; total count statistic, but it pretend it register intersection points
  R=p: total intersection counting and per segment intersection counting registrator; 
@@ -359,18 +291,10 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
           case 'a':
           {
             alg = atoi(argv[i] + 2);
-            if ((alg < 1) || (alg > 255))
+            if ((alg < 1) || (alg > 31))
             {
               alg = 4; printf("some error in -a param. 4 used instead.\n");
             }
-          }
-          break;
-          case 'i':
-          {
-           impl = atoi(argv[i] + 2);
-           if ((impl < 1) || (impl > 3)) {
-              impl = 3; printf("some error in -i param. 3 used instead.\n");
-           }
           }
           break;
           case 's':
@@ -493,42 +417,31 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
 
   if (!print_less) {
     if(seg_type!=_Segment::intline)
-      printf("params are: -a%i -s%c -d%c -r%c -i%i -n%i -S%i -p%f\n", alg, ss[seg_type], sd[distr_type], sr[reg_stat], impl, n, random_seed, distr_param);
+      printf("params are: -a%i -s%c -d%c -r%c -n%i -S%i -p%f\n", alg, ss[seg_type], sd[distr_type], sr[reg_stat],  n, random_seed, distr_param);
     else
-      printf("actual params is: -a%i -si%i -d%c -r%c -i%i -n%i -S%i -p%f -e%f\n", alg, range_for_int_seg, sd[distr_type], sr[reg_stat], impl, n, random_seed, distr_param, ICT);
+      printf("actual params is: -a%i -si%i -d%c -r%c -n%i -S%i -p%f -e%f\n", alg, range_for_int_seg, sd[distr_type], sr[reg_stat],  n, random_seed, distr_param, ICT);
   }
-  PSeg *seg_ptr_coll = nullptr;
-  PSeg seg_coll;
   CRandomValueGen rv(random_seed);
-  int4 new_seg_type = seg_type;
-  if(impl&_Implementation::impl_old)
-    seg_coll = create_test_collection(seg_type, n, distr_type, distr_param,rv, &seg_ptr_coll);
-  else
-    seg_coll = create_test_collection(seg_type, n, distr_type, distr_param,rv, nullptr);
+  PSeg seg_coll = create_test_collection(seg_type, n, distr_type, distr_param,rv, nullptr);
 
-  bool dont_need_ip = (alg & fast_no_ip) != 0;
-  if (impl&_Implementation::impl_old)
-    perform_tests(use_counters, _Implementation::impl_old, alg, seg_type, distr_type, distr_param, print_less, rtime_printout, dont_need_ip, n, seg_coll, seg_ptr_coll,reg_stat,range_for_int_seg);
-  if (impl & _Implementation::impl_new) {
-    std::ostrstream SVG_str;
-    std::ofstream svgf;
-    if (fname && (n <= max_SVG_items) && (svgf.open(fname), svgf.is_open())) {
-      write_SVG(&SVG_str, seg_type, n, seg_coll, alg, reg_stat);
-      auto insert_pos = strstr(STYLE_temlate, to_insert_SVG);
-      {
-        std::ostream_iterator<char> it(svgf);
-        std::copy(STYLE_temlate, insert_pos, it);
-      }
-      SVG_str << std::ends;
-      svgf << SVG_str.str();
-      svgf << "</svg>\n" << insert_pos;
-      svgf.close();
+  std::ostrstream SVG_str;
+  std::ofstream svgf;
+  if (fname && (n <= max_SVG_items) && (svgf.open(fname), svgf.is_open())) {
+    write_SVG(&SVG_str, seg_type, n, seg_coll, alg, reg_stat);
+    auto insert_pos = strstr(STYLE_temlate, to_insert_SVG);
+    {
+      std::ostream_iterator<char> it(svgf);
+      std::copy(STYLE_temlate, insert_pos, it);
     }
-    perform_tests(use_counters, _Implementation::impl_new, alg, new_seg_type, distr_type, distr_param, print_less, rtime_printout, dont_need_ip, n, seg_coll, seg_ptr_coll, reg_stat,range_for_int_seg);
+    SVG_str << std::ends;
+    svgf << SVG_str.str();
+    svgf << "</svg>\n" << insert_pos;
+    svgf.close();
   }
+  perform_tests(use_counters, alg, seg_type, distr_type, distr_param, print_less, rtime_printout,  n, seg_coll, reg_stat,range_for_int_seg);
 
   
-  delete_test_collection(seg_type, seg_coll, seg_ptr_coll);
+  delete_test_collection(seg_type, seg_coll, nullptr);
 
   if(wait){printf("\npress 'Enter' to continue"); getchar();}
   return 0;
