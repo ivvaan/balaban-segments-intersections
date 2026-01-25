@@ -163,16 +163,8 @@ void perform_tests(const Options& opt, PSeg seg_coll)
   double exec_time[33], nInt[33];
   const char* ss = "Llag";
   const char* sd = "rlmspc";
-  char counters_string[256], * counters_mute;
-  const char* stat_names_new[] = { "inters. numb","max inters. per segm","inters. numb","inters. numb" };
-  const char** stat_names = stat_names_new;
+  const char* stat_names[] = { "inters. numb","max inters. per segm","inters. numb","inters. numb" };
 
-  counters_string[0] = 0;
-
-#ifdef COUNTERS_ON
-  if (opt.use_counters)strcpy(counters_string, "\ncounters:");
-#endif
-  counters_mute = counters_string + strlen(counters_string);
   if (!opt.print_less)printf("\nnew implementation testing... ************************************************\n");
 
   for (int4 a = sizeof(alg_list) / sizeof(alg_list[0]) - 1; a > -1; a--)
@@ -183,9 +175,9 @@ void perform_tests(const Options& opt, PSeg seg_coll)
       exec_time[a] = _benchmark_new(opt, seg_coll, alg_list[a], nInt[a]);
 
       if (opt.print_less)
-        printf("a%i;s%c;d%c;S%i;n%i;i%13.0f;t%6.5f;p%f;%s\n", alg_list[a], ss[opt.seg_type], sd[opt.distr_type], opt.random_seed, opt.n, nInt[a], exec_time[a], opt.distr_param, counters_mute);
+        printf("a%i;s%c;d%c;S%i;n%i;i%13.0f;t%6.5f;p%f\n", alg_list[a], ss[opt.seg_type], sd[opt.distr_type], opt.random_seed, opt.n, nInt[a], exec_time[a], opt.distr_param);
       else
-        printf("alg=%s; %s=%13.0f; exec time=%6.5f;%s\n", alg_names[a], stat_names[opt.reg_stat], nInt[a], exec_time[a], counters_string);
+        printf("alg=%s; %s=%13.0f; exec time=%6.5f\n", alg_names[a], stat_names[opt.reg_stat], nInt[a], exec_time[a]);
     }
   };
 
@@ -254,11 +246,7 @@ int main(int argc, char* argv[])
 
   if (argc == 1)
   {
-#ifdef COUNTERS_ON
-    printf("usage: seg_int -aA -sS -SR -dD -nN -pP -rR -m -eE -w -SN -fhtmfile -c\n");
-#else    
     printf("usage: seg_int -aA -sS -SR -dD -nN -pP -rR -m -eE -w -SN -fhtmfile\n");
-#endif
     printf(
       R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
 -aA: type of algorithms tested
@@ -306,9 +294,6 @@ int main(int argc, char* argv[])
 )WYX"
     );
 
-#ifdef COUNTERS_ON
-    printf("-c: counters are printed, if presented\n");
-#endif    
     return 0;
   }
   else
@@ -429,13 +414,6 @@ int main(int argc, char* argv[])
           opt.fname = argv[i] + 2;
         }
         break;
-#ifdef COUNTERS_ON
-        case 'c':
-        {
-          opt.use_counters = true;
-        }
-        break;
-#endif
         }
       }
   }
