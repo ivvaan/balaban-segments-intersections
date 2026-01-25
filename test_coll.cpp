@@ -42,50 +42,53 @@ PSeg first_segment_ptr = NULL;
 
 
 
-PSeg create_test_collection(int4 seg_type, int4 n, int4 distr, REAL par, CRandomValueGen& random_gen)
+PSeg create_test_collection(const SegmentsAndRegOptions& opt, CRandomValueGen& random_gen)
 {
   int4 i;
   constexpr int4 sentinels = 2;
-  if (distr != _Distribution::param_defined)par /= n / 33.0;
-  if (distr == _Distribution::parallel)par /= 2.4;
+
+  auto par = opt.distr_param;
+  if (opt.distr_type != _Distribution::param_defined)par /= opt.n / 33.0;
+  if (opt.distr_type == _Distribution::parallel)par /= 2.4;
+
   PSeg result = nullptr;
-  switch (seg_type)
+  switch (opt.seg_type)
   {
   case _Segment::line1:
   case _Segment::intline:
   {
-    TLineSegment1* Colls = new TLineSegment1[n + sentinels];
-    for (i = 0; i < n; i++)
-      Colls[i].InitRandom(random_gen, i, distr, par);
-    auto mmr = get_minmax(n, Colls).get_scaled(2.0);
-    Colls[n] = TLineSegment1(mmr.ld, { mmr.rt.x,mmr.ld.y });
-    Colls[n + 1] = TLineSegment1({ mmr.ld.x,mmr.rt.y }, mmr.rt);
+    TLineSegment1* Colls = new TLineSegment1[opt.n + sentinels];
+    for (i = 0; i < opt.n; i++)
+      Colls[i].InitRandom(random_gen, i, opt.distr_type, par);
+    auto mmr = get_minmax(opt.n, Colls).get_scaled(2.0);
+    Colls[opt.n] = TLineSegment1(mmr.ld, { mmr.rt.x,mmr.ld.y });
+    Colls[opt.n + 1] = TLineSegment1({ mmr.ld.x,mmr.rt.y }, mmr.rt);
     result = Colls;
     first_segment_ptr = Colls;
   }; break;
   case _Segment::line2:
   {
-    TLineSegment2* Colls = new TLineSegment2[n + sentinels];
-    for (i = 0; i < n; i++)
-      Colls[i].InitRandom(random_gen, i, distr, par);
-    auto mmr = get_minmax(n, Colls).get_scaled(2.0);
-    Colls[n].Init({ mmr.ld, { mmr.rt.x,mmr.ld.y } });
-    Colls[n + 1].Init({ { mmr.ld.x,mmr.rt.y }, mmr.rt });
+    TLineSegment2* Colls = new TLineSegment2[opt.n + sentinels];
+    for (i = 0; i < opt.n; i++)
+      Colls[i].InitRandom(random_gen, i, opt.distr_type, par);
+    auto mmr = get_minmax(opt.n, Colls).get_scaled(2.0);
+    Colls[opt.n].Init({ mmr.ld, { mmr.rt.x,mmr.ld.y } });
+    Colls[opt.n + 1].Init({ { mmr.ld.x,mmr.rt.y }, mmr.rt });
     result = Colls;
     first_segment_ptr = Colls;
   }; break;
   case _Segment::arc:
   {
-    TArcSegment* Colls = new TArcSegment[n];
-    for (i = 0; i < n; i++)
-      Colls[i].InitRandom(random_gen, i, distr, par);
+    TArcSegment* Colls = new TArcSegment[opt.n];
+    for (i = 0; i < opt.n; i++)
+      Colls[i].InitRandom(random_gen, i, opt.distr_type, par);
     result = Colls;
     first_segment_ptr = Colls;
   }; break;
   case _Segment::graph:
   {
-    TPlaneVect* Colls = new TPlaneVect[n];
-    for (i = 0; i < n; i++)
+    TPlaneVect* Colls = new TPlaneVect[opt.n];
+    for (i = 0; i < opt.n; i++)
       Colls[i].InitRandom(random_gen);
     result = Colls;
     first_segment_ptr = Colls;
@@ -185,7 +188,7 @@ auto _find_int(int4 seg_type, int4 n, PSeg segs, int4 alg, uint4 stat, int4 rang
 };
 
 template<class Counter>
-auto _find_int(const IntersectionRunOptions& opt, PSeg segs, int4 alg)
+auto _find_int(const SegmentsAndRegOptions& opt, PSeg segs, int4 alg)
 {
   Counter reg;
   reg.Alloc(opt.n);
@@ -224,7 +227,7 @@ find_intersections_func get_find_intersections_func(uint4 reg_type)
   return _find_int<PerSegmCounter>;
 };
 
-void write_SVG(std::ostream* svg_stream, const IntersectionRunOptions& opt, PSeg segs, int4 algs)
+void write_SVG(std::ostream* svg_stream, const SegmentsAndRegOptions& opt, PSeg segs, int4 algs)
 {
   if (!svg_stream)
     return;
@@ -236,7 +239,7 @@ void write_SVG(std::ostream* svg_stream, const IntersectionRunOptions& opt, PSeg
         auto alg = alg_list[a];
         TrueRegistrator reg;
         coll.SetRegistrator(&reg);
-        find_int(opt.n, coll, alg, opt.reg_stat);
+        find_int(opt.n, coll, alg, 0);
         reg.write_SVG(alg, svg_stream);
       }
     };

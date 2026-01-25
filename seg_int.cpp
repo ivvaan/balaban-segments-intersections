@@ -108,37 +108,23 @@ SetPriorityClass(hProcess, dwProcessPriSave);
 #include <crtdbg.h>
 #endif
 
-struct Options
+struct Options : public SegmentsAndRegOptions
 {
+
   int4 alg = 31;
-  int4 seg_type = 2;
-  int4 n = 20000;
-  int4 distr_type = 0;
-  REAL distr_param = 1.0;
 
   BOOL print_less = FALSE;
   BOOL wait = FALSE;
   BOOL rtime_printout = FALSE;
   bool use_counters = false;
 
-  uint4 reg_stat = 2;
   const char* fname = nullptr;
 
   double ICT = -1;
   unsigned random_seed = 317;
 
-  int4 range_for_int_seg = full_int_range;
 };
 
-static IntersectionRunOptions ToIntersectionRunOptions(const Options& opt)
-{
-  IntersectionRunOptions run_opt;
-  run_opt.seg_type = opt.seg_type;
-  run_opt.n = opt.n;
-  run_opt.reg_stat = opt.reg_stat;
-  run_opt.range_for_int_seg = opt.range_for_int_seg;
-  return run_opt;
-}
 
 double _benchmark_new(const Options& opt, PSeg seg_coll, int4 alg, double& res)
 {
@@ -148,14 +134,14 @@ double _benchmark_new(const Options& opt, PSeg seg_coll, int4 alg, double& res)
   double mint = 1.0e10;
   unsigned long thread_affinity_mask = alg & fast_parallel ? 0 : 8;
 
-  const auto run_opt = ToIntersectionRunOptions(opt);
+  //const auto run_opt = ToIntersectionRunOptions(opt);
 
   ON_BENCH_BEG
   do
   {
     auto find_intersections = get_find_intersections_func(opt.reg_stat);
     auto start = high_resolution_clock::now();
-    res = find_intersections(run_opt, seg_coll, alg);
+    res = find_intersections(opt, seg_coll, alg);
     tottime += timeit = static_cast<duration<double>>(high_resolution_clock::now() - start).count();
 
     if (timeit < mint)
@@ -241,7 +227,7 @@ static void TryWriteSvgHtml(const Options& opt, PSeg seg_coll)
     return;
 
   std::ostringstream svg;
-  write_SVG(&svg, ToIntersectionRunOptions(opt), seg_coll, opt.alg);
+  write_SVG(&svg, opt, seg_coll, opt.alg);
 
   const char* insert_pos = strstr(STYLE_temlate, to_insert_SVG);
   if (!insert_pos)
@@ -467,7 +453,7 @@ int main(int argc, char* argv[])
       printf("actual params is: -a%i -si%i -d%c -r%c -n%i -S%i -p%f -e%f\n", opt.alg, opt.range_for_int_seg, sd[opt.distr_type], sr[opt.reg_stat], opt.n, opt.random_seed, opt.distr_param, opt.ICT);
   }
   CRandomValueGen rv(opt.random_seed);
-  auto seg_coll = create_test_collection(opt.seg_type, opt.n, opt.distr_type, opt.distr_param, rv);
+  auto seg_coll = create_test_collection(opt, rv);
 
   TryWriteSvgHtml(opt, seg_coll);
   perform_tests(opt, seg_coll);
@@ -477,10 +463,6 @@ int main(int argc, char* argv[])
   if (opt.wait) { printf("\npress 'Enter' to continue"); getchar(); }
   return 0;
 }
-
-
-
-
 
 
 
