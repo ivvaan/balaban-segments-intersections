@@ -175,6 +175,32 @@ public:
   };
 
   template<bool remove_zero_seg = true>
+  auto NoRemapInit(uint4 n, TIntegerSegment* sc, IntersectionRegistrator* r, int4 range, CTHIS& collection) {
+    initial_SN = n;
+    std::vector<TIntegerVect> points(2 * n);
+
+    this->range = range;
+    uint4 i = 0;
+    for (uint4 m = 0; m != n; ++m) {
+      if constexpr (remove_zero_seg) {
+        if (sc[m].shift.is_zero()) continue;
+      }
+      seg_v[i] = sc[m];
+      points[first_point(i)] = sc[m].BegPoint();
+      points[last_point(i)] = sc[m].EndPoint();
+      ++i;
+    }
+    remapped_SN = nonzero_N = i;
+    if constexpr (remove_zero_seg)
+      initial_SN = nonzero_N;
+    registrator = r;
+
+    collection.segments = std::move(seg_v);
+    collection.points = std::move(points);
+    return;
+  };
+
+  template<bool remove_zero_seg = true>
   auto FromIntSegVect(std::vector<TIntegerSegment>& v, IntersectionRegistrator* r, CTHIS& collection) {
     auto n = nonzero_N = v.size();
     std::vector<TIntegerVect> points(2 * n);

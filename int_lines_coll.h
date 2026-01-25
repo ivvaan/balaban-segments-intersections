@@ -792,7 +792,8 @@ public:
 
   IntersectionRegistrator* GetRegistrator() { return  remaper.registrator; };
 
-  CIntegerSegmentCollection(uint4 n, TLineSegment1* c, IntersectionRegistrator *r, int4 range)
+  template <class Segment>
+  CIntegerSegmentCollection(uint4 n, Segment* c, IntersectionRegistrator *r, int4 range)
   {
     assert(("integer collection registers only intersecting pairs:\n\
        intersection points don't have integer coords ",
