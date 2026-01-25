@@ -228,7 +228,7 @@ static void TryWriteSvgHtml(const Options& opt, PSeg seg_coll)
 
 
   std::ostringstream svg;
-  write_SVG(&svg, opt.seg_type, opt.n, seg_coll, opt.alg, opt.reg_stat);
+  write_SVG(&svg, opt.seg_type, opt.n, seg_coll, opt.alg, opt.reg_stat,opt.range_for_int_seg);
 
   const char* insert_pos = strstr(STYLE_temlate, to_insert_SVG);
   if (!insert_pos)

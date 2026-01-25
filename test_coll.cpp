@@ -394,7 +394,7 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
     return 0ULL;
   };
 
-  void write_SVG(std::ostream* svg_stream, int4 seg_type, int4 n, PSeg segs, int4 algs, uint4 stat)
+  void write_SVG(std::ostream* svg_stream, int4 seg_type, int4 n, PSeg segs, int4 algs, uint4 stat,int4 range)
   {
     if (!svg_stream)
       return;
@@ -412,6 +412,10 @@ double find_intersections(int4 seg_type, int4 SN, PSeg* colls, int4 alg, double*
     };
 
     switch (seg_type) {
+    case _Segment::intline: {
+      CIntegerSegmentCollection<SimpleCounter> coll(n,(TLineSegment1 *) segs, nullptr,range);
+      coll.coll_to_SVG(svg_stream);
+    }; break;
     case _Segment::line1: {
       CLine1SegmentCollection<TrueRegistrator> coll(n, segs, nullptr);
       apply_algs(coll);
