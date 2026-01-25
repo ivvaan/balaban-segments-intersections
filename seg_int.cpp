@@ -17,10 +17,9 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
-*/ 
+*/
 // seg_int.cpp : Defines the entry point for the console application.
 //
-
 #include "test_coll.h"
 #include "utils.h"
 
@@ -131,6 +130,16 @@ struct Options
   int4 range_for_int_seg = full_int_range;
 };
 
+static IntersectionRunOptions ToIntersectionRunOptions(const Options& opt)
+{
+  IntersectionRunOptions run_opt;
+  run_opt.seg_type = opt.seg_type;
+  run_opt.n = opt.n;
+  run_opt.reg_stat = opt.reg_stat;
+  run_opt.range_for_int_seg = opt.range_for_int_seg;
+  return run_opt;
+}
+
 double _benchmark_new(const Options& opt, PSeg seg_coll, int4 alg, double& res)
 {
   double timeit, tottime = 0;
@@ -139,12 +148,14 @@ double _benchmark_new(const Options& opt, PSeg seg_coll, int4 alg, double& res)
   double mint = 1.0e10;
   unsigned long thread_affinity_mask = alg & fast_parallel ? 0 : 8;
 
+  const auto run_opt = ToIntersectionRunOptions(opt);
+
   ON_BENCH_BEG
   do
   {
     auto find_intersections = get_find_intersections_func(opt.reg_stat);
     auto start = high_resolution_clock::now();
-    res = find_intersections(opt.seg_type, opt.n, seg_coll, alg, opt.reg_stat, opt.range_for_int_seg);
+    res = find_intersections(run_opt, seg_coll, alg);
     tottime += timeit = static_cast<duration<double>>(high_resolution_clock::now() - start).count();
 
     if (timeit < mint)
@@ -229,9 +240,8 @@ static void TryWriteSvgHtml(const Options& opt, PSeg seg_coll)
   if (!opt.fname || (opt.n > max_SVG_items))
     return;
 
-
   std::ostringstream svg;
-  write_SVG(&svg, opt.seg_type, opt.n, seg_coll, opt.alg, opt.reg_stat,opt.range_for_int_seg);
+  write_SVG(&svg, ToIntersectionRunOptions(opt), seg_coll, opt.alg);
 
   const char* insert_pos = strstr(STYLE_temlate, to_insert_SVG);
   if (!insert_pos)
@@ -243,7 +253,8 @@ static void TryWriteSvgHtml(const Options& opt, PSeg seg_coll)
   svgf << svg.str();
   svgf << "</svg>\n";
   svgf << insert_pos;
-}
+};
+
 int main(int argc, char* argv[])
 {
   Options opt;
@@ -456,16 +467,20 @@ int main(int argc, char* argv[])
       printf("actual params is: -a%i -si%i -d%c -r%c -n%i -S%i -p%f -e%f\n", opt.alg, opt.range_for_int_seg, sd[opt.distr_type], sr[opt.reg_stat], opt.n, opt.random_seed, opt.distr_param, opt.ICT);
   }
   CRandomValueGen rv(opt.random_seed);
-  PSeg seg_coll = create_test_collection(opt.seg_type, opt.n, opt.distr_type, opt.distr_param, rv, nullptr);
+  auto seg_coll = create_test_collection(opt.seg_type, opt.n, opt.distr_type, opt.distr_param, rv);
 
   TryWriteSvgHtml(opt, seg_coll);
-
   perform_tests(opt, seg_coll);
-  delete_test_collection(opt.seg_type, seg_coll, nullptr);
+
+  delete_test_collection(opt.seg_type, seg_coll);
 
   if (opt.wait) { printf("\npress 'Enter' to continue"); getchar(); }
   return 0;
 }
+
+
+
+
 
 
 
