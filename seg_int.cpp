@@ -213,17 +213,16 @@ void perform_tests(const Options& opt, PSeg seg_coll)
 };
 
 
-static void TryWriteSvgHtml(const Options& opt, PSeg seg_coll)
+void WriteSvgHtml(const Options& opt, PSeg seg_coll)
 {
-  if (!opt.fname || (opt.n > max_SVG_items))
+  const char* insert_pos = strstr(STYLE_temlate, to_insert_SVG);
+  assert(insert_pos != nullptr);
+  if (!insert_pos)
     return;
 
   std::ostringstream svg;
   write_SVG(&svg, opt, seg_coll, opt.alg);
 
-  const char* insert_pos = strstr(STYLE_temlate, to_insert_SVG);
-  if (!insert_pos)
-    return;
   std::ofstream svgf(opt.fname);
   if (!svgf.is_open())
     return;
@@ -433,7 +432,13 @@ int main(int argc, char* argv[])
   CRandomValueGen rv(opt.random_seed);
   auto seg_coll = create_test_collection(opt, rv);
 
-  TryWriteSvgHtml(opt, seg_coll);
+  if (opt.fname) {
+    if (opt.n > max_SVG_items)
+      printf("Too many segments (and possible intersections!) for SVG output.\n");
+    else
+      WriteSvgHtml(opt, seg_coll);
+  }
+
   perform_tests(opt, seg_coll);
 
   delete_test_collection(opt.seg_type, seg_coll);
