@@ -408,33 +408,9 @@ public:
     }
 
     bool no_common_y(const TIntegerSegment& s2) const {
-      decltype(org.y) min1, min2, max1, max2;
-
-      auto dy = sy();
-      if (dy > 0) {
-        min1 = by();
-        max1 = min1 + dy;
-      }
-      else {
-        max1 = by();
-        min1 = max1 + dy;
-      }
-
-      dy = s2.sy();
-      if (dy > 0) {
-        min2 = s2.by();
-        max2 = min2 + dy;
-      }
-      else {
-        max2 = s2.by();
-        min2 = max2 + dy;
-      }
+      auto [min1, max1] = std::pair<int4,int4>(std::minmax(by(), ey()));
+      auto [min2, max2] = std::pair<int4, int4>(std::minmax(s2.by(), s2.ey()));
       return (min2 > max1) || (min1 > max2);
-
-     /* auto [min1, max1] = std::minmax(by(), ey());
-      auto [min2, max2] = std::minmax(s2.by(), s2.ey());
-
-      return max1 < min2 || max2 < min1;*/
     }
 
     void write_SVG(int4 id, chostream* SVG_text,int4 type=0) const {
