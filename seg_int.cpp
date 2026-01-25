@@ -80,6 +80,57 @@ if(state<=1){dir=1;}
 
 const char* to_insert_SVG = "<!--inserthere-->";
 
+const char* help_msg = R"WYX(
+example: seg_int -a14 -sa -dp -n20000 -p5.5
+-aA: type of algorithms tested
+ A=1: trivial
+ A=2: simple sweep
+ A=4: balaban fast
+ A=8: balaban optimal
+ A=16: balaban fast parallel for 6 treads
+ if you want several algorithms to test just sum up their values
+ i.e. A=31 (=1+2+4+8+16) all algorithms
+-sS: type of segments
+ S=l: line segments representation y=a*x+b,x1<=x<=x2; a,b,x1,x2 - reals
+ S=L: line segments representation r=b+a*t,0<=t<=1; b,a - vectors
+ S=a: arcs
+ S=g: graph: test example is simple circle of N vertices and N edges
+ S=i: same as L but vectors a and b have integer coords; if a number is appended, e.g. -si100, coordinates are in range -100 to 100; if not, range is 1/2 of int range
+-nN: number of segments
+-pP: parameter value, must be positive
+-dD: type of distribution
+ D=r: random segments
+ D=l: random length almost x parallel segments, the bigger
+  distr_param/N the less parallel segments
+ D=m: mixed random length almost x parallel 'long' segments
+  (33%%) and 'small' segments(67%%), the bigger distr_param/N
+  the less parallel 'long' and longer 'short' segments
+ D=s: short segments: random segment with  length multiplied by distr_param/N
+ D=distr_param: random segment with  length multiplied by distr_param
+ D=c: segments ends are on the opposite sides of unit circle, each
+  segment intesect each
+-rR: type of registrar used in new implementation and type of result statistic
+ R=c: total intersection counting registrator; total count statistic
+ R=C: total intersection counting registrator; total count statistic, but it pretend it register intersection points
+ R=p: total intersection counting and per segment intersection counting registrator; 
+  total count statistic
+ R=P: total intersection counting and per segment intersection counting registrator; 
+  max intersections pre segment statistic
+ R=r: really storing pairs and intersections registrator (be carefull with memory!!!); 
+  total count statistic. As we can have O(N^2) int. the option is limited to N=20000 max
+-eE: prints intersection find time compare to trivial intersection check time (ICT) for all tested algorithms 
+  E - ICT estimation in nanoseconds (you can take it from small segment sets)
+  if E not presented (just -e), program calculates ICT from trivial algorithm run. In the later 
+  case trivial algorithm must be selected for testing and for the large N it can take quite a time.
+-SR: capital S for random seed; R - random seed value; if R=0 - non pseudo random generator used
+-fhtmfile: if presented, program writes SVG picture to htmfile. For examle -fC:/tmp/res.htm
+  To limit resulting file size option works only for 5000 segments and less, also only first 
+  150000 intersections are drawn.
+-m: print truncated information in one row (to make a table)
+-w: stop and wait for an input befor exit
+)WYX";
+
+
 
 #if defined(_WIN32) && !defined(_DEBUG)
 #include <windows.h>
@@ -134,8 +185,6 @@ double _benchmark_new(const Options& opt, PSeg seg_coll, int4 alg, double& res)
   double mint = 1.0e10;
   unsigned long thread_affinity_mask = alg & fast_parallel ? 0 : 8;
 
-  //const auto run_opt = ToIntersectionRunOptions(opt);
-
   ON_BENCH_BEG
   do
   {
@@ -167,10 +216,8 @@ void perform_tests(const Options& opt, PSeg seg_coll)
 
   if (!opt.print_less)printf("\nnew implementation testing... ************************************************\n");
 
-  for (int4 a = sizeof(alg_list) / sizeof(alg_list[0]) - 1; a > -1; a--)
-  {
-    if (opt.alg & alg_list[a])
-    {
+  for (int4 a = sizeof(alg_list) / sizeof(alg_list[0]) - 1; a > -1; a--){
+    if (opt.alg & alg_list[a])  {
       exec_time[a] = -1;
       exec_time[a] = _benchmark_new(opt, seg_coll, alg_list[a], nInt[a]);
 
@@ -181,34 +228,25 @@ void perform_tests(const Options& opt, PSeg seg_coll)
     }
   };
 
-  if (opt.rtime_printout && (!opt.print_less) && (opt.reg_stat != 1)) {
+  if (opt.rtime_printout && (!opt.print_less) && (opt.reg_stat != _Registrator::per_segm_reg_max_per_segm_stat)) {
+    double check_time;
     if ((opt.alg & triv)) {
       double n_checks = ((double)opt.n) * 0.5 * (opt.n - 1);
-      double check_time = exec_time[0] / n_checks;
+      check_time = exec_time[0] / n_checks;
       printf("\ntrivial alg made %13.0f intersection checks\n", n_checks);
       printf("one intersection check takes %6.3f ns, let's use intersection check time (ICT) as a time unit \n\n", 1E+09 * check_time);
-      for (int4 a = 0; a < sizeof(alg_list) / sizeof(alg_list[0]); a++)
-      {
-        if (opt.alg & alg_list[a])
-        {
-          if (exec_time[a] > 0)
-            printf("%s finds one intersection in %6.3f ICT \n", alg_names[a], exec_time[a] / check_time / nInt[a]);
-        }
-      };
     }
     else if (opt.ICT > 0) {
       printf("\none intersection check presumably takes %6.3f ns, let's use this value as a time unit (ICT) \n\n", opt.ICT);
-      double check_time = 1E-09 * opt.ICT;
-      for (int4 a = 0; a < sizeof(alg_list) / sizeof(alg_list[0]); a++)
-      {
-        if (opt.alg & alg_list[a])
-        {
-          if (exec_time[a] > 0)
-            printf("%s finds one intersection in %6.3f ICT \n", alg_names[a], exec_time[a] / check_time / nInt[a]);
-        }
-      };
+      check_time = 1E-09 * opt.ICT;
+    };
+    for (int4 a = 0; a < sizeof(alg_list) / sizeof(alg_list[0]); a++){
+      if (opt.alg & alg_list[a]) {
+        if (exec_time[a] > 0)
+          printf("%s finds one intersection in %6.3f ICT \n", alg_names[a], exec_time[a] / check_time / nInt[a]);
+      }
+    };
 
-    }
   }
 };
 
@@ -246,53 +284,7 @@ int main(int argc, char* argv[])
   if (argc == 1)
   {
     printf("usage: seg_int -aA -sS -SR -dD -nN -pP -rR -m -eE -w -SN -fhtmfile\n");
-    printf(
-      R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
--aA: type of algorithms tested
- A=1: trivial
- A=2: simple sweep
- A=4: balaban fast
- A=8: balaban optimal
- A=16: balaban fast parallel for 6 treads
- if you want several algorithms to test just sum up their values
- i.e. A=31 (=1+2+4+8+16) all algorithms
--sS: type of segments
- S=l: line segments representation y=a*x+b,x1<=x<=x2; a,b,x1,x2 - reals
- S=L: line segments representation r=b+a*t,0<=t<=1; b,a - vectors
- S=a: arcs
- S=g: graph: test example is simple circle of N vertices and N edges
- S=i: same as L but vectors a and b have integer coords; if a number is appended, e.g. -si100, coordinates are in range -100 to 100; if not, range is 1/2 of int range
--nN: number of segments
--pP: parameter value, must be positive
--dD: type of distribution
- D=r: random segments
- D=l: random length almost x parallel segments, the bigger
-  distr_param/N the less parallel segments
- D=m: mixed random length almost x parallel 'long' segments
-  (33%%) and 'small' segments(67%%), the bigger distr_param/N
-  the less parallel 'long' and longer 'short' segments
- D=s: short segments: random segment with  length multiplied by distr_param/N
- D=distr_param: random segment with  length multiplied by distr_param
- D=c: segments ends are on the opposite sides of unit circle, each
-  segment intesect each
--rR: type of registrar used in new implementation and type of result statistic
- R=c: total intersection counting registrator; total count statistic
- R=C: total intersection counting registrator; total count statistic, but it pretend it register intersection points
- R=p: total intersection counting and per segment intersection counting registrator; 
-  total count statistic
- R=P: total intersection counting and per segment intersection counting registrator; 
-  max intersections pre segment statistic
- R=r: really storing pairs and intersections registrator (be carefull with memory!!!); 
-  total count statistic. As we can have O(N^2) int. the option is limited to N=20000 max
--SR: capital S for random seed; R - random seed value; if R=0 - non pseudo random generator used
--fhtmfile: if presented, program writes SVG picture to htmfile. For examle -fC:/tmp/res.htm
-  To limit resulting file size option works only for 5000 segments and less, also only first 
-  150000 intersections are drawn.
--m: print truncated information in one row (to make a table)
--w: stop and wait for an input befor exit
-)WYX"
-    );
-
+    printf(help_msg);
     return 0;
   }
   else
