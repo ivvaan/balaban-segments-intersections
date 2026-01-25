@@ -28,6 +28,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <numeric> 
 
+
 namespace {
   template<class T>
   T& unmove(T&& t) { return t; };
@@ -893,8 +894,8 @@ public:
     int4 n = MIN(max_SVG_items, nSegments);
     auto mmr = get_mmrect01(collection, n);
     *SVG_stream << "<svg height='100%' width='100%' viewBox='";
-    *SVG_stream << mmr.ld.x << " " << mmr.ld.y << " "
-      << mmr.rt.x - mmr.ld.x << " " << mmr.rt.y - mmr.ld.y << "' transform='scale(1, -1)'>\n";
+    *SVG_stream << mmr.ld.x*crd_scaler << " " << mmr.ld.y * crd_scaler << " "
+      << (mmr.rt.x - mmr.ld.x) * crd_scaler << " " << (mmr.rt.y - mmr.ld.y) * crd_scaler << "' transform='scale(1, -1)'>\n";
     for (int4 i = 0; i < n; ++i)collection[i].write_SVG(i, SVG_stream);
   };
   auto &get_segments() {

@@ -343,7 +343,6 @@ TIntegerVect operator*(TIntegerVect t, int4 r);
 
 
 
-
 struct minmaxrect { 
   TPlaneVect ld, rt; // left down, right top coners
   auto get_diag() const {
@@ -363,6 +362,19 @@ struct minmaxrect {
   };
 };
 
+struct intmmrect {
+  TIntegerVect ld, rt; // left down, right top coners
+  auto get_diag() const {
+    return rt - ld;
+  }
+  auto get_width() const {
+    return rt.x - ld.x;
+  }
+  auto get_height() const {
+    return rt.x - ld.x;
+  }
+};
+
 template<class SegArr>
 minmaxrect get_mmrect01(SegArr c[], int4 N) {
   REAL xmin = 0, ymin = 0, xmax = 1, ymax = 1;
@@ -380,12 +392,12 @@ minmaxrect get_mmrect01(SegArr c[], int4 N) {
 template <class T>
 minmaxrect get_minmax(int4 n, T c[])
 {
-  TPlaneVect bp = c[0].BegPoint();
-  TPlaneVect ep = c[0].EndPoint();
-  REAL xmin = bp.x;
-  REAL xmax = ep.x;
-  REAL ymin = MIN(bp.y, ep.y);
-  REAL ymax = MAX(bp.y, ep.y);
+  auto bp = c[0].BegPoint();
+  auto ep = c[0].EndPoint();
+  auto xmin = bp.x;
+  auto xmax = ep.x;
+  auto ymin = MIN(bp.y, ep.y);
+  auto ymax = MAX(bp.y, ep.y);
   for (int4 i = 1; i < n; ++i) {
     bp = c[i].BegPoint();
     ep = c[i].EndPoint();
@@ -397,6 +409,28 @@ minmaxrect get_minmax(int4 n, T c[])
 
   return { {xmin,ymin},{xmax,ymax} };
 };
+
+template <class T>
+intmmrect get_int_minmax(int4 n, T c[])
+{
+  auto bp = c[0].BegPoint();
+  auto ep = c[0].EndPoint();
+  auto xmin = bp.x;
+  auto xmax = ep.x;
+  auto ymin = MIN(bp.y, ep.y);
+  auto ymax = MAX(bp.y, ep.y);
+  for (int4 i = 1; i < n; ++i) {
+    bp = c[i].BegPoint();
+    ep = c[i].EndPoint();
+    xmin = MIN(xmin, bp.x);
+    xmax = MAX(xmax, ep.x);
+    ymin = std::min({ ymin,bp.y,ep.y });
+    ymax = std::max({ ymax,bp.y,ep.y });
+  }
+
+  return { {xmin,ymin},{xmax,ymax} };
+};
+
 
 template <class T>
 minmaxrect get_rot_minmax(int4 n, T coll[], double s, double c)

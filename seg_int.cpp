@@ -38,10 +38,13 @@ const char* STYLE_temlate = R"WYX(
 <html>
 <style>
 line{stroke:blue;
-stroke-width:0.001;}
+stroke-width:1px;
+vector-effect: non-scaling-stroke;}
 path{stroke:blue;
-stroke-width:0.001;
-fill:none;}
+stroke-width:1px;
+fill:none;
+vector-effect: non-scaling-stroke;}
+.int_line{stroke:green;}
 .line1{stroke:cadetblue;}
 .line2{stroke:darkblue;}
 .edge{stroke:black;}
@@ -60,7 +63,7 @@ var dir=1;
 var zoom=function(){
 svg=document.getElementsByTagName('svg')[0];
 mul=1.25;
-if(dir<0) {mul=0.8;} 
+if(dir<0) {mul=0.8;}
 var h=parseFloat(svg.getAttribute('height'));
 svg.setAttribute('height',h*mul+'%');
 var w=parseFloat(svg.getAttribute('width'));
@@ -463,5 +466,6 @@ int main(int argc, char* argv[])
   if (opt.wait) { printf("\npress 'Enter' to continue"); getchar(); }
   return 0;
 }
+
 
 

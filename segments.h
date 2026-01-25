@@ -25,6 +25,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include "math.h"
 #include <cstddef>
 
+constexpr const double crd_scaler = 1.e-3;
 
 
 class TLineSegment1
@@ -407,19 +408,42 @@ public:
     }
 
     bool no_common_y(const TIntegerSegment& s2) const {
-      auto [min1, max1] = std::minmax(by(), ey());
+      decltype(org.y) min1, min2, max1, max2;
+
+      auto dy = sy();
+      if (dy > 0) {
+        min1 = by();
+        max1 = min1 + dy;
+      }
+      else {
+        max1 = by();
+        min1 = max1 + dy;
+      }
+
+      dy = s2.sy();
+      if (dy > 0) {
+        min2 = s2.by();
+        max2 = min2 + dy;
+      }
+      else {
+        max2 = s2.by();
+        min2 = max2 + dy;
+      }
+      return (min2 > max1) || (min1 > max2);
+
+     /* auto [min1, max1] = std::minmax(by(), ey());
       auto [min2, max2] = std::minmax(s2.by(), s2.ey());
 
-      return max1 < min2 || max2 < min1;
+      return max1 < min2 || max2 < min1;*/
     }
 
     void write_SVG(int4 id, chostream* SVG_text,int4 type=0) const {
       if (SVG_text) {
         *SVG_text << "<line id='seg" << id;
-        *SVG_text << "' x1='" << bx();
-        *SVG_text << "' y1='" << by();
-        *SVG_text << "' x2='" << ex();
-        *SVG_text << "' y2='" << ey();
+        *SVG_text << "' x1='" << (double)bx() * crd_scaler;
+        *SVG_text << "' y1='" << (double)by() * crd_scaler;
+        *SVG_text << "' x2='" << (double)ex() * crd_scaler;
+        *SVG_text << "' y2='" << (double)ey() * crd_scaler;
         if (type == 0)
           *SVG_text << "' class='int_line'/>\n";
         else {
