@@ -38,8 +38,33 @@ struct SegmentsAndRegOptions
   uint4 reg_stat = 2;
 };
 
-PSeg create_test_collection(const SegmentsAndRegOptions& opt, CRandomValueGen& random_gen);
-void delete_test_collection(int4 seg_type, PSeg seg_coll);
+class SegCollection
+{
+public:
+  SegCollection() = default;
+  SegCollection(int4 seg_type, PSeg segs) noexcept;
+
+  SegCollection(const SegCollection&) = delete;
+  SegCollection& operator=(const SegCollection&) = delete;
+
+  SegCollection(SegCollection&& other) noexcept;
+  SegCollection& operator=(SegCollection&& other) noexcept;
+
+  ~SegCollection();
+
+  int4 seg_type() const noexcept { return seg_type_; }
+  PSeg get() const noexcept { return segs_; }
+  explicit operator bool() const noexcept { return segs_ != nullptr; }
+  operator PSeg() const noexcept { return segs_; }
+
+  void reset() noexcept;
+
+private:
+  int4 seg_type_ = -1;
+  PSeg segs_ = nullptr;
+};
+
+SegCollection create_test_collection(const SegmentsAndRegOptions& opt, CRandomValueGen& random_gen);
 
 using find_intersections_func = uint8(*)(const SegmentsAndRegOptions& opt, PSeg segs, int4 alg);
 find_intersections_func get_find_intersections_func(uint4 reg_type);

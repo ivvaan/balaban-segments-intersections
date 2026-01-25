@@ -163,7 +163,7 @@ void perform_tests(const Options& opt, PSeg seg_coll)
   double exec_time[33], nInt[33];
   const char* ss = "Llag";
   const char* sd = "rlmspc";
-  const char* stat_names[] = { "inters. numb","max inters. per segm","inters. numb","inters. numb" };
+  const char* stat_names[] = { "inters. numb","max inters. per segm","inters. numb","inters. numb" ,"inters. numb" };
 
   if (!opt.print_less)printf("\nnew implementation testing... ************************************************\n");
 
@@ -440,8 +440,6 @@ int main(int argc, char* argv[])
   }
 
   perform_tests(opt, seg_coll);
-
-  delete_test_collection(opt.seg_type, seg_coll);
 
   if (opt.wait) { printf("\npress 'Enter' to continue"); getchar(); }
   return 0;
