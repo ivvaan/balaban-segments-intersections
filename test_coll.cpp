@@ -31,9 +31,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "new_int_finder.h"
 #include "fast_finder.h"
-#include "mem_save_finder.h"
 #include "optimal_finder.h"
-#include "intersection_finder.h"
 
 
 constexpr int4 n_threads = 6;
