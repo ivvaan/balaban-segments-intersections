@@ -29,10 +29,6 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <numeric> 
 
 
-namespace {
-  template<class T>
-  T& unmove(T&& t) { return t; };
-}
 
 template<typename Real>
 Real get_max_gap_middle(uint4 N, Real arr[]) {

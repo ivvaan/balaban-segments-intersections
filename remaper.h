@@ -1,7 +1,15 @@
 
 
-class CRemaper {
 
+class CRemaper {
+  struct MarkedListBounds {
+    uint4 beg = 0;
+    uint4 end = 0;
+    uint4 flags = 0;
+    bool is_mapped_entirely() const {
+      return (flags != 0);
+    };
+  };
 
   static REAL get_rot_angle(uint4 n, TLineSegment1 sc[]) {
     REAL* arr;
@@ -91,12 +99,19 @@ public:
       if (size != 0) {
         assert(i + 1 < N);
 
+        auto next_pt = indexes[i + 1];
         auto beg = points[pt];
-        auto end = points[indexes[i + 1]];
+        auto end = points[next_pt];
 
         if (beg != end) {
           std::copy(stack.begin(), stack.end(), remap + remaper_pos);
-          rrec[new_seg_num] = { remaper_pos,remaper_pos + (uint4)size };
+          uint4 is_mapped_entirely = 0;
+          if (size == 1) {
+            auto s = remap[remaper_pos];
+            if (pt == first_point(s) && (next_pt == last_point(s)))
+              is_mapped_entirely = 1;
+          }
+          rrec[new_seg_num] = { remaper_pos,remaper_pos + (uint4)size, is_mapped_entirely };
           remaper_pos += size;
           not_remapped &= size < 2;
           res_coll[new_seg_num] = { beg,end };
@@ -119,16 +134,18 @@ public:
   }
 
   void register_pair(uint4 s1, uint4 s2) {
-#ifdef PRINT_SEG_AND_INT
-    if (s1 > s2)
-      std::swap(s1, s2);
-    printf("remapped int pair %i %i\n", s1, s2);
-#endif 
     auto rr1 = rrec_v[s1];
     auto rr2 = rrec_v[s2];
+    if(rr1.is_mapped_entirely() && rr2.is_mapped_entirely()) {
+      //if we have full mapping segment to segment, no need to check anything
+      //trivial remap (should be most of the time)
+      registrator->register_pair(remap_v[rr1.beg], remap_v[rr2.beg]);
+      return;
+    }
     auto int_type = remapped_segs[s1].get_int_type_beg(remapped_segs[s2]);
-    //trivial remap (should be most of the time)
     if (rr1.end + rr2.end - rr1.beg - rr2.beg < 3) {
+      //one to one mapping but not to entire segments
+      //need to check type of intersection to exclude double registration
       register_pair(remap_v[rr1.beg], remap_v[rr2.beg], int_type);
       return;
     }
@@ -142,11 +159,12 @@ public:
           break;
         }
 
-    //register only intersections with nonmarked segments
+    //register only intersections with nonmarked segments, otherwise we can have double registration
     for (uint4 seg1 = rr1.beg; seg1 < rr1.end; ++seg1)
       if ((remap_v[seg1] & mark) == 0) {
         for (uint4 seg2 = rr2.beg; seg2 < rr2.end; ++seg2)
           if ((remap_v[seg2] & mark) == 0)
+            //also need to check type of intersection to exclude double registration
             register_pair(remap_v[seg1], remap_v[seg2], int_type);
       }
 
@@ -311,7 +329,7 @@ private:
   uint4 remapped_SN = 0;
   uint4 remap_size = 0;
   int4 range = 1;
-  std::vector<ListBounds> rrec_v;
+  std::vector<MarkedListBounds> rrec_v;
   std::vector<uint4> remap_v;
   std::vector<TIntegerSegment> seg_v;//if remapped original int segments are stored here
   TIntegerSegment* remapped_segs = nullptr;
