@@ -136,19 +136,41 @@ public:
   void register_pair(uint4 s1, uint4 s2) {
     auto rr1 = rrec_v[s1];
     auto rr2 = rrec_v[s2];
+
     if(rr1.is_mapped_entirely() && rr2.is_mapped_entirely()) {
       //if we have full mapping segment to segment, no need to check anything
       //trivial remap (should be most of the time)
       registrator->register_pair(remap_v[rr1.beg], remap_v[rr2.beg]);
       return;
     }
+
     auto int_type = remapped_segs[s1].get_int_type_beg(remapped_segs[s2]);
+
+    if (int_type == _IntType::common_int) {
+      //if nondegenerate common intersection of mapped segments s1 and s2 -> 
+      //trivial remap for both one to one or many to many mapping
+
+      if (rr1.end + rr2.end - rr1.beg - rr2.beg < 3) {//one to one mapping 
+        registrator->register_pair(remap_v[rr1.beg], remap_v[rr2.beg]);
+        return;
+      };
+
+      for (uint4 seg1 = rr1.beg; seg1 < rr1.end; ++seg1) {//many to many mapping
+        for (uint4 seg2 = rr2.beg; seg2 < rr2.end; ++seg2)
+          registrator->register_pair(remap_v[rr1.beg], remap_v[rr2.beg]);
+      };
+      return;
+    };
+    //non common intersection, need to check more carefully
+    //need to check type of intersection to exclude double registration
+
     if (rr1.end + rr2.end - rr1.beg - rr2.beg < 3) {
-      //one to one mapping but not to entire segments
-      //need to check type of intersection to exclude double registration
       register_pair(remap_v[rr1.beg], remap_v[rr2.beg], int_type);
       return;
-    }
+    };
+
+    //most complex case, need to check for nonunique segments; hopefully rare
+    // 
     //marking all nonunique segments
     constexpr const uint4 mark = 1 << (sizeof(uint4) * 8 - 1);
     for (uint4 seg1 = rr1.beg; seg1 < rr1.end; ++seg1)
