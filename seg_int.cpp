@@ -229,7 +229,7 @@ void perform_tests(const Options& opt, PSeg seg_coll)
   };
 
   if (opt.rtime_printout && (!opt.print_less) && (opt.reg_stat != _Registrator::per_segm_reg_max_per_segm_stat)) {
-    double check_time;
+    double check_time=-1;
     if ((opt.alg & triv)) {
       double n_checks = ((double)opt.n) * 0.5 * (opt.n - 1);
       check_time = exec_time[0] / n_checks;
@@ -240,12 +240,13 @@ void perform_tests(const Options& opt, PSeg seg_coll)
       printf("\none intersection check presumably takes %6.3f ns, let's use this value as a time unit (ICT) \n\n", opt.ICT);
       check_time = 1E-09 * opt.ICT;
     };
-    for (int4 a = 0; a < sizeof(alg_list) / sizeof(alg_list[0]); a++){
-      if (opt.alg & alg_list[a]) {
-        if (exec_time[a] > 0)
-          printf("%s finds one intersection in %6.3f ICT \n", alg_names[a], exec_time[a] / check_time / nInt[a]);
-      }
-    };
+    if(check_time>0)
+      for (int4 a = 0; a < sizeof(alg_list) / sizeof(alg_list[0]); a++){
+        if (opt.alg & alg_list[a]) {
+          if (exec_time[a] > 0)
+            printf("%s finds one intersection in %6.3f ICT \n", alg_names[a], exec_time[a] / check_time / nInt[a]);
+        }
+      };
 
   }
 };
