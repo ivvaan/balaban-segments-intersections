@@ -301,15 +301,23 @@ public:
     std::sort(L, L + n, [this](int4 s1, int4 s2) {return LBelow(s1, s2); });
   };
 
-  void clone(CArcSegmentCollection& c, IntersectionRegistrator* r)
+  void clone(CArcSegmentCollection& coll, IntersectionRegistrator* r)
   {
-    clone_of = &c;
-    Init(c.N, c.collection, r);
+    clone_of = &coll;
+    ENDS = coll.ENDS;
+    seg_L_rank = coll.seg_L_rank;
+    seg_R_rank = coll.seg_R_rank;
+
+    Init(coll.N, coll.collection, r);
   };
 
   void unclone() {
-    if (clone_of == nullptr)return; 
-    collection = nullptr; 
+    if (clone_of == nullptr)
+      return;
+    ENDS = nullptr;
+    seg_L_rank = nullptr;
+    seg_R_rank = nullptr;
+    collection = nullptr;
     clone_of = nullptr;
   };
 

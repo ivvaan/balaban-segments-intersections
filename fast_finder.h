@@ -89,13 +89,19 @@ public:
     uint4 start_from = part;
     for (uint4 i = 2, from = start_from, to; i <= n_threads; ++i) {
       to = (i == n_threads) ? 2 * n - 1 : (uint4)(part * i);
+#if defined(DEBUG) || defined(_DEBUG)
+      thread_func(this, &segments, from, to, regs[i - 2]); // starts intersection finding in a stripe <from,to>
+#else
       wrk_threads.emplace_back(thread_func, this, &segments, from, to, regs[i - 2]); // starts intersection finding in a stripe <from,to>
+#endif
       from = to;
     }
 
     find_intersections(segments, 0, start_from);
+#if !(defined(DEBUG) || defined(_DEBUG))
     for (auto& cur_thread:wrk_threads)
       cur_thread.join(); //waiting for calculation of all threads are finished
+#endif
   }
 
   template<class SegmentsColl>
@@ -318,6 +324,7 @@ public:
       LR_len = master->LR_len;
       len_of_Q = LR_len;
       avr_segm_on_vline = master->avr_segm_on_vline;
+      nTotX = master->nTotX;
       clone_of = master;
   };
 

@@ -151,15 +151,15 @@ protected:
   constexpr static uint4 cut_margin = 24;
   constexpr static uint4 min_strip_width = 6;// at least 2
 
+  int4* Q = nullptr;
+  int4* L = nullptr;
+  double avr_segm_on_vline = 0;
   uint4 LR_len = 0;
   uint4 nTotSegm = 0;
   uint4 len_of_Q = 0;
   uint4 L_size = 0;
   uint4 nTotX = 0;
 
-  int4* Q = nullptr;
-  int4* L = nullptr;
-  double avr_segm_on_vline = 0;
 
   template<class SegmentsColl, bool HasSentinels = has_sentinels<SegmentsColl> >
   struct CSentinel {

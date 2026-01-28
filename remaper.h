@@ -1,6 +1,5 @@
 
 
-
 class CRemaper {
   struct MarkedListBounds {
     uint4 beg = 0;
@@ -38,7 +37,7 @@ public:
       .scale = 2. * range / mm_rect.get_width() };
     auto y_transf = transf1D{ .shift = -mm_rect.ld.y - mm_rect.get_height() / 2.,
       .scale = 2. * range / mm_rect.get_height() };
-    auto coll_begin = set_size(seg_v, n);
+    seg = set_size(seg_v, n);
 #ifdef PRINT_SEG_AND_INT
     TIntegerSegment::coll_begin = coll_begin;
 #endif
@@ -49,7 +48,7 @@ public:
       if constexpr (remove_zero_seg) {
         if (s.shift.is_zero()) continue;
       }
-      seg_v[i] = s;
+      seg[i] = s;
       points[first_point(i)] = s.BegPoint();
       points[last_point(i)] = s.EndPoint();
       ++i;
@@ -73,7 +72,7 @@ public:
     }
     if ((initial_SN == remapped_SN) && (initial_SN == nonzero_N))
       return true;//not remapped
-    auto rrec = set_size(rrec_v, remapped_SN);
+    rrec = set_size(rrec_v, remapped_SN);
     auto remap = set_size(remap_v, remap_size);
 
     set_size(res_coll, remapped_SN);
@@ -128,18 +127,18 @@ public:
   }
 
   void register_pair(uint4 s1, uint4 s2, uint4 int_type) {
-    auto orig_int_type = seg_v[s1].get_int_type_beg(seg_v[s2]);
+    auto orig_int_type = seg[s1].get_int_type_beg(seg[s2]);
     if (int_type == orig_int_type)
       registrator->register_pair(s1, s2);
   }
 
   void register_pair(uint4 s1, uint4 s2) {
-    auto rr1 = rrec_v[s1];
-    auto rr2 = rrec_v[s2];
+    auto rr1 = rrec[s1];
+    auto rr2 = rrec[s2];
 
-    if(rr1.is_mapped_entirely() && rr2.is_mapped_entirely()) {
+    if (rr1.is_mapped_entirely() && rr2.is_mapped_entirely()) {
       //if we have full mapping segment to segment, no need to check anything
-      //trivial remap (should be most of the time)
+      //trivial remap_v (should be most of the time)
       registrator->register_pair(remap_v[rr1.beg], remap_v[rr2.beg]);
       return;
     }
@@ -148,7 +147,7 @@ public:
 
     if (int_type == _IntType::common_int) {
       //if nondegenerate common intersection of mapped segments s1 and s2 -> 
-      //trivial remap for both one to one or many to many mapping
+      //trivial remap_v for both one to one or many to many mapping
 
       if (rr1.end + rr2.end - rr1.beg - rr2.beg < 3) {//one to one mapping 
         registrator->register_pair(remap_v[rr1.beg], remap_v[rr2.beg]);
@@ -221,11 +220,12 @@ public:
 
     this->range = range;
     uint4 i = 0;
+    seg = set_size(seg_v, n);
     for (uint4 m = 0; m != n; ++m) {
       if constexpr (remove_zero_seg) {
         if (sc[m].shift.is_zero()) continue;
       }
-      seg_v[i] = sc[m];
+      seg[i] = sc[m];
       points[first_point(i)] = sc[m].BegPoint();
       points[last_point(i)] = sc[m].EndPoint();
       ++i;
@@ -256,6 +256,7 @@ public:
       points[last_point(i)] = s.EndPoint();
       ++i;
     }
+    seg = seg_v.data();
     remapped_SN = nonzero_N;
     if constexpr (remove_zero_seg)
       initial_SN = nonzero_N;
@@ -269,20 +270,21 @@ public:
   auto TurnRemapOn(CTHIS& collection) {
     auto points = std::move(collection.points);
     seg_v = std::move(collection.segments);
+    seg = seg_v.data();
     std::vector<uint4> indexes;
     auto n = initial_SN;
     indexes.reserve(2 * n);
 
     for (uint4 i = 0; i < 2 * n; ++i)
-      if (seg_v[get_segm(i)].shift.is_non_zero())
+      if (seg[get_segm(i)].shift.is_non_zero())
         indexes.push_back(i);
 
     nonzero_N = indexes.size() / 2;
 
-    auto comparator = [segments = seg_v.data(), pts = points.data()](uint4 pt1, uint4 pt2) {
+    auto comparator = [segments = seg, pts = points.data()](uint4 pt1, uint4 pt2) {
       auto i1 = get_segm(pt1);
       auto i2 = get_segm(pt2);
-      if(i1==i2)
+      if (i1 == i2)
         return pt1 < pt2; //same segment
       auto& s1 = segments[i1];
       auto& s2 = segments[i2];
@@ -307,20 +309,6 @@ public:
       };
 
     std::sort(indexes.begin(), indexes.end(), comparator);
-/*  std::vector<uint8_t> marks;
-    set_size(marks, n);
-    for (auto pt : indexes) {
-      if (is_first(pt))
-        marks[get_segm(pt)] = 1;
-      else
-        if (marks[get_segm(pt)] != 1) {
-          auto s = get_segm(pt);
-          auto& seg = seg_v[s];
-
-          int a = 0;
-        };
-    }*/
-
 
     bool not_remapped = prepare_remap(indexes, points.data(), collection.segments, collection.points);
     if (not_remapped) {
@@ -335,7 +323,7 @@ public:
   };
 
   TIntegerSegment& get_original_segment(uint4 s) {
-    return seg_v[s];
+    return seg[s];
   }
 
 
@@ -345,6 +333,28 @@ public:
 
   IntersectionRegistrator* registrator = nullptr;
 
+  void clone_from(CRemaper* other) {
+    initial_SN = other->initial_SN;
+    nonzero_N = other->nonzero_N;
+    remapped_SN = other->remapped_SN;
+    remap_size = other->remap_size;
+    range = other->range;
+    registrator = other->registrator;
+    remap_v = other->remap_v;//the data mast be copied when cloning (read\write access)
+    //just copy pointers (for read only access)
+    rrec = other->rrec;
+    seg = other->seg;
+    remapped_segs = other->remapped_segs;
+    remapped_ends = other->remapped_ends;
+  };
+
+  void unclone() {
+    rrec = nullptr;
+    remapped_segs = nullptr;
+    remapped_ends = nullptr;
+    registrator = nullptr;
+  };
+
 private:
   uint4 initial_SN = 0;
   uint4 nonzero_N = 0;
@@ -352,10 +362,14 @@ private:
   uint4 remap_size = 0;
   int4 range = 1;
   std::vector<MarkedListBounds> rrec_v;
-  std::vector<uint4> remap_v;
+  MarkedListBounds* rrec = nullptr;
+  std::vector<uint4> remap_v;//mast be copied when cloning
   std::vector<TIntegerSegment> seg_v;//if remapped original int segments are stored here
+  TIntegerSegment* seg = nullptr;
   TIntegerSegment* remapped_segs = nullptr;
   TIntegerVect* remapped_ends = nullptr;
+  //CRemaper* clone_of = nullptr;
 
 };
+
 

@@ -34,7 +34,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include "optimal_finder.h"
 
 
-constexpr int4 n_threads = 6;
+constexpr uint4 n_threads = 8;
 
 
 // creating and deleting collections

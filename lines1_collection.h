@@ -388,10 +388,14 @@ public:
     */
   };
 
-  void clone(CLine1SegmentCollection& c, IntersectionRegistrator* r)
+  void clone(CLine1SegmentCollection& coll, IntersectionRegistrator* r)
   {
-    clone_of = &c;
-    Init(c.N, c.collection, r);
+    clone_of = &coll;
+    ENDS = coll.ENDS;
+    seg_L_rank = coll.seg_L_rank;
+    seg_R_rank = coll.seg_R_rank;
+
+    Init(coll.N, coll.collection, r);
   };
 
   /*
@@ -400,7 +404,16 @@ public:
   };
 */
 
-  void unclone() { if (clone_of == nullptr)return; collection = nullptr; clone_of = nullptr; };
+  void unclone() { 
+    if (clone_of == nullptr)  
+      return; 
+    ENDS = nullptr;
+    seg_L_rank = nullptr;
+    seg_R_rank = nullptr;
+    collection = nullptr; 
+    clone_of = nullptr; 
+  };
+
   void SortAt(uint4 rank, uint4 n, int4* L)
   {
     SetCurStripeLeft(rank);

@@ -346,23 +346,31 @@ public:
     }
     );
   };
-  void clone(CGraphSegmentCollection &c, IntersectionRegistrator *r)
+  void clone(CGraphSegmentCollection &coll, IntersectionRegistrator *r)
   {
-    clone_of = &c;
-    nVertices = c.nVertices;
-    nEdges= c.nEdges;
-    vertices = c.vertices;
-    vertex_idx = c.vertex_idx;
+    clone_of = &coll;
+    ENDS = coll.ENDS;
+    seg_L_rank = coll.seg_L_rank;
+    seg_R_rank = coll.seg_R_rank;
+
+    nVertices = coll.nVertices;
+    nEdges= coll.nEdges;
+    vertices = coll.vertices;
+    vertex_idx = coll.vertex_idx;
     SetRegistrator(r);
   };
   
   void unclone() 
   { 
-    if (clone_of == nullptr)return; 
+    if (clone_of == nullptr)
+      return; 
     nVertices = 0;
     nEdges = 0;
     vertices = nullptr;
     vertex_idx = nullptr;
+    ENDS = nullptr;
+    seg_L_rank = nullptr;
+    seg_R_rank = nullptr;
     clone_of = nullptr;
   };
 
@@ -422,12 +430,12 @@ public:
   CGraphSegmentCollection(CGraphSegmentCollection& coll, IntersectionRegistrator* r)
   {
     clone(coll, r);
-    Reset();
   }
 
   ~CGraphSegmentCollection() 
   {
     unclone();
+    Reset();
     //MY_FREE_ARR_MACRO(vertices);
     MY_FREE_ARR_MACRO(vertex_idx);
 

@@ -169,8 +169,7 @@ public:
     uint4 nEnds = nSeg * 2;
     //RAII_ARR(uint4,tmpENDS,nEnds);
     auto __tmpENDS__ = std::make_unique<uint4[]>(nEnds); 
-      uint4* tmpENDS = __tmpENDS__.get();
-    tmp =new int4[nEnds];
+    uint4* tmpENDS = __tmpENDS__.get();
     PrepareEndpointsSortedList(tmpENDS);
 
     auto [nX,nV]=get_dublicate_stat(nEnds, tmpENDS);
@@ -178,7 +177,7 @@ public:
     //auto nD = nAll  - nX;
     //nV - number of unique non unique X,e.g. for X={0,1,3,3,3,4,4} 3 and 4 are non unique, the number is 2
     //nD - number of non unique non unique X, i.e. 5: 3,3,3,4,4
-
+    tmp = new int4[nEnds];
     if (nV != 0) {
       ENDS = new uint4[nAll+nV];
       uint4 D_last = nX;
@@ -436,6 +435,7 @@ public:
     MY_FREE_ARR_MACRO(ENDS);
     MY_FREE_ARR_MACRO(seg_L_rank);
     MY_FREE_ARR_MACRO(seg_R_rank);
+    MY_FREE_ARR_MACRO(tmp);
   }
 
 
@@ -757,17 +757,23 @@ public:
       seg_L_rank = c.seg_L_rank;
       seg_R_rank = c.seg_R_rank;
       collection = c.collection;
+      pts = c.pts;
+      tmp = new int4[nSegments << 1];
       //!!!!!clone remaper!!!!!!!!!!!!
+      remaper.clone_from(&c.remaper);
       SetRegistrator(r);
   };
 
   void unclone() { 
     if (clone_of == nullptr)return; 
+    remaper.unclone();
     collection = nullptr; 
+    pts = nullptr;
     clone_of = nullptr; 
     ENDS = nullptr;
     seg_L_rank = nullptr;
     seg_R_rank = nullptr;
+    MY_FREE_ARR_MACRO(tmp);
     //unclone remaper !!!!!!!!
 
   };
@@ -874,14 +880,13 @@ public:
  
   CIntegerSegmentCollection(CIntegerSegmentCollection& coll, IntersectionRegistrator* r)
   {
-    //clone(coll, r);
+    clone(coll, r);
   }
 
   ~CIntegerSegmentCollection()
   {
     unclone();
     Reset();
-   // MY_FREE_ARR_MACRO(SegR);
   }
 
 
