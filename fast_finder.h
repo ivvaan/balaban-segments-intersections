@@ -61,15 +61,13 @@ public:
     }
     else
       L_size = CalcLAt(segments, from);
-    if (avr_segm_on_vline < 20) {
-      SISFindR(*this, segments, bottom_index, from, to, &stack_rec);
-      InsDel(segments, to, &stack_rec);
-      return;
-    };
     if (not_parallel) {
-      MultipleCutting(*this, segments, bottom_index, from, to, &stack_rec, GetDivPow(to - from));
+      if (avr_segm_on_vline < 20)
+        SISFindR(*this, segments, bottom_index, from, to, &stack_rec);
+      else
+        MultipleCutting(*this, segments, bottom_index, from, to, &stack_rec, GetDivPow(to - from));
     }
-    else
+    else //parallel call
       FindR(*this, segments, bottom_index, from, to, &stack_rec/*, 0, get_max_call(to - from)*/);
     InsDel(segments, to, &stack_rec);
   }
@@ -85,11 +83,11 @@ public:
     };
     auto n = segments.GetSegmNumb();
 
-    double part = 2 * n / (double)n_threads;
+    double part = nTotX / (double)n_threads;
     uint4 start_from = part;
     for (uint4 i = 2, from = start_from, to; i <= n_threads; ++i) {
-      to = (i == n_threads) ? 2 * n - 1 : (uint4)(part * i);
-#if defined(DEBUG) || defined(_DEBUG)
+      to = (i == n_threads) ? nTotX : (uint4)(part * i);
+#if defined(DEBUG) || defined(_DEBUG) 
       thread_func(this, &segments, from, to, regs[i - 2]); // starts intersection finding in a stripe <from,to>
 #else
       wrk_threads.emplace_back(thread_func, this, &segments, from, to, regs[i - 2]); // starts intersection finding in a stripe <from,to>

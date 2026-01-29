@@ -354,6 +354,7 @@ public:
 #endif
   };
 
+
   void AllIntCurLine(uint4 f, uint4& L_size, int4* L)//all intersections with vertical segments in the current line are registered
   {
     auto vertical_segments = tmp;//temporary storage for vertical segment indices
@@ -761,6 +762,7 @@ public:
       tmp = new int4[nSegments << 1];
       //!!!!!clone remaper!!!!!!!!!!!!
       remaper.clone_from(&c.remaper);
+      register_pair = c.register_pair;
       SetRegistrator(r);
   };
 
@@ -773,7 +775,9 @@ public:
     ENDS = nullptr;
     seg_L_rank = nullptr;
     seg_R_rank = nullptr;
+    remaper.unclone();
     MY_FREE_ARR_MACRO(tmp);
+
     //unclone remaper !!!!!!!!
 
   };

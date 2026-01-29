@@ -196,6 +196,8 @@ protected:
         segments.SetCurStripe(i - 1, i);
         i_f.SearchInStrip(segments, ladder_start_index);
       }
+      else
+        segments.SetCurStripeRight(i);
       i_f.InsDel(segments, i, stack_pos);
     }
     //the stripe right bound needs to be installed correctly even if i_f.L_size <= 1

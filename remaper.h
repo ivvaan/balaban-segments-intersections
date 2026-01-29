@@ -62,26 +62,35 @@ public:
 
     auto N = indexes.size();
     uint4 remap_size = 0;
-    int seg_numb = 0;
     remapped_SN = 0;
-    for (auto pt : indexes) {
-      seg_numb += is_last(pt) ? -1 : 1;
-      assert(seg_numb >= 0);
-      remap_size += seg_numb;
-      remapped_SN += (seg_numb) ? 1 : 0;
+    bool not_remapped = initial_SN == nonzero_N;
+    for (int4 i = 0,size=0; i < N; ++i) {
+      auto pt = indexes[i];
+      size += is_last(pt) ? -1 : 1;
+      assert(size >= 0);
+      if (size != 0) {
+        assert(i + 1 < N);
+        auto next_pt = indexes[i + 1];
+        if (points[pt] != points[next_pt]) {
+          not_remapped = not_remapped && size < 2;
+          remap_size += size;
+          ++remapped_SN;
+        }
+      };
     }
-    if ((initial_SN == remapped_SN) && (initial_SN == nonzero_N))
+    not_remapped = not_remapped && (remapped_SN == initial_SN);
+    if (not_remapped)
       return true;//not remapped
     rrec = set_size(rrec_v, remapped_SN);
     auto remap = set_size(remap_v, remap_size);
 
     set_size(res_coll, remapped_SN);
     set_size(res_pts, 2 * remapped_SN);
-    uint4 remaper_pos = 0, new_seg_num = 0;
+    uint4 remaper_pos = 0;
+    uint4 new_seg_num = 0;
     std::vector<uint4> stack;
     stack.reserve(nonzero_N);
-    bool not_remapped = initial_SN == nonzero_N;
-    for (size_t i = 0; i < N; ++i) {
+    for (uint4 i = 0; i < N; ++i) {
       auto pt = indexes[i];
       if (is_last(pt)) {
         remove_by_val(stack, get_segm(pt));
@@ -112,7 +121,6 @@ public:
           }
           rrec[new_seg_num] = { remaper_pos,remaper_pos + (uint4)size, is_mapped_entirely };
           remaper_pos += size;
-          not_remapped &= size < 2;
           res_coll[new_seg_num] = { beg,end };
           res_pts[first_point(new_seg_num)] = beg;
           res_pts[last_point(new_seg_num)] = end;
@@ -121,7 +129,7 @@ public:
         }
       };
     }
-    remapped_SN = new_seg_num;
+    assert(remapped_SN == new_seg_num);
     remap_size = remaper_pos;
     return not_remapped;
   }
