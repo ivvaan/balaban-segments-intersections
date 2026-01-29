@@ -19,21 +19,29 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 */
-// NEW IMPLEMENTATION
+
+// New template-based implementation.
+//
+// This collection is the integer-geometry pipeline for the degenerate_cases branch.
+// It supports degenerate configurations that break the original Balaban assumptions:
+// - collinear overlaps (handled via a preprocessing "remaper" that splits overlaps)
+// - multiple endpoints with identical X ("multi-events", i.e., collapsed same-X boundaries)
+//
+// Zero-length segments (begin == end) are not supported as first-class objects.
+// They are typically filtered out at input time (see `CRemaper`).
 
 #include "segments.h"
 #include "registrator.h"
 #include "utils.h"
 #include <cassert>
 #include <algorithm>
-#include <numeric> 
-
-
+#include <numeric>
 
 template<typename Real>
-Real get_max_gap_middle(uint4 N, Real arr[]) {
-  // function to find a middle of maximum gap between arr elements, Real is like double 
-
+Real get_max_gap_middle(uint4 N, Real arr[])
+{
+  // Returns the midpoint of the maximum gap between adjacent elements of `arr`.
+  // Note: `arr` is sorted in-place.
   assert(N > 1);
   std::sort(arr, arr + N);
 
@@ -52,15 +60,18 @@ Real get_max_gap_middle(uint4 N, Real arr[]) {
   return (arr[best_i] + _arr[best_i]) / Real(2);
 }
 
-
 template<class IntersectionRegistrator>
 class CIntegerSegmentCollection
 {
-  using CTHIS = CIntegerSegmentCollection< IntersectionRegistrator>;
+  using CTHIS = CIntegerSegmentCollection<IntersectionRegistrator>;
 public:
-  static constexpr _Coll_flag_state get_coll_flag(_Coll_flags flag) {
+  static constexpr _Coll_flag_state get_coll_flag(_Coll_flags flag)
+  {
     if (flag == _Coll_flags::line_segments)
-      return _Coll_flag_state::state_false;// degenerate segments should be processed as nonlinear
+      // With degeneracies enabled (exact endpoint-on-stair cases),
+      // "line segment monotonicity" optimizations are impossible. Treat as non-linear
+      // so algorithms check intersections in both directions.
+      return _Coll_flag_state::state_false;
 
     return _Coll_flag_state::state_unimplemented;
   }
@@ -69,31 +80,14 @@ public:
     stage_split = 0, stage_bubble, stage_merge
   };
 
-  static  bool is_last(uint4 pt)
-  {
-    return pt & 1;
-  };
-  static  bool is_first(uint4 pt)
-  {
-    return (pt & 1) == 0;
-  };
-  static  uint4 get_segm(uint4 pt)
-  {
-    return pt >> 1;
-  };
-  static  uint4 first_point(uint4 s)
-  {
-    return s << 1;
-  };
-  static  uint4 last_point(uint4 s)
-  {
-    return (s << 1) + 1;
-  };
-  static  uint4 other_point(uint4 pt)
-  {
-    return pt^1;
-  };
-
+  // Endpoints are encoded as point indices in `[0, 2*nSegments)`,
+  // where `pt = (segment_index << 1) | is_last_bit`.
+  static bool is_last(uint4 pt) { return pt & 1; }
+  static bool is_first(uint4 pt) { return (pt & 1) == 0; }
+  static uint4 get_segm(uint4 pt) { return pt >> 1; }
+  static uint4 first_point(uint4 s) { return s << 1; }
+  static uint4 last_point(uint4 s) { return (s << 1) + 1; }
+  static uint4 other_point(uint4 pt) { return pt ^ 1; }
 
 private:
   struct ListBounds {
@@ -106,92 +100,110 @@ private:
   //===========================================================================
 
 public:
-
   int4* tmp = nullptr;
 
-  std::pair<uint4, uint4> get_dublicate_stat(uint4 len, uint4* arr) const {
+  std::pair<uint4, uint4> get_dublicate_stat(uint4 len, uint4* arr) const
+  {
+    // Counts unique X-coordinates and the number of X-values that appear more than once.
+    // Example X: {0,1,3,3,3,4,4} -> unique_count=4, duplicated_elements_count=2 (X=3 and X=4).
     uint4 unique_count = 0;
     uint4 duplicated_elements_count = 0;
-    
-    for (uint4 i = 0,j; i < len; i = j) {
+
+    for (uint4 i = 0, j; i < len; i = j) {
       j = i + 1;
-      while (j < len && pts[arr[j]].x == pts[arr[i]].x) 
+      while (j < len && pts[arr[j]].x == pts[arr[i]].x)
         ++j;
       ++unique_count;
-      if (j >  i + 1) {
+      if (j > i + 1)
         ++duplicated_elements_count;
-      }
     }
-    return { unique_count , duplicated_elements_count };
+    return { unique_count, duplicated_elements_count };
   }
 
-
-  void PrepareEndpointsSortedList(uint4* epoints)// endpoints allocated by caller and must contain space for at least 2*GetSegmNumb() points 
+  void PrepareEndpointsSortedList(uint4* epoints)
   {
+    // Fills `epoints` with all endpoint indices `[0..2*nSegments)` and sorts them by:
+    // X, then Y, then (first before last), then angular tie-break for stable ordering.
+    // The output is later collapsed into "multi-events" (same-X groups) in `Prepare()`.
     auto NN = GetSegmNumb() << 1;
-    std::iota(epoints, epoints+NN, 0);
+    std::iota(epoints, epoints + NN, 0);
+
     auto is_below = [pts = pts, coll = collection](uint4 pt1, uint4 pt2) {
       if (pts[pt1].x != pts[pt2].x)
         return pts[pt1].x < pts[pt2].x;
       if (pts[pt1].y != pts[pt2].y)
         return pts[pt1].y < pts[pt2].y;
+
       auto le1 = is_last(pt1), le2 = is_last(pt2);
       if (le1 != le2)
         return le1 < le2;
+
       auto& s1 = coll[get_segm(pt1)];
       auto& s2 = coll[get_segm(pt2)];
       auto angle_like = s1.shift % s2.shift;
       if (angle_like != 0)
         return le1 != (0 < angle_like);
+
       return (pt1 < pt2);
       };
-    std::sort(epoints, epoints + NN, is_below);
-  };
 
-  bool is_multiple(uint4 pt) const {
-    return pt >= (nSegments << 1);
-  };
-  auto mark_multiple(uint4 pt) const {
-    return pt + (nSegments << 1);
-  };
-  auto unmark_multiple(uint4 pt) const {
-    return pt - (nSegments << 1);
-  };
+    std::sort(epoints, epoints + NN, is_below);
+  }
+
+  // Multi-event encoding:
+  // `ENDS[rank]` is either a normal endpoint index (< 2*nSegments),
+  // or a marker `mark_multiple(head)` that points into a secondary list stored in ENDS[].
+  bool is_multiple(uint4 pt) const { return pt >= (nSegments << 1); }
+  auto mark_multiple(uint4 pt) const { return pt + (nSegments << 1); }
+  auto unmark_multiple(uint4 pt) const { return pt - (nSegments << 1); }
 
   constexpr const static uint4 list_stop = std::numeric_limits<uint4>::max();
 
   PrepareResult Prepare()
   {
+    // Preparation does two degenerate-case steps:
+    // 1) TurnRemapOn(): optional normalization that splits collinear overlaps via CRemaper.
+    // 2) Collapse equal-X endpoints into "multi-events" to avoid zero-width stripes.
     Reset();
     TurnRemapOn();
+
     uint4 nSeg = GetSegmNumb();
     if (nSeg == 0) return {};
+
     uint4 nEnds = nSeg * 2;
-    //RAII_ARR(uint4,tmpENDS,nEnds);
-    auto __tmpENDS__ = std::make_unique<uint4[]>(nEnds); 
+
+    auto __tmpENDS__ = std::make_unique<uint4[]>(nEnds);
     uint4* tmpENDS = __tmpENDS__.get();
     PrepareEndpointsSortedList(tmpENDS);
 
-    auto [nX,nV]=get_dublicate_stat(nEnds, tmpENDS);
-    auto nAll = nEnds+nV;
-    //auto nD = nAll  - nX;
-    //nV - number of unique non unique X,e.g. for X={0,1,3,3,3,4,4} 3 and 4 are non unique, the number is 2
-    //nD - number of non unique non unique X, i.e. 5: 3,3,3,4,4
+    auto [nX, nV] = get_dublicate_stat(nEnds, tmpENDS);
+    auto nAll = nEnds + nV;
+
+    // tmp[] maps each endpoint (in sorted tmpENDS order) to its final rank in ENDS[].
+    // This keeps seg_L_rank / seg_R_rank construction compatible with multi-events.
     tmp = new int4[nEnds];
+
     if (nV != 0) {
-      ENDS = new uint4[nAll+nV];
+      // ENDS layout when multi-events exist:
+      // - ENDS[0..nX) contains either a normal endpoint index or a multi-event marker.
+      // - Secondary lists for same-X groups are appended starting from D_last=nX.
+      // - Each list is terminated by `list_stop`.
+      ENDS = new uint4[nAll + nV];
+
       uint4 D_last = nX;
       for (uint4 i = 0, ne_pos = 0, j; i < nEnds; i = j) {
         j = i + 1;
         while (j < nEnds && pts[tmpENDS[j]].x == pts[tmpENDS[i]].x)
           ++j;
+
         auto len = j - i;
         if (len > 1) {
           std::copy(tmpENDS + i, tmpENDS + j, ENDS + D_last);
           ENDS[ne_pos] = mark_multiple(D_last);
           std::fill(tmp + i, tmp + j, ne_pos);
+
           D_last += len;
-          ENDS[D_last++] = list_stop; //mark the end of the list
+          ENDS[D_last++] = list_stop; // Marks the end of the per-X list.
         }
         else {
           ENDS[ne_pos] = tmpENDS[i];
@@ -204,12 +216,14 @@ public:
       std::iota(tmp, tmp + nEnds, 0);
       ENDS = tmpENDS;
       __tmpENDS__.release();
-    };
+    }
 
     seg_L_rank = new uint4[nSeg];
     seg_R_rank = new uint4[nSeg];
+
     uint4 max_segm_on_vline = 0, nsegm_on_vline = 0;
     double avr = 0;
+
     for (uint4 i = 0; i < nEnds; ++i) {
       if (is_last(tmpENDS[i])) {
         seg_R_rank[get_segm(tmpENDS[i])] = tmp[i];
@@ -218,12 +232,15 @@ public:
       else {
         seg_L_rank[get_segm(tmpENDS[i])] = tmp[i];
         ++nsegm_on_vline;
-        if (nsegm_on_vline > max_segm_on_vline) max_segm_on_vline = nsegm_on_vline;
+        if (nsegm_on_vline > max_segm_on_vline)
+          max_segm_on_vline = nsegm_on_vline;
       }
       avr += nsegm_on_vline;
     }
+
     avr /= (double)nX;
-    nTotX = nX; nCollideX = nV;
+    nTotX = nX;
+    nCollideX = nV;
     return { nX, max_segm_on_vline, avr };
   }
 
@@ -234,44 +251,53 @@ public:
   template<class IntersectionFinder, class ProgramStackRec>
   void InsDelOrdinary(IntersectionFinder& i_f, uint4& L_size, int4* L, uint4 pt, ProgramStackRec* stack_pos)
   {
+    // Ordinary event: a single endpoint at this X.
+    // - If it's a last point: remove the segment from L.
+    // - If it's a first point: insert and optionally search internal intersections higher in the stack.
     auto sn = get_segm(pt);
-    if (is_last(pt)){ // if endpoint - remove
+    if (is_last(pt)) { // Endpoint: remove.
       auto last = std::remove(L, L + L_size, sn);
       assert(last + 1 == L + L_size);
       --L_size;
       ReorderStep(E, L_size, L);
     }
-    else{// if startpoint - insert
+    else { // Start point: insert.
       ReorderStep(E, L_size, L);
       if (stack_pos->isnot_top()) {
         SetCurSegAndPoint(sn);
-        i_f.FindIntI(*this, sn, stack_pos);// get internal intersections
+        i_f.FindIntI(*this, sn, stack_pos); // Find internal intersections in ancestor staircases.
       }
       else {
-        SetCurPointAtBeg(sn);//sets collection current point at the begin of the segment sn
+        SetCurPointAtBeg(sn); // Sets current point to the begin of segment sn.
       }
+
       int4 i = L_size;
       for (auto _L = L - 1; (i != 0) && (!UnderCurPoint(_L[i])); --i)
         L[i] = _L[i];
-      L[i] = sn; ++L_size;
+      L[i] = sn;
+      ++L_size;
     }
   }
 
-
-
   template<class IntersectionFinder, class ProgramStackRec>
-  void InsDel(IntersectionFinder& i_f, uint4& L_size, int4* L, uint4 end_rank, ProgramStackRec* stack_pos) {
+  void InsDel(IntersectionFinder& i_f, uint4& L_size, int4* L, uint4 end_rank, ProgramStackRec* stack_pos)
+  {
+    // Degenerate handling: if ENDS[end_rank] is a "multi-event marker", process the whole same-X boundary
+    // as a single combined event to avoid zero-width stripes.
     auto pt = PointAtRank(end_rank);
     if (is_multiple(pt)) {
       DelStep(end_rank, L_size, L);
 
       auto f = unmark_multiple(pt);
       assert(E == XAtRank(end_rank));
+
       ReorderStep(E, L_size, L);
       AllIntCurLine(f, L_size, L);
       InsStep(f, L_size, L);
-      if (stack_pos->isnot_top())// find intersections for all inserted and vertical  
-        //segments in the staircases above (in the stack)
+
+      if (stack_pos->isnot_top())
+        // Find intersections for all inserted (first endpoints) and vertical segments
+        // in staircase levels above (in the stack).
         for (uint4 i = f, cur_pt = ENDS[f]; cur_pt != list_stop; cur_pt = ENDS[++i]) {
           if (is_first(cur_pt)) {
             auto sn = get_segm(cur_pt);
@@ -280,15 +306,121 @@ public:
           }
         }
     }
-    else
+    else {
       InsDelOrdinary(i_f, L_size, L, pt, stack_pos);
+    }
   }
 
-  uint4 test_rank_to_rank(uint4 multiple_rank) {
-    auto pt = PointAtRank(multiple_rank);
-    auto seg = get_segm(pt);
-    return is_first(pt)?seg_L_rank[seg]:seg_R_rank[seg];
+  void ReorderStep(int4 x, uint4 L_size, int4* L)
+  {
+#ifdef TURN_ON_ADDITIONAL_ORDER
+    // Optional experiment: for segments with equal YAtX at the boundary, reverse order.
+    // This is related to the "node on boundary" phenomenon described in Degenerate-cases.md.
+    // Left disabled by default because normal split/merge tends to reestablish correct order anyway.
+    for (uint4 i = 0, j; i < L_size; i = j) {
+      j = i + 1;
+      while (j < L_size && 0 == (collection[L[i]].YAtX_frac(x) <=> collection[L[j]].YAtX_frac(x)))
+        ++j;
+      if (j > i + 1) {
+        // Reverse order for sublists of equal-Y segments (passing segments should be in reverse order).
+        std::reverse(L + i, L + j);
+      }
+    }
+#endif
   }
+
+  void AllIntCurLine(uint4 f, uint4& L_size, int4* L)
+  {
+    // Registers intersections on a multi-event vertical boundary X = const.
+    // The list ENDS[f..] contains endpoints with that same X, terminated by list_stop.
+    //
+    // We handle:
+    // - vertical-vertical intersections (stacks),
+    // - vertical vs segments passing through the boundary (segments already in L),
+    // - vertical vs endpoints lying on the boundary,
+    // - plus same-Y begin/end combinations via LastFirstInt().
+    auto vertical_segments = tmp; // Temporary storage for vertical segment indices.
+    uint4 v_size = 0;
+
+    auto non_vertical_pts = tmp + GetSegmNumb(); // Temporary storage for non-vertical endpoints on this X.
+    uint4 nv_size = 0;
+
+    for (uint4 i = f, cur_pt = ENDS[f]; cur_pt != list_stop; cur_pt = ENDS[++i]) {
+      auto s = get_segm(cur_pt);
+      if (collection[s].is_vertical()) {
+        if (is_first(cur_pt))
+          vertical_segments[v_size++] = s;
+      }
+      else {
+        non_vertical_pts[nv_size++] = cur_pt;
+      }
+    }
+
+    auto prev_vert = vertical_segments[0];
+    for (uint4 i = 1; i < v_size; ++i) { // vertical-vertical intersections
+      auto cur_vert = vertical_segments[i];
+      if (pts[first_point(cur_vert)].y == pts[last_point(prev_vert)].y)
+        register_pair(this, prev_vert, cur_vert);
+      prev_vert = cur_vert;
+    }
+
+    for (uint4 i = 0, j = 0; j < L_size && i < v_size; ++i) { // vertical vs passing intersections
+      auto s = vertical_segments[i];
+
+      // Skip segments below the vertical segment.
+      while (j < L_size && collection[L[j]].exact_under(pts[first_point(s)]))
+        j++;
+
+      // Register segments intersecting the vertical segment, except those ending exactly at its upper end.
+      for (; j < L_size && collection[L[j]].exact_under(pts[last_point(s)]); ++j)
+        register_pair(this, L[j], s);
+
+      // Register segments passing exactly through the upper end of the vertical segment.
+      // Keep j unchanged for the next vertical segment beginning at the same point.
+      for (auto k = j; k < L_size && collection[L[k]].exact_on(pts[last_point(s)]); ++k)
+        register_pair(this, L[k], s);
+    }
+
+    for (uint4 i = 0, j = 0; j < nv_size && i < v_size; ++i) { // vertical vs endpoint intersections
+      auto s = vertical_segments[i];
+
+      // Skip endpoints below the vertical segment.
+      while (j < nv_size && pts[non_vertical_pts[j]].y < pts[first_point(s)].y)
+        j++;
+
+      // Register endpoints strictly inside the vertical segment.
+      for (; j < nv_size && pts[non_vertical_pts[j]].y < pts[last_point(s)].y; ++j)
+        register_pair(this, get_segm(non_vertical_pts[j]), s);
+
+      // Register endpoints exactly at the upper end; keep j unchanged for the next vertical segment.
+      for (auto k = j; k < nv_size && pts[non_vertical_pts[k]].y == pts[last_point(s)].y; ++k)
+        register_pair(this, get_segm(non_vertical_pts[k]), s);
+    }
+
+    LastFirstInt(nv_size, non_vertical_pts);
+  }
+
+  void LastFirstInt(uint4 len, int4* nv_pts)
+  {
+    // For endpoints on the same X: if multiple non-vertical endpoints share the same Y,
+    // and the block contains first-points followed by last-points, register all (begin,end) pairs.
+    for (uint4 i = 0, j; i < len; i = j) {
+      j = i + 1;
+      while (j < len && pts[nv_pts[j]].y == pts[nv_pts[i]].y)
+        ++j;
+      if (j > i + 1) {
+        auto first_beg = nv_pts + i;
+        auto all_ends = nv_pts + j;
+        auto first_end = std::find_if(first_beg, all_ends, +[](uint4 pt) { return is_last(pt); });
+        assert(all_ends == std::find_if(first_end, all_ends, +[](uint4 pt) { return is_first(pt); }));
+        if (first_end != all_ends)
+          for (auto beg_pt = first_beg; beg_pt < first_end; ++beg_pt)
+            for (auto end_pt = first_end; end_pt < all_ends; ++end_pt)
+              register_pair(this, get_segm(*beg_pt), get_segm(*end_pt));
+      }
+    }
+  }
+
 
   void DelStep(uint4 end_rank, uint4& L_size, int4* L)
   {
@@ -339,97 +471,6 @@ public:
     auto last_res = merge_two_ranges(first_L, last_L, first_to_insert, last_to_insert, L, is_below);
     L_size = last_res - L;
   }
-
-
-  void ReorderStep(int4 x, uint4 L_size, int4* L) {
-#ifdef TURN_ON_ADDITIONAL_ORDER
-    for (uint4 i = 0, j; i < L_size; i = j) {
-      j = i + 1;
-      while (j < L_size && 0==(collection[L[i]].YAtX_frac(x) <=> collection[L[j]].YAtX_frac(x)))
-        ++j;
-      if (j > i + 1) {//reverse order for sublists of equal Y segments (passing segments should be in reverse order)
-        std::reverse(L + i, L + j);
-      };
-    };
-#endif
-  };
-
-
-  void AllIntCurLine(uint4 f, uint4& L_size, int4* L)//all intersections with vertical segments in the current line are registered
-  {
-    auto vertical_segments = tmp;//temporary storage for vertical segment indices
-    uint4 v_size=0;
-    auto non_vertical_pts = tmp + GetSegmNumb();//temporary storage for non vertical segment endpoints
-    uint4 nv_size = 0;
-
-    for (uint4 i = f, cur_pt = ENDS[f]; cur_pt!=list_stop; cur_pt = ENDS[++i]) {
-      auto s = get_segm(cur_pt);
-      if (collection[s].is_vertical()) {
-        if (is_first(cur_pt))
-            vertical_segments[v_size++] = s;
-      }
-      else
-        non_vertical_pts[nv_size++] = cur_pt;
-    };
- 
-    auto prev_vert = vertical_segments[0];
-    for (uint4 i = 1; i < v_size; ++i) {//vertical - vertical intersections
-      auto cur_vert = vertical_segments[i];
-      if (pts[first_point(cur_vert)].y == pts[last_point(prev_vert)].y)
-        register_pair(this, prev_vert, cur_vert);
-      prev_vert = cur_vert;
-    }
-     
-    for (uint4 i = 0, j = 0; j < L_size && i < v_size; ++i) {// vertical - passing intersections
-      auto s = vertical_segments[i];
-      //skip segments below the vertical segment
-      while (j < L_size && collection[L[j]].exact_under(pts[first_point(s)]))
-        j++;
-      //register segments intersecting the vertical segment except those exactly ending at its upper end
-      for (; j < L_size && collection[L[j]].exact_under(pts[last_point(s)]);++j)
-        register_pair(this, L[j], s); 
-      //register segments passing exactly through the upper end of the vertical segment
-      //keep j unchanged for the next vertical segment beginning at the same point
-      for (auto k = j; k < L_size && collection[L[k]].exact_on(pts[last_point(s)]);++k) 
-        register_pair(this, L[k], s);
-    };
-
-
-    for (uint4 i = 0, j = 0; j < nv_size && i < v_size; ++i) {// vertical - endpoint intersections
-      auto s = vertical_segments[i];
-      //skip segments below the vertical segment
-      while (j < nv_size && pts[non_vertical_pts[j]].y<pts[first_point(s)].y)
-        j++;
-      //register segments intersecting the vertical segment except those exactly ending at its upper end
-      for (; j < nv_size && pts[non_vertical_pts[j]].y < pts[last_point(s)].y; ++j)
-        register_pair(this, get_segm(non_vertical_pts[j]), s);
-      //register segments exactly ending at the upper end of the vertical segment
-      //keep j unchanged for the next vertical segment beginning at the same point
-      for (auto k=j; k < nv_size && pts[non_vertical_pts[k]].y == pts[last_point(s)].y; ++k)
-        register_pair(this, get_segm(non_vertical_pts[k]), s);
-    };
-    LastFirstInt(nv_size, non_vertical_pts);
-  }
-
-
-  void LastFirstInt(uint4 len, int4 * nv_pts)//all intersections with vertical segments in the current line are registered
-  {
-    for (uint4 i = 0, j; i < len; i = j) {
-      j = i + 1;
-      while (j < len && pts[nv_pts[j]].y == pts[nv_pts[i]].y)
-        ++j;
-      if (j > i + 1) {
-        auto first_beg = nv_pts + i;
-        auto all_ends = nv_pts + j;
-        auto first_end = std::find_if(first_beg, all_ends, +[](uint4 pt) { return is_last(pt); });
-        assert(all_ends == std::find_if(first_end, all_ends, +[](uint4 pt) { return is_first(pt); }));
-        if (first_end != all_ends)
-          for (auto beg_pt = first_beg; beg_pt < first_end; ++beg_pt)
-            for (auto end_pt = first_end; end_pt < all_ends; ++end_pt)
-              register_pair(this, get_segm(*beg_pt), get_segm(*end_pt));
-      };
-    };
-  };
 
   void Reset()
   {
@@ -950,4 +991,3 @@ private:
 //  bool rbelong_to_stripe=true;
 };
 
-// some string

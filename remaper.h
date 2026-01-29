@@ -1,36 +1,45 @@
-
-
 class CRemaper {
   struct MarkedListBounds {
     uint4 beg = 0;
     uint4 end = 0;
     uint4 flags = 0;
-    bool is_mapped_entirely() const {
+
+    bool is_mapped_entirely() const
+    {
+      // Non-zero means: the remapped segment corresponds exactly to a single original segment.
+      // (A fast path for one-to-one mapping.)
       return (flags != 0);
-    };
+    }
   };
 
-  static REAL get_rot_angle(uint4 n, TLineSegment1 sc[]) {
+  static REAL get_rot_angle(uint4 n, TLineSegment1 sc[])
+  {
     REAL* arr;
     DECL_RAII_ARR(arr, n + 2);
     arr[0] = -M_PI / 2.;
     std::transform(sc, sc + n, arr,
-      [](const TLineSegment1& s) {
-        return std::atan2(s.shift.y, s.shift.x);
-      });
+      [](const TLineSegment1& s) { return std::atan2(s.shift.y, s.shift.x); });
     arr[n + 1] = M_PI / 2.;
     auto max_gap_mid = get_max_gap_middle(n + 2, arr);
     return max_gap_mid + (max_gap_mid > 0 ? -M_PI / 2. : M_PI / 2.);
   }
 
 public:
+  // CRemaper is a degenerate-case preprocessor for integer segments.
+  //
+  // It normalizes a set of potentially overlapping / collinear segments by splitting
+  // shared subsegments into separate pieces. After normalization:
+  // - no two distinct segments overlap along a 1D interval,
+  // - only endpoint-level degeneracies remain (shared endpoints, multi-events handled elsewhere).
+  //
+  // The sweep algorithms run on the normalized collection, and reported intersecting pairs are
+  // expanded back into pairs of original segments via `register_pair(...)`.
 
   template<bool remove_zero_seg>
-  uint4 int_seg_from_real(uint4 n, TLineSegment1 sc[], std::vector<TIntegerVect>& points) {
-    //REAL angle = CRandomValueGen().GetRandomDouble();
-    //REAL angle = get_rot_angle(n,sc);//try to rotate the scene to remove vertical segments
-    //REAL si = std::sin(angle), co = std::cos(angle);
-
+  uint4 int_seg_from_real(uint4 n, TLineSegment1 sc[], std::vector<TIntegerVect>& points)
+  {
+    // Converts real-coordinate segments into integer segments (scaled into [-range, range]).
+    // If remove_zero_seg==true, zero-length segments are skipped.
     REAL si = 0., co = 1.;
     auto mm_rect = get_rot_minmax(n, sc, si, co);
     auto x_transf = transf1D{ .shift = -mm_rect.ld.x - mm_rect.get_width() / 2.,
@@ -58,13 +67,20 @@ public:
 
   bool prepare_remap(std::vector<uint4>& indexes, TIntegerVect points[],
     std::vector<TIntegerSegment>& res_coll,
-    std::vector<TIntegerVect>& res_pts) {
-
+    std::vector<TIntegerVect>& res_pts)
+  {
+    // Takes endpoints sorted along each supporting line (see comparator in TurnRemapOn()),
+    // then builds a new collection where every maximal overlapping interval is split out
+    // as a separate segment.
+    //
+    // `rrec[new_seg]` stores the back-reference list boundaries into `remap_v`,
+    // i.e., which original segments contributed to this new segment.
     auto N = indexes.size();
     uint4 remap_size = 0;
     remapped_SN = 0;
+
     bool not_remapped = initial_SN == nonzero_N;
-    for (int4 i = 0,size=0; i < N; ++i) {
+    for (int4 i = 0, size = 0; i < (int4)N; ++i) {
       auto pt = indexes[i];
       size += is_last(pt) ? -1 : 1;
       assert(size >= 0);
@@ -86,10 +102,13 @@ public:
 
     set_size(res_coll, remapped_SN);
     set_size(res_pts, 2 * remapped_SN);
+
     uint4 remaper_pos = 0;
     uint4 new_seg_num = 0;
+
     std::vector<uint4> stack;
     stack.reserve(nonzero_N);
+
     for (uint4 i = 0; i < N; ++i) {
       auto pt = indexes[i];
       if (is_last(pt)) {
@@ -97,13 +116,17 @@ public:
       }
       else {
         auto s = get_segm(pt);
-        for (auto p : stack) {
-          registrator->register_pair(s, p);
-        }
-        stack.push_back(s);
-      };
-      auto size = stack.size();
 
+        // Every time a new segment enters an active overlap stack on the same line,
+        // it overlaps the currently active ones. Those "overlap intersections" can be
+        // recorded here while full 1D overlap information is available.
+        for (auto p : stack)
+          registrator->register_pair(s, p);
+
+        stack.push_back(s);
+      }
+
+      auto size = (uint4)stack.size();
       if (size != 0) {
         assert(i + 1 < N);
 
@@ -113,22 +136,25 @@ public:
 
         if (beg != end) {
           std::copy(stack.begin(), stack.end(), remap + remaper_pos);
+
           uint4 is_mapped_entirely = 0;
           if (size == 1) {
             auto s = remap[remaper_pos];
             if (pt == first_point(s) && (next_pt == last_point(s)))
               is_mapped_entirely = 1;
           }
-          rrec[new_seg_num] = { remaper_pos,remaper_pos + (uint4)size, is_mapped_entirely };
+
+          rrec[new_seg_num] = { remaper_pos, remaper_pos + size, is_mapped_entirely };
           remaper_pos += size;
-          res_coll[new_seg_num] = { beg,end };
+
+          res_coll[new_seg_num] = { beg, end };
           res_pts[first_point(new_seg_num)] = beg;
           res_pts[last_point(new_seg_num)] = end;
           ++new_seg_num;
-
         }
-      };
+      }
     }
+
     assert(remapped_SN == new_seg_num);
     remap_size = remaper_pos;
     return not_remapped;
@@ -145,8 +171,8 @@ public:
     auto rr2 = rrec[s2];
 
     if (rr1.is_mapped_entirely() && rr2.is_mapped_entirely()) {
-      //if we have full mapping segment to segment, no need to check anything
-      //trivial remap_v (should be most of the time)
+      // If both remapped segments map to exactly one original segment each,
+      // we can register the corresponding original pair directly.
       registrator->register_pair(remap_v[rr1.beg], remap_v[rr2.beg]);
       return;
     }
@@ -154,35 +180,32 @@ public:
     auto int_type = remapped_segs[s1].get_int_type_beg(remapped_segs[s2]);
 
     if (int_type == _IntType::common_int) {
-      //if nondegenerate common intersection of mapped segments s1 and s2 -> 
-      //trivial remap_v for both one to one or many to many mapping
+      // Common (non-degenerate) intersection of remapped segments.
+      // Expand to original pairs via the remap lists.
 
-      if (rr1.end + rr2.end - rr1.beg - rr2.beg < 3) {//one to one mapping 
+      if (rr1.end + rr2.end - rr1.beg - rr2.beg < 3) { // one-to-one mapping
         registrator->register_pair(remap_v[rr1.beg], remap_v[rr2.beg]);
         return;
-      };
+      }
 
-      for (uint4 seg1 = rr1.beg; seg1 < rr1.end; ++seg1) {//many to many mapping
+      for (uint4 seg1 = rr1.beg; seg1 < rr1.end; ++seg1) { // many-to-many mapping
         for (uint4 seg2 = rr2.beg; seg2 < rr2.end; ++seg2)
-          registrator->register_pair(remap_v[rr1.beg], remap_v[rr2.beg]);
-      };
+          registrator->register_pair(remap_v[seg1], remap_v[seg2]);
+      }
       return;
-    };
-    //non common intersection, need to check more carefully
-    //need to check type of intersection to exclude double registration
+    }
 
+    // Non-common intersection: need to filter by intersection type to avoid double registration.
     if (rr1.end + rr2.end - rr1.beg - rr2.beg < 3) {
       register_pair(remap_v[rr1.beg], remap_v[rr2.beg], int_type);
       return;
-    };
+    }
 
-    //most complex case, need to check for nonunique segments; hopefully rare
-    // 
-    //marking all nonunique segments
+    // Most complex case: possible duplicates inside remap lists; mark duplicates to avoid double registration.
     constexpr const uint4 mark = 1 << (sizeof(uint4) * 8 - 1);
     for (uint4 seg1 = rr1.beg; seg1 < rr1.end; ++seg1)
       for (uint4 seg2 = rr2.beg; seg2 < rr2.end; ++seg2)
-        if (remap_v[seg1] == remap_v[seg2]) {//same segment found, mark it 
+        if (remap_v[seg1] == remap_v[seg2]) { // same original segment appears in both lists
           remap_v[seg1] |= mark;
           remap_v[seg2] |= mark;
           break;
@@ -202,7 +225,6 @@ public:
       remap_v[seg1] &= ~mark;
     for (uint4 seg2 = rr2.beg; seg2 < rr2.end; ++seg2)
       remap_v[seg2] &= ~mark;
-
   };
 
   template<bool remove_zero_seg = true>
@@ -379,5 +401,8 @@ private:
   //CRemaper* clone_of = nullptr;
 
 };
+
+
+
 
 
