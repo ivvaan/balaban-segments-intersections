@@ -34,7 +34,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include "optimal_finder.h"
 
 
-constexpr uint4 n_threads = 8;
+constexpr uint4 n_threads_default = 8;
 
 
 // creating and deleting collections
@@ -155,11 +155,12 @@ SegCollection create_test_collection(const SegmentsAndRegOptions& opt, CRandomVa
 };
 
 
+//#define OLD_PARALLEL
 
-
+#ifdef OLD_PARALLEL
 
 template<template<class>class SegColl, class Counter>
-auto find_int(int4 n, SegColl<Counter>& coll, int4 alg, uint4 stat)
+auto find_int(int4 n, SegColl<Counter>& coll, int4 alg)
 {
   switch (alg) {
     case triv: {
@@ -183,53 +184,115 @@ auto find_int(int4 n, SegColl<Counter>& coll, int4 alg, uint4 stat)
     case fast_parallel: {
       constexpr uint4 cache_line_size = std::hardware_constructive_interference_size;
       constexpr uint4 reg_margin = (cache_line_size + sizeof(Counter) - 1) / sizeof(Counter);// for reg objects to be in different CPU cache lines
-      Counter reg_objects[reg_margin * n_threads];
-      Counter* additional_reg_obj[n_threads];
-      for (int i = 0; i < n_threads - 1; i++) {
+      Counter reg_objects[reg_margin * n_threads_default];
+      Counter* additional_reg_obj[n_threads_default];
+      for (int i = 0; i < n_threads_default - 1; i++) {
         additional_reg_obj[i] = reg_objects + i * reg_margin;
         additional_reg_obj[i]->Alloc(n);
       }
       CFastIntFinder fi;
       fi.prepare_ends(coll);
-      fi.find_intersections(coll, n_threads, additional_reg_obj);
-      coll.GetRegistrator()->combine_reg_data(n_threads, additional_reg_obj);
+      fi.find_intersections(coll, n_threads_default, additional_reg_obj);
+      coll.GetRegistrator()->combine_reg_data(n_threads_default, additional_reg_obj);
 
     } break;
   };
-  return coll.GetRegistrator()->get_stat(stat);
+  return ;
 };
 
-
 template<class Counter>
-auto _find_int(const SegmentsAndRegOptions& opt, PSeg segs, int4 alg)
+uint8 _find_int(const SegmentsAndRegOptions& opt, PSeg segs, int4 alg)
 {
   Counter reg;
   reg.Alloc(opt.n);
   switch (opt.seg_type) {
     case _Segment::line1: {
       CLine1SegmentCollection<Counter> coll(opt.n, segs, &reg);
-      return find_int(opt.n, coll, alg, opt.reg_stat);
-    };
+      find_int(opt.n, coll, alg);
+    }; break;
     case _Segment::intline: {
       CIntegerSegmentCollection<Counter> coll(opt.n, (TLineSegment1*)segs, &reg, opt.range_for_int_seg);
-      return find_int(opt.n, coll, alg, opt.reg_stat);
-    };
+       find_int(opt.n, coll, alg);
+    }; break;
     case _Segment::line2: {
       CLine2SegmentCollection<Counter> coll(opt.n, segs, &reg);
-      return find_int(opt.n, coll, alg, opt.reg_stat);
-    };
+      find_int(opt.n, coll, alg);
+    }; break;
     case _Segment::arc: {
       CArcSegmentCollection<Counter>  coll(opt.n, segs, &reg);
-      return find_int(opt.n, coll, alg, opt.reg_stat);
-    };
+      find_int(opt.n, coll, alg);
+    }; break;
     case _Segment::graph: {
       CGraphSegmentCollection<Counter> coll(opt.n, segs, &reg);
-      return find_int(opt.n, coll, alg, opt.reg_stat);
-    };
+      find_int(opt.n, coll, alg);
+    }; break;
   };
-  return 0ULL;
+  return reg.get_stat(opt.reg_stat);
 };
 
+#else
+template<class SegColl>
+auto find_int(int4 n, SegColl& coll, int4 alg)
+{
+  switch (alg) {
+  case triv: {
+    CTrivialIntFinder fi;
+    fi.find_intersections(coll);
+  } break;
+  case simple_sweep: {
+    CSimpleSweepIntFinder fi;
+    fi.find_intersections(coll);
+  }; break;
+  case fast: {
+    CFastIntFinder fi;
+    fi.prepare_ends(coll);
+    fi.find_intersections(coll);
+  } break;
+  case optimal: {
+    COptimalIntFinder fi;
+    fi.prepare_ends(coll);
+    fi.find_intersections(coll);
+  } break;
+  case fast_parallel: {
+    CFastIntFinder fi;
+    fi.prepare_ends(coll);
+    fi.find_intersections(n_threads_default,coll);
+  } break;
+  };
+  return;
+};
+
+template<class Counter>
+uint8 _find_int(const SegmentsAndRegOptions& opt, PSeg segs, int4 alg)
+{
+  CRegistratorFactory<Counter> reg;
+  reg.PrepareAlloc(opt.n);
+  switch (opt.seg_type) {
+  case _Segment::line1: {
+    CLine1SegmentCollection<Counter> coll(opt.n, segs, &reg);
+    find_int(opt.n, coll, alg);
+  }; break;
+  case _Segment::intline: {
+    CIntegerSegmentCollection<Counter> coll(opt.n, (TLineSegment1*)segs, &reg, opt.range_for_int_seg);
+    find_int(opt.n, coll, alg);
+  }; break;
+  case _Segment::line2: {
+    CLine2SegmentCollection<Counter> coll(opt.n, segs, &reg);
+    find_int(opt.n, coll, alg);
+  }; break;
+  case _Segment::arc: {
+    CArcSegmentCollection<Counter>  coll(opt.n, segs, &reg);
+    find_int(opt.n, coll, alg);
+  }; break;
+  case _Segment::graph: {
+    CGraphSegmentCollection<Counter> coll(opt.n, segs, &reg);
+    find_int(opt.n, coll, alg);
+  }; break;
+  };
+  reg.combine_reg_data();
+  return reg.get_stat(opt.reg_stat);
+};
+#endif
 find_intersections_func get_find_intersections_func(uint4 reg_type)
 {
   if (reg_type == _Registrator::just_count)return _find_int<SimpleCounter>;
@@ -252,30 +315,30 @@ void write_SVG(std::ostream* svg_stream, const SegmentsAndRegOptions& opt, PSeg 
         auto alg = alg_list[a];
         TrueRegistrator reg;
         coll.SetRegistrator(&reg);
-        find_int(opt.n, coll, alg, 0);
+        find_int(opt.n, coll, alg);
         reg.write_SVG(alg, svg_stream);
       }
     };
 
   switch (opt.seg_type) {
     case _Segment::intline: {
-      CIntegerSegmentCollection<SimpleCounter> coll(opt.n, (TLineSegment1*)segs, nullptr, opt.range_for_int_seg);
+      CIntegerSegmentCollection<SimpleCounter> coll(opt.n, (TLineSegment1*)segs, (SimpleCounter *)nullptr, opt.range_for_int_seg);
       coll.coll_to_SVG(svg_stream);
     }; break;
     case _Segment::line1: {
-      CLine1SegmentCollection<TrueRegistrator> coll(opt.n, segs, nullptr);
+      CLine1SegmentCollection<TrueRegistrator> coll(opt.n, segs,(TrueRegistrator*) nullptr);
       apply_algs(coll);
     }; break;
     case _Segment::line2: {
-      CLine2SegmentCollection<TrueRegistrator> coll(opt.n, segs, nullptr);
+      CLine2SegmentCollection<TrueRegistrator> coll(opt.n, segs, (TrueRegistrator*)nullptr);
       apply_algs(coll);
     }; break;
     case _Segment::arc: {
-      CArcSegmentCollection<TrueRegistrator>  coll(opt.n, segs, nullptr);
+      CArcSegmentCollection<TrueRegistrator>  coll(opt.n, segs, (TrueRegistrator*)nullptr);
       apply_algs(coll);
     }; break;
     case _Segment::graph: {
-      CGraphSegmentCollection<TrueRegistrator> coll(opt.n, segs, nullptr);
+      CGraphSegmentCollection<TrueRegistrator> coll(opt.n, segs, (TrueRegistrator*)nullptr);
       apply_algs(coll);
     }; break;
   };

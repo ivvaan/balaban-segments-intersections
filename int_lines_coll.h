@@ -808,6 +808,9 @@ public:
   };
 
   void unclone() { 
+    if (GetRegistrator())
+      GetRegistrator()->Flash();
+
     if (clone_of == nullptr)return; 
     remaper.unclone();
     collection = nullptr; 
@@ -840,20 +843,38 @@ public:
   IntersectionRegistrator* GetRegistrator() { return  remaper.registrator; };
 
   template <class Segment>
-  CIntegerSegmentCollection(uint4 n, Segment* c, IntersectionRegistrator *r, int4 range)
-  {
+  void Init(uint4 n, Segment* c, IntersectionRegistrator* r, int4 range){
     assert(("integer collection registers only intersecting pairs:\n\
        intersection points don't have integer coords ",
       (IntersectionRegistrator::reg_type & _RegistrationType::point) == 0));
     remaper.NoRemapInit(n, c, r, range, *this);
-    //TurnRemapOn();
     is_collection_remapped = false;
     register_pair = reg_pair;
     nSegments = remaper.get_N();
     collection = segments.data();
     pts = points.data();
-
   }
+
+  template <class Segment>
+  CIntegerSegmentCollection(uint4 n, Segment* c, IntersectionRegistrator *r, int4 range)
+  {
+    Init(n, c, r, range);
+  }
+
+  void InitClone(uint4 n_threads) {
+    if (factory)
+      factory->InitClone(n_threads);
+  }
+
+  template <class Segment>
+  CIntegerSegmentCollection(uint4 n, Segment* c, CRegistratorFactory<IntersectionRegistrator>* f, int4 range)
+  {
+    factory = f;
+    factory->PrepareAlloc(n);
+    Init(n, c, factory->GetRegistrator(0),range);
+  }
+
+
 
   void FromIntSegVect(std::vector<TIntegerSegment> &v, IntersectionRegistrator* r)
   {
@@ -928,6 +949,14 @@ public:
     clone(coll, r);
   }
 
+  CIntegerSegmentCollection(CIntegerSegmentCollection& coll, uint4 thread_index):factory(coll.factory)
+  {
+    if (factory)
+      clone(coll, factory->GetRegistrator(thread_index));
+    else
+      clone(coll, coll.GetRegistrator());
+  }
+
   ~CIntegerSegmentCollection()
   {
     unclone();
@@ -971,6 +1000,7 @@ private:
   TIntegerSegment* collection = nullptr;
   TIntegerVect* pts = nullptr;
   uint4* seg_L_rank = nullptr, * seg_R_rank = nullptr, * ENDS = nullptr;
+  CRegistratorFactory<IntersectionRegistrator>* factory = nullptr;
 
   TIntegerSegment cur_seg;
   TIntegerVect cur_point, active_end;

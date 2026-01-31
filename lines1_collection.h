@@ -405,7 +405,9 @@ public:
 */
 
   void unclone() { 
-    if (clone_of == nullptr)  
+    if (registrator)
+      registrator->Flash();
+    if (clone_of == nullptr)
       return; 
     ENDS = nullptr;
     seg_L_rank = nullptr;
@@ -442,6 +444,18 @@ public:
     }
   }
 
+  CLine1SegmentCollection(uint4 n, void* c, CRegistratorFactory<IntersectionRegistrator>* f)
+  {
+    factory = f;
+    factory->PrepareAlloc(n);
+    Init(n, c, factory->GetRegistrator(0));
+    chopped_Y = new REAL[N + 2];
+    if constexpr (THIS_HAS_SENTINELS) {
+      chopped_Y[this->get_sentinel(false)] = std::numeric_limits<REAL>::lowest();
+      chopped_Y[this->get_sentinel(true)] = std::numeric_limits<REAL>::max();
+    }
+  }
+
   CLine1SegmentCollection() {};
 
   CLine1SegmentCollection(CLine1SegmentCollection& coll, IntersectionRegistrator* r)
@@ -449,8 +463,26 @@ public:
     clone(coll, r);
     chopped_Y = new REAL[N + 2];
     if constexpr (THIS_HAS_SENTINELS) {
-        chopped_Y[this->get_sentinel(false)] = std::numeric_limits<REAL>::lowest();
-        chopped_Y[this->get_sentinel(true)] = std::numeric_limits<REAL>::max();
+      chopped_Y[this->get_sentinel(false)] = std::numeric_limits<REAL>::lowest();
+      chopped_Y[this->get_sentinel(true)] = std::numeric_limits<REAL>::max();
+    }
+  }
+
+  void InitClone(uint4 n_threads) {
+    if (factory)
+      factory->InitClone(n_threads);
+  }
+
+  CLine1SegmentCollection(CLine1SegmentCollection& coll, uint4 thread_index) :factory(coll.factory)
+  {
+    if (factory)
+      clone(coll, factory->GetRegistrator(thread_index));
+    else
+      clone(coll, coll.GetRegistrator());
+    chopped_Y = new REAL[N + 2];
+    if constexpr (THIS_HAS_SENTINELS) {
+      chopped_Y[this->get_sentinel(false)] = std::numeric_limits<REAL>::lowest();
+      chopped_Y[this->get_sentinel(true)] = std::numeric_limits<REAL>::max();
     }
   }
 
@@ -481,12 +513,17 @@ private:
     return is_last(pt) ? collection[get_segm(pt)].ex() : collection[get_segm(pt)].bx();
   };
 
+  //arrays for endpoints
+  uint4* ENDS = nullptr;
+  uint4* seg_L_rank = nullptr;
+  uint4* seg_R_rank = nullptr;
 
-  TLineSegment1 cur_seg;
   TLineSegment1* collection = nullptr;
+  CRegistratorFactory<IntersectionRegistrator>* factory = nullptr;
   IntersectionRegistrator* registrator = nullptr;
   REAL* chopped_Y = nullptr;
   CLine1SegmentCollection* clone_of = nullptr;
+  TLineSegment1 cur_seg;
   uint4 N = 0;
   REAL B, E, curB, curE;
   TPlaneVect cur_point, active_end;
@@ -494,10 +531,6 @@ private:
   uint4 cur_seg_idx = 0xFFFFFFFF;
   bool is_chopped = false;
 
-  // moved arrays for endpoints
-  uint4* ENDS = nullptr;
-  uint4* seg_L_rank = nullptr;
-  uint4* seg_R_rank = nullptr;
 
 };
 

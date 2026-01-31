@@ -41,30 +41,71 @@ enum _RegistrationType
 
 using int_rec = std::tuple<uint4, uint4>;
 
+constexpr const uint4 cache_line_size = std::hardware_constructive_interference_size;
 
-struct RegistratorBase {
-  void (*reg_pair)(void*, uint4 s1, uint4 s2) = nullptr;
-  void (*alloc)(void*, uint4 N) = nullptr;
-  double (*get_st)(void *,uint4 stat_type) = nullptr;
-  void (*wr_SVG)(void* ,uint4 alg, chostream* SVG_text) = nullptr;
-  void* instance=nullptr;
 
-  void register_pair(uint4 s1, uint4 s2) const { reg_pair(instance, s1, s2); };
-  void Alloc(uint4 N) const { alloc(instance, N); };
-  double get_stat(uint4 stat_type) const { return get_st(instance, stat_type); };
-  void write_SVG(uint4 alg, chostream* SVG_text) const { wr_SVG(instance,alg, SVG_text); };
-};
+//registrar factory can create different types of registrators
+template <class Registrar>
+class CRegistratorFactory
+{
+  constexpr static const uint4 reg_margin = (cache_line_size + sizeof(Registrar) - 1) / sizeof(Registrar);// for reg objects to be in different CPU cache lines
+  //constexpr static const uint4 initial_size = 4;
+  std::vector<Registrar> reg_objects;
+  std::vector<Registrar*> reg_pointers;
+  uint4 nSegm = 0;
 
-template<typename T>
-RegistratorBase makeRegistratorBase(T& obj) {
-  return {
-      [](void* instance, uint4 s1, uint4 s2) { static_cast<T*>(instance)->register_pair(s1,s2); },
-      [](void* instance, uint4 N) { static_cast<T*>(instance)->Alloc(N); },
-      [](void* instance, uint4 stat_type) { return static_cast<T*>(instance)->get_stat(stat_type); },
-      [](void* instance, uint4 alg, chostream* SVG_text) { static_cast<T*>(instance)->write_SVG(alg,SVG_text); },
-    &obj
+  std::unique_ptr<Registrar> main_reg_owner;
+
+public:
+  CRegistratorFactory()
+    : main_reg_owner(std::make_unique<Registrar>())
+  {}
+
+  void InitClone(uint4 n_threads)
+  {
+      reg_objects.resize((n_threads-1) * reg_margin);
+      reg_pointers.resize(n_threads-1);
   };
-}
+
+  void PrepareAlloc(uint4 _nSegm)
+  {
+    nSegm = _nSegm;
+    //main_reg_owner->Alloc(nSegm);
+  };
+
+
+  Registrar* GetRegistrator(uint4 thread_index) 
+  {
+    Registrar *ptr;
+    if (thread_index) {
+      ptr = &reg_objects.at((thread_index - 1) * reg_margin);
+      reg_pointers.at(thread_index - 1) = ptr;
+    }
+    else
+      ptr = main_reg_owner.get();
+    ptr->Alloc(nSegm);
+    return ptr;
+  };
+
+  void remove_null() 
+  {
+    reg_pointers.erase(
+      std::remove(reg_pointers.begin(), reg_pointers.end(), nullptr),
+      reg_pointers.end());
+  };
+
+  void combine_reg_data() {
+    remove_null();
+    uint4 n_threads = reg_pointers.size()+1;
+    if (n_threads > 1) {
+      main_reg_owner->combine_reg_data(n_threads, reg_pointers.data());
+    }
+  };
+  uint8 get_stat(uint4 stat_type = 0) {
+    return  main_reg_owner->get_stat(stat_type);
+  };
+
+};
 
 template <uint4 r_type = 0>
 class JustCountingRegistrator
@@ -89,10 +130,13 @@ public:
  
   void combine_reg_data(uint4 n_threads, JustCountingRegistrator* additional_reg_obj[])
   {
-    for (int i = 0; i < n_threads - 1; i++)
+    for (int i = 0; i < n_threads - 1; i++){
       counter += additional_reg_obj[i]->counter;
+    }
   };
   void Alloc(uint4 _N) {};
+
+  void Flash() {};
 
   // to return some statistics about registered intersections;
   auto get_stat(uint4 stat_type = 0) { return counter; };
@@ -103,7 +147,7 @@ public:
 
 class PerSegmCountingRegistrator
 {
-  uint4 N;
+  uint4 N=0;
   uint4* segm_counters = nullptr;
   uint8 counter = 0;
 
@@ -123,10 +167,15 @@ public:
 
   void Alloc(uint4 _N)
   {
-    N = _N;
-    segm_counters = new uint4[N];
-    std::memset(segm_counters, 0, N * sizeof(*segm_counters));
+    if(!segm_counters){
+      N = _N;
+      segm_counters = new uint4[N];
+      std::fill_n(segm_counters,N,0);
+    }
   };
+
+  void Flash() {};
+
   void combine_reg_data(uint4 n_threads, PerSegmCountingRegistrator* to_add[])
   {
     for (uint4 r = 0; r < n_threads - 1; ++r)
@@ -170,7 +219,7 @@ public:
   ~PairRegistrator() {
   };
 
-
+  void Flash() {};
 
   void register_pair(uint4 s1, uint4 s2) {
     ++counter;
@@ -308,7 +357,7 @@ public:
   ~PairAndPointRegistrator() {
   };
 
- 
+  void Flash() {};
 
   void register_pair(uint4 s1, uint4 s2) noexcept {
     ++counter;

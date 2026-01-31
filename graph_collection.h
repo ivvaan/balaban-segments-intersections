@@ -346,6 +346,7 @@ public:
     }
     );
   };
+
   void clone(CGraphSegmentCollection &coll, IntersectionRegistrator *r)
   {
     clone_of = &coll;
@@ -362,6 +363,9 @@ public:
   
   void unclone() 
   { 
+    if (registrator)
+      registrator->Flash();
+
     if (clone_of == nullptr)
       return; 
     nVertices = 0;
@@ -421,15 +425,36 @@ public:
 
   };
 
+  void InitClone(uint4 n_threads) {
+    if (factory)
+      factory->InitClone(n_threads);
+  }
+
   CGraphSegmentCollection(uint4 n, void* c, IntersectionRegistrator *r)
   {
     Init(n, c, r);
   }
+
+  CGraphSegmentCollection(uint4 n, void* c, CRegistratorFactory<IntersectionRegistrator>* f)
+  {
+    factory = f;
+    factory->PrepareAlloc(n);
+    Init(n, c, factory->GetRegistrator(0));
+  }
+
   CGraphSegmentCollection() {};
 
   CGraphSegmentCollection(CGraphSegmentCollection& coll, IntersectionRegistrator* r)
   {
     clone(coll, r);
+  }
+
+  CGraphSegmentCollection(CGraphSegmentCollection& coll, uint4 thread_index) :factory(coll.factory)
+  {
+    if (factory)
+      clone(coll, factory->GetRegistrator(thread_index));
+    else
+      clone(coll, coll.GetRegistrator());
   }
 
   ~CGraphSegmentCollection() 
@@ -476,7 +501,7 @@ private:
     return vertices[vertex_idx[pt]].x;
   };
 
-
+  CRegistratorFactory<IntersectionRegistrator>* factory = nullptr;
   IntersectionRegistrator *registrator = nullptr;
   CGraphSegmentCollection *clone_of = nullptr;
   uint4 nVertices, nEdges;

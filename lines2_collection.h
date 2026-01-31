@@ -342,6 +342,9 @@ public:
   };
 
   void unclone() {
+    if (registrator)
+      registrator->Flash();
+
     if (clone_of == nullptr)
       return;
     ENDS = nullptr;
@@ -381,11 +384,31 @@ public:
     Init(n, c, r);
   }
 
+  CLine2SegmentCollection(uint4 n, void* c, CRegistratorFactory<IntersectionRegistrator>* f)
+  {
+    factory = f;
+    factory->PrepareAlloc(n);
+    Init(n, c, factory->GetRegistrator(0));
+  }
+
   CLine2SegmentCollection() {};
+
+  void InitClone(uint4 n_threads) {
+    if (factory)
+      factory->InitClone(n_threads);
+  }
 
   CLine2SegmentCollection(CLine2SegmentCollection& coll, IntersectionRegistrator* r)
   {
     clone(coll, r);
+  }
+
+  CLine2SegmentCollection(CLine2SegmentCollection& coll, uint4 thread_index) :factory(coll.factory)
+  {
+    if (factory)
+      clone(coll, factory->GetRegistrator(thread_index));
+    else
+      clone(coll, coll.GetRegistrator());
   }
 
   ~CLine2SegmentCollection()
@@ -409,7 +432,7 @@ private:
   auto GetX(uint4 pt) const { return ends[pt]; };
   //{ return is_last(pt) ? collection[get_segm(pt)].x2 :collection[get_segm(pt)].x1; };
 
-
+  CRegistratorFactory<IntersectionRegistrator>* factory = nullptr;
   IntersectionRegistrator* registrator = nullptr;
   CLine2SegmentCollection* clone_of = nullptr;
   uint4 N = 0;

@@ -86,7 +86,7 @@ public:
     double part = nTotX / (double)n_threads;
     uint4 start_from = part;
     for (uint4 i = 2, from = start_from, to; i <= n_threads; ++i) {
-      to = (i == n_threads) ? nTotX : (uint4)(part * i);
+      to = (i == n_threads) ? nTotX-1 : (uint4)(part * i);
 #if defined(DEBUG) || defined(_DEBUG) 
       thread_func(this, &segments, from, to, regs[i - 2]); // starts intersection finding in a stripe <from,to>
 #else
@@ -98,6 +98,36 @@ public:
     find_intersections(segments, 0, start_from);
 #if !(defined(DEBUG) || defined(_DEBUG))
     for (auto& cur_thread:wrk_threads)
+      cur_thread.join(); //waiting for calculation of all threads are finished
+#endif
+  }
+
+  template<class SegmentsColl>
+  void find_intersections(uint4 n_threads,SegmentsColl& segments)
+  {
+    using namespace std;
+    vector<thread> wrk_threads;
+    auto thread_func = [](this_T* master, SegmentsColl* segments,uint4 thread_index, uint4 from, uint4 to) {
+      SegmentsColl coll(*segments, thread_index);
+      this_T(master).find_intersections(coll, from, to);
+      };
+    segments.InitClone(n_threads);
+    auto n = segments.GetSegmNumb();
+    double part = nTotX / (double)n_threads;
+    uint4 start_from = part;
+    for (uint4 i = 2, from = start_from, to; i <= n_threads; ++i) {
+      to = (i == n_threads) ? nTotX-1 : (uint4)(part * i);
+#if defined(DEBUG) || defined(_DEBUG) 
+      thread_func(this, &segments,i-1, from, to); // starts intersection finding in a stripe <from,to>
+#else
+      wrk_threads.emplace_back(thread_func, this, &segments,i-1, from, to); // starts intersection finding in a stripe <from,to>
+#endif
+      from = to;
+    }
+
+    find_intersections(segments, 0, start_from);
+#if !(defined(DEBUG) || defined(_DEBUG))
+    for (auto& cur_thread : wrk_threads)
       cur_thread.join(); //waiting for calculation of all threads are finished
 #endif
   }

@@ -312,6 +312,9 @@ public:
   };
 
   void unclone() {
+    if (registrator)
+      registrator->Flash();
+
     if (clone_of == nullptr)
       return;
     ENDS = nullptr;
@@ -323,14 +326,35 @@ public:
 
   CArcSegmentCollection() {};
 
+  void InitClone(uint4 n_threads) {
+    if (factory)
+      factory->InitClone(n_threads);
+  }
+
+
   CArcSegmentCollection(uint4 n, void* c, IntersectionRegistrator* r)
   {
     Init(n, c, r);
   }
 
+  CArcSegmentCollection(uint4 n, void* c, CRegistratorFactory<IntersectionRegistrator>* f)
+  {
+    factory = f;
+    factory->PrepareAlloc(n);
+    Init(n, c, factory->GetRegistrator(0));
+  }
+
   CArcSegmentCollection(CArcSegmentCollection& coll, IntersectionRegistrator* r)
   {
     clone(coll,r);
+  }
+
+  CArcSegmentCollection(CArcSegmentCollection& coll, uint4 thread_index) :factory(coll.factory)
+  {
+    if (factory)
+      clone(coll, factory->GetRegistrator(thread_index));
+    else
+      clone(coll, coll.GetRegistrator());
   }
 
   ~CArcSegmentCollection()
@@ -354,7 +378,7 @@ private:
   auto GetX(uint4 pt) const { return ends[pt]; };
   //{ return is_last(pt) ? collection[get_segm(pt)].x2 :collection[get_segm(pt)].x1; };
 
-
+  CRegistratorFactory<IntersectionRegistrator>* factory = nullptr;
   IntersectionRegistrator *registrator = nullptr;
   CArcSegmentCollection *clone_of = nullptr;
   uint4 N=0;
