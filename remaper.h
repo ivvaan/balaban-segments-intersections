@@ -12,17 +12,6 @@ class CRemaper {
     }
   };
 
-  static REAL get_rot_angle(uint4 n, TLineSegment1 sc[])
-  {
-    REAL* arr;
-    DECL_RAII_ARR(arr, n + 2);
-    arr[0] = -M_PI / 2.;
-    std::transform(sc, sc + n, arr,
-      [](const TLineSegment1& s) { return std::atan2(s.shift.y, s.shift.x); });
-    arr[n + 1] = M_PI / 2.;
-    auto max_gap_mid = get_max_gap_middle(n + 2, arr);
-    return max_gap_mid + (max_gap_mid > 0 ? -M_PI / 2. : M_PI / 2.);
-  }
 
 public:
   // CRemaper is a degenerate-case preprocessor for integer segments.
@@ -35,35 +24,6 @@ public:
   // The sweep algorithms run on the normalized collection, and reported intersecting pairs are
   // expanded back into pairs of original segments via `register_pair(...)`.
 
-  template<bool remove_zero_seg>
-  uint4 int_seg_from_real(uint4 n, TLineSegment1 sc[], std::vector<TIntegerVect>& points)
-  {
-    // Converts real-coordinate segments into integer segments (scaled into [-range, range]).
-    // If remove_zero_seg==true, zero-length segments are skipped.
-    REAL si = 0., co = 1.;
-    auto mm_rect = get_rot_minmax(n, sc, si, co);
-    auto x_transf = transf1D{ .shift = -mm_rect.ld.x - mm_rect.get_width() / 2.,
-      .scale = 2. * range / mm_rect.get_width() };
-    auto y_transf = transf1D{ .shift = -mm_rect.ld.y - mm_rect.get_height() / 2.,
-      .scale = 2. * range / mm_rect.get_height() };
-    seg = set_size(seg_v, n);
-#ifdef PRINT_SEG_AND_INT
-    TIntegerSegment::coll_begin = coll_begin;
-#endif
-    TIntegerSegment s;
-    uint4 i = 0;
-    for (uint4 m = 0; m != n; ++m) {
-      s.Init(sc[m], si, co, x_transf, y_transf);
-      if constexpr (remove_zero_seg) {
-        if (s.shift.is_zero()) continue;
-      }
-      seg[i] = s;
-      points[first_point(i)] = s.BegPoint();
-      points[last_point(i)] = s.EndPoint();
-      ++i;
-    }
-    return i;
-  }
 
   bool prepare_remap(std::vector<uint4>& indexes, TIntegerVect points[],
     std::vector<TIntegerSegment>& res_coll,
@@ -227,48 +187,14 @@ public:
       remap_v[seg2] &= ~mark;
   };
 
-  template<bool remove_zero_seg = true>
-  auto NoRemapInit(uint4 n, TLineSegment1* sc, IntersectionRegistrator* r, int4 range, CTHIS& collection) {
-    initial_SN = n;
-    std::vector<TIntegerVect> points(2 * n);
-
-    this->range = range;
-    remapped_SN = nonzero_N = int_seg_from_real<remove_zero_seg>(n, sc, points);
-    if constexpr (remove_zero_seg)
-      initial_SN = nonzero_N;
-    registrator = r;
-
-    collection.segments = std::move(seg_v);
-    collection.points = std::move(points);
+  auto init(uint4 _initial_SN, uint4 _nonzero_N) 
+  {
+    initial_SN = _initial_SN;
+    nonzero_N = _nonzero_N;
+    remapped_SN = nonzero_N;
     return;
-  };
+  }
 
-  template<bool remove_zero_seg = true>
-  auto NoRemapInit(uint4 n, TIntegerSegment* sc, IntersectionRegistrator* r, int4 range, CTHIS& collection) {
-    initial_SN = n;
-    std::vector<TIntegerVect> points(2 * n);
-
-    this->range = range;
-    uint4 i = 0;
-    seg = set_size(seg_v, n);
-    for (uint4 m = 0; m != n; ++m) {
-      if constexpr (remove_zero_seg) {
-        if (sc[m].shift.is_zero()) continue;
-      }
-      seg[i] = sc[m];
-      points[first_point(i)] = sc[m].BegPoint();
-      points[last_point(i)] = sc[m].EndPoint();
-      ++i;
-    }
-    remapped_SN = nonzero_N = i;
-    if constexpr (remove_zero_seg)
-      initial_SN = nonzero_N;
-    registrator = r;
-
-    collection.segments = std::move(seg_v);
-    collection.points = std::move(points);
-    return;
-  };
 
   template<bool remove_zero_seg = true>
   auto FromIntSegVect(std::vector<TIntegerSegment>& v, IntersectionRegistrator* r, CTHIS& collection) {

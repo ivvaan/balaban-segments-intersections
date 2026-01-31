@@ -60,10 +60,24 @@ Real get_max_gap_middle(uint4 N, Real arr[])
   return (arr[best_i] + _arr[best_i]) / Real(2);
 }
 
+
 template<class IntersectionRegistrator>
 class CIntegerSegmentCollection
 {
   using CTHIS = CIntegerSegmentCollection<IntersectionRegistrator>;
+
+  static REAL get_rot_angle(uint4 n, TLineSegment1 sc[])
+  {
+    REAL* arr;
+    DECL_RAII_ARR(arr, n + 2);
+    arr[0] = -M_PI / 2.;
+    std::transform(sc, sc + n, arr,
+      [](const TLineSegment1& s) { return std::atan2(s.shift.y, s.shift.x); });
+    arr[n + 1] = M_PI / 2.;
+    auto max_gap_mid = get_max_gap_middle(n + 2, arr);
+    return max_gap_mid + (max_gap_mid > 0 ? -M_PI / 2. : M_PI / 2.);
+  }
+
 public:
   static constexpr _Coll_flag_state get_coll_flag(_Coll_flags flag)
   {
@@ -842,12 +856,81 @@ public:
 
   IntersectionRegistrator* GetRegistrator() { return  remaper.registrator; };
 
+  template<bool remove_zero_seg>
+  uint4 int_seg_from_real(uint4 n, TLineSegment1 sc[],int4 range)
+  {
+    // Converts real-coordinate segments into integer segments (scaled into [-range, range]).
+    // If remove_zero_seg==true, zero-length segments are skipped.
+    REAL si = 0., co = 1.;
+    auto mm_rect = get_rot_minmax(n, sc, si, co);
+    auto x_transf = transf1D{ .shift = -mm_rect.ld.x - mm_rect.get_width() / 2.,
+      .scale = 2. * range / mm_rect.get_width() };
+    auto y_transf = transf1D{ .shift = -mm_rect.ld.y - mm_rect.get_height() / 2.,
+      .scale = 2. * range / mm_rect.get_height() };
+    auto seg = set_size(segments, n);
+    set_size(points, 2 * n);
+#ifdef PRINT_SEG_AND_INT
+    TIntegerSegment::coll_begin = coll_begin;
+#endif
+    TIntegerSegment s;
+    uint4 i = 0;
+    for (uint4 m = 0; m != n; ++m) {
+      s.Init(sc[m], si, co, x_transf, y_transf);
+      if constexpr (remove_zero_seg) {
+        if (s.shift.is_zero()) continue;
+      }
+      seg[i] = s;
+      points[first_point(i)] = s.BegPoint();
+      points[last_point(i)] = s.EndPoint();
+      ++i;
+    }
+    return i;
+  }
+
+
+  template<bool remove_zero_seg = true>
+  auto NoRemapInit(uint4 n, TLineSegment1* sc, IntersectionRegistrator* r, int4 range) {
+    auto initial_SN = n;
+    points = std::vector<TIntegerVect>(2 * n);
+
+    auto nonzero_N = int_seg_from_real<remove_zero_seg>(n, sc,range);
+    if constexpr (remove_zero_seg)
+      initial_SN = nonzero_N;
+    SetRegistrator(r);
+    remaper.init(initial_SN, nonzero_N);
+  };
+
+  template<bool remove_zero_seg = true>
+  void NoRemapInit(uint4 n, TIntegerSegment* sc, IntersectionRegistrator* r, int4 range) {
+    auto initial_SN = n;
+    points = std::vector<TIntegerVect>(2 * n);
+
+    //this->range = range;
+    uint4 i = 0;
+    auto seg = set_size(segments, n);
+    for (uint4 m = 0; m != n; ++m) {
+      if constexpr (remove_zero_seg) {
+        if (sc[m].shift.is_zero()) continue;
+      }
+      seg[i] = sc[m];
+      points[first_point(i)] = sc[m].BegPoint();
+      points[last_point(i)] = sc[m].EndPoint();
+      ++i;
+    }
+    auto nonzero_N = i;
+    if constexpr (remove_zero_seg)
+      initial_SN = nonzero_N;
+    SetRegistrator(r);
+    remaper.init(initial_SN, nonzero_N);
+  };
+
+
   template <class Segment>
   void Init(uint4 n, Segment* c, IntersectionRegistrator* r, int4 range){
     assert(("integer collection registers only intersecting pairs:\n\
        intersection points don't have integer coords ",
       (IntersectionRegistrator::reg_type & _RegistrationType::point) == 0));
-    remaper.NoRemapInit(n, c, r, range, *this);
+    NoRemapInit(n, c, r, range);
     is_collection_remapped = false;
     register_pair = reg_pair;
     nSegments = remaper.get_N();
