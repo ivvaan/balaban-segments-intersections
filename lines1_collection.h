@@ -366,7 +366,7 @@ public:
   }
 
 
-  void PrepareEndpointsSortedList(uint4* epoints)// endpoints allocated by caller and must contain space for at least 2*GetSegmNumb() points 
+  uint4 PrepareEndpointsSortedList(uint4* epoints)// endpoints allocated by caller and must contain space for at least 2*GetSegmNumb() points 
   {
     auto NN = N * 2;
     for (uint4 i = 0; i < NN; ++i)  epoints[i] = i * 2;
@@ -389,6 +389,8 @@ public:
       collection[i].shift.x -= collection[i].org.x;
     };
     for (uint4 i = 0; i < NN; ++i)  epoints[i] /= 2;
+
+    return NN;
 
     // more memory consume variant
     /*for (uint4 i = 0; i < NN; ++i)  epoints[i] = i;

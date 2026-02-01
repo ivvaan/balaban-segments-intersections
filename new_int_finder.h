@@ -63,26 +63,21 @@ public:
         uint4* sgm;
         DECL_RAII_ARR(sgm, n * 3);
         uint4 *Ends = sgm+n;
-        segments.PrepareEndpointsSortedList(Ends);
+        auto nEvents=segments.PrepareEndpointsSortedList(Ends);
 
         auto pos = sgm;
-        for (auto i = Ends,l=i+2*n; i < l; ++i) {
+        for (auto i = Ends,l = i + nEvents; i != l; ++i) {
             auto s = SegmentsColl::get_segm(*i);
             if (SegmentsColl::is_last(*i)) 
             {
-                auto j = --pos;
-                auto cur = *j;
-                while (cur != s) {
-                    --j;
-                    auto buf = cur;
-                    cur = *j;
-                    *j = buf;
-                }
+              auto last = std::remove(sgm, pos, s);
+              assert(last + 1 == pos);
+              pos=last;
             } 
             else 
             {
                 segments.SetCurSeg(s);
-                for (auto j = sgm; j < pos; ++j)
+                for (auto j = sgm; j != pos; ++j)
                     segments.SSCurSegIntWith(*j);
                 *pos = s;
                 ++pos;

@@ -242,7 +242,7 @@ void write_SVG(std::ostream* svg_stream, const SegmentsAndRegOptions& opt, PSeg 
   switch (opt.seg_type) {//first draw segments
     case _Segment::intline: {
       CIntegerSegmentCollection<SimpleCounter> coll(opt.n, (TLineSegment1*)segs, (SimpleCounter *)nullptr, opt.range_for_int_seg);
-      coll.coll_to_SVG(svg_stream);
+      return coll.coll_to_SVG(svg_stream);
     }; break;
     case _Segment::line1: {
       CLine1SegmentCollection<SimpleCounter> coll(opt.n, segs, (SimpleCounter*)nullptr);

@@ -290,7 +290,7 @@ public:
     MY_FREE_ARR_MACRO(seg_R_rank);
   }
 
-  void PrepareEndpointsSortedList(uint4 *epoints)// endpoints allocated by caller and must contain space for at least 2*GetSegmNumb() points 
+  uint4 PrepareEndpointsSortedList(uint4 *epoints)// endpoints allocated by caller and must contain space for at least 2*GetSegmNumb() points 
   {
     auto NN = N << 1;
     for (uint4 i = 0; i < NN; ++i)     epoints[i] = i * 3;
@@ -299,6 +299,7 @@ public:
       return ((x[pt1] < x[pt2]) || ((x[pt1] == x[pt2]) && (pt1 < pt2)));
     }
     );
+    return NN;
   };
 
   void SetRegistrator(IntersectionRegistrator *r){

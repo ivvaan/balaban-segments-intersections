@@ -350,7 +350,7 @@ public:
   }
 
 
-  void PrepareEndpointsSortedList(uint4 *epoints)// endpoints allocated by caller and must contain space for at least 2*GetSegmNumb() points 
+  uint4 PrepareEndpointsSortedList(uint4 *epoints)// endpoints allocated by caller and must contain space for at least 2*GetSegmNumb() points 
   {
     auto NN = nEdges * 2;
     for (uint4 i = 0; i < NN; ++i)     epoints[i] = i;
@@ -368,6 +368,7 @@ public:
         return (vertices[get_other_idx(pt1)] - vertices[idx1]) % (vertices[get_other_idx(pt2)] - vertices[idx2])>0;
     }
     );
+    return NN;
   };
 
   void clone(CGraphSegmentCollection &coll, IntersectionRegistrator *r)

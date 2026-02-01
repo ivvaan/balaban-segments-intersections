@@ -24,7 +24,6 @@ public:
   // The sweep algorithms run on the normalized collection, and reported intersecting pairs are
   // expanded back into pairs of original segments via `register_pair(...)`.
 
-
   bool prepare_remap(std::vector<uint4>& indexes, TIntegerVect points[],
     std::vector<TIntegerSegment>& res_coll,
     std::vector<TIntegerVect>& res_pts)
@@ -54,7 +53,7 @@ public:
         }
       };
     }
-    not_remapped = not_remapped && (remapped_SN == initial_SN);
+    not_remapped = not_remapped && (remapped_SN == initial_SN) ;
     if (not_remapped)
       return true;//not remapped
     rrec = set_size(rrec_v, remapped_SN);
@@ -191,7 +190,7 @@ public:
   {
     initial_SN = _initial_SN;
     nonzero_N = _nonzero_N;
-    remapped_SN = nonzero_N;
+    remapped_SN = initial_SN;
     return;
   }
 
@@ -223,6 +222,7 @@ public:
     return;
   };
 
+  template<bool leave_zero_seg = false>
   auto TurnRemapOn(CTHIS& collection) {
     auto points = std::move(collection.points);
     seg_v = std::move(collection.segments);
@@ -232,7 +232,7 @@ public:
     indexes.reserve(2 * n);
 
     for (uint4 i = 0; i < 2 * n; ++i)
-      if (seg[get_segm(i)].shift.is_non_zero())
+      if (leave_zero_seg || seg[get_segm(i)].shift.is_non_zero())
         indexes.push_back(i);
 
     nonzero_N = indexes.size() / 2;

@@ -133,14 +133,28 @@ public:
     }
     return { unique_count, duplicated_elements_count };
   }
-
-  void PrepareEndpointsSortedList(uint4* epoints)
+  template<bool filter_zero_length = true>
+  uint4 PrepareEndpointsSortedList(uint4* epoints)
   {
     // Fills `epoints` with all endpoint indices `[0..2*nSegments)` and sorts them by:
     // X, then Y, then (first before last), then angular tie-break for stable ordering.
     // The output is later collapsed into "multi-events" (same-X groups) in `Prepare()`.
-    auto NN = GetSegmNumb() << 1;
-    std::iota(epoints, epoints + NN, 0);
+    uint4 nPoints = 0;
+    if constexpr (filter_zero_length) {
+      // Filter out zero-length segments.
+      uint4 nSeg = GetSegmNumb();
+      for (uint4 s = 0; s < nSeg; ++s) {
+        if (collection[s].shift.is_non_zero())
+        {
+          epoints[nPoints++] = first_point(s);
+          epoints[nPoints++] = last_point(s);
+        }
+      }
+    }
+    else {
+      nPoints = GetSegmNumb() << 1;
+      std::iota(epoints, epoints + nPoints, 0);
+    }
 
     auto is_below = [pts = pts, coll = collection](uint4 pt1, uint4 pt2) {
       if (pts[pt1].x != pts[pt2].x)
@@ -161,7 +175,8 @@ public:
       return (pt1 < pt2);
       };
 
-    std::sort(epoints, epoints + NN, is_below);
+    std::sort(epoints, epoints + nPoints, is_below);
+    return nPoints;
   }
 
   // Multi-event encoding:
@@ -183,12 +198,9 @@ public:
 
     uint4 nSeg = GetSegmNumb();
     if (nSeg == 0) return {};
-
-    uint4 nEnds = nSeg * 2;
-
-    auto __tmpENDS__ = std::make_unique<uint4[]>(nEnds);
+    auto __tmpENDS__ = std::make_unique<uint4[]>(nSeg*2);
     uint4* tmpENDS = __tmpENDS__.get();
-    PrepareEndpointsSortedList(tmpENDS);
+    uint4 nEnds = PrepareEndpointsSortedList<false>(tmpENDS);
 
     auto [nX, nV] = get_dublicate_stat(nEnds, tmpENDS);
     auto nAll = nEnds + nV;
@@ -637,8 +649,8 @@ public:
   template <bool reg = true>
   bool SSCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (both are on some vertical line) and register them
   {
-    //!!! can't process zero segments
-    //!precondition segments share some x coords
+    //!!! can't correctly process zero segments
+    //precondition segments share some x coords
     auto& s1 = cur_seg;
     auto& s2 = collection[s_];
     if (s1.no_common_y(s2))
@@ -648,6 +660,8 @@ public:
     auto delt = s2.BegPoint() - s1.BegPoint();
     auto prod = s1.shift % s2.shift, beg = s1.shift % delt;
     if (prod == 0) { // segments parallel
+      if (s1.shift.is_zero() || s2.shift.is_zero())
+        return false;// can't process zero segments !!!!
       if ( (beg == 0) && (s2.shift % delt == 0)) {// they are on the same line
         if constexpr (reg)register_pair(this, cur_seg_idx, s_);
         return true;
@@ -875,11 +889,9 @@ public:
 
   IntersectionRegistrator* GetRegistrator() { return  remaper.registrator; };
 
-  template<bool remove_zero_seg>
   uint4 int_seg_from_real(uint4 n, TLineSegment1 sc[],int4 range)
   {
     // Converts real-coordinate segments into integer segments (scaled into [-range, range]).
-    // If remove_zero_seg==true, zero-length segments are skipped.
     REAL si = 0., co = 1.;
     auto mm_rect = get_rot_minmax(n, sc, si, co);
     auto x_transf = transf1D{ .shift = -mm_rect.ld.x - mm_rect.get_width() / 2.,
@@ -893,52 +905,43 @@ public:
 #endif
     TIntegerSegment s;
     uint4 i = 0;
+    uint4 n_zero_seg = 0;
     for (uint4 m = 0; m != n; ++m) {
       s.Init(sc[m], si, co, x_transf, y_transf);
-      if constexpr (remove_zero_seg) {
-        if (s.shift.is_zero()) continue;
-      }
+      if (s.shift.is_zero()) 
+          ++n_zero_seg;
       seg[i] = s;
       points[first_point(i)] = s.BegPoint();
       points[last_point(i)] = s.EndPoint();
       ++i;
     }
-    return i;
+    return i - n_zero_seg;
   }
 
 
-  template<bool remove_zero_seg = true>
   auto NoRemapInit(uint4 n, TLineSegment1* sc, IntersectionRegistrator* r, int4 range) {
     auto initial_SN = n;
     points = std::vector<TIntegerVect>(2 * n);
-
-    auto nonzero_N = int_seg_from_real<remove_zero_seg>(n, sc,range);
-    if constexpr (remove_zero_seg)
-      initial_SN = nonzero_N;
+    auto nonzero_N = int_seg_from_real(n, sc,range);
     SetRegistrator(r);
     remaper.init(initial_SN, nonzero_N);
   };
 
-  template<bool remove_zero_seg = true>
   void NoRemapInit(uint4 n, TIntegerSegment* sc, IntersectionRegistrator* r, int4 range) {
     auto initial_SN = n;
     points = std::vector<TIntegerVect>(2 * n);
-
-    //this->range = range;
     uint4 i = 0;
+    uint4 n_zero_seg = 0;
     auto seg = set_size(segments, n);
     for (uint4 m = 0; m != n; ++m) {
-      if constexpr (remove_zero_seg) {
-        if (sc[m].shift.is_zero()) continue;
-      }
+      if (sc[m].shift.is_zero())
+        ++n_zero_seg;
       seg[i] = sc[m];
       points[first_point(i)] = sc[m].BegPoint();
       points[last_point(i)] = sc[m].EndPoint();
       ++i;
     }
-    auto nonzero_N = i;
-    if constexpr (remove_zero_seg)
-      initial_SN = nonzero_N;
+    auto nonzero_N = i - n_zero_seg;
     SetRegistrator(r);
     remaper.init(initial_SN, nonzero_N);
   };
