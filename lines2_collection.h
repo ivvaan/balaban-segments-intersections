@@ -88,12 +88,7 @@ public:
     }
   }
 
-  void Reset()
-  {
-    MY_FREE_ARR_MACRO(ENDS);
-    MY_FREE_ARR_MACRO(seg_L_rank);
-    MY_FREE_ARR_MACRO(seg_R_rank);
-  }
+
 
   static bool is_last(uint4 pt){
     return pt & 2;
@@ -316,6 +311,37 @@ public:
   bool UnderCurPoint(int4 s_) const { return collection[s_].a * cur_point.x + collection[s_].b < cur_point.y; };//returns true if s is under current point 
   bool UnderActiveEnd(int4 s_) const { return collection[s_].a * active_end.x + collection[s_].b < active_end.y; };//returns true if s is under current point 
 
+
+  void ResetRegistration()
+  {
+    if (factory) {// only main collection has factory, not clones
+      if (registrator)//regstrar of main collection, clones will reset via factory
+        registrator->Reset();
+      factory->Reset();
+    }
+  }
+
+  void CombineRegData()
+  {
+    if (factory) {// only main collection has factory, not clones
+      factory->combine_reg_data();
+    }
+  }
+
+
+  void IntersectionsFindingDone()
+  {// to be called after all intersections found
+// empty function for the future use
+  }
+
+  void Reset()
+  {
+    MY_FREE_ARR_MACRO(ENDS);
+    MY_FREE_ARR_MACRO(seg_L_rank);
+    MY_FREE_ARR_MACRO(seg_R_rank);
+  }
+
+
   void PrepareEndpointsSortedList(uint4* epoints)// endpoints allocated by caller and must contain space for at least 2*GetSegmNumb() points 
   {
     auto NN = N << 1;
@@ -403,10 +429,10 @@ public:
     clone(coll, r);
   }
 
-  CLine2SegmentCollection(CLine2SegmentCollection& coll, uint4 thread_index) :factory(coll.factory)
+  CLine2SegmentCollection(CLine2SegmentCollection& coll, uint4 thread_index) 
   {
-    if (factory)
-      clone(coll, factory->GetRegistrator(thread_index));
+    if (coll.factory)
+      clone(coll, coll.factory->GetRegistrator(thread_index));
     else
       clone(coll, coll.GetRegistrator());
   }

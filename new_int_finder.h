@@ -47,6 +47,7 @@ public:
         segments.TrivCurSegIntWith(j);
 
     }
+    segments.IntersectionsFindingDone();
   };
 
 };
@@ -87,6 +88,7 @@ public:
                 ++pos;
             }
         }
+        segments.IntersectionsFindingDone();
     };
 };
 

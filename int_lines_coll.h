@@ -486,16 +486,6 @@ public:
     L_size = last_res - L;
   }
 
-  void Reset()
-  {
-    MY_FREE_ARR_MACRO(ENDS);
-    MY_FREE_ARR_MACRO(seg_L_rank);
-    MY_FREE_ARR_MACRO(seg_R_rank);
-    MY_FREE_ARR_MACRO(tmp);
-  }
-
-
-
   static void reg_pair(CIntegerSegmentCollection* c, uint4 s1, uint4 s2) {
     c->remaper.registrator->register_pair(s1, s2);
   };
@@ -805,6 +795,35 @@ public:
   };
 
 
+  void ResetRegistration()
+  {
+    if (factory) {// only main collection has factory, not clones
+      if (GetRegistrator())//regstrar of main collection, clones will reset via factory
+        GetRegistrator()->Reset();
+      factory->Reset();
+    }
+  }
+
+  void CombineRegData()
+  {
+    if (factory) {// only main collection has factory, not clones
+      factory->combine_reg_data();
+    }
+  }
+
+  void IntersectionsFindingDone()
+  {// to be called after all intersections found
+// empty function for the future use
+  }
+
+  void Reset()
+  {
+    MY_FREE_ARR_MACRO(ENDS);
+    MY_FREE_ARR_MACRO(seg_L_rank);
+    MY_FREE_ARR_MACRO(seg_R_rank);
+    MY_FREE_ARR_MACRO(tmp);
+  }
+
   void clone(CIntegerSegmentCollection &c, IntersectionRegistrator *r)
   {
       clone_of = &c;
@@ -1032,10 +1051,10 @@ public:
     clone(coll, r);
   }
 
-  CIntegerSegmentCollection(CIntegerSegmentCollection& coll, uint4 thread_index):factory(coll.factory)
+  CIntegerSegmentCollection(CIntegerSegmentCollection& coll, uint4 thread_index)
   {
-    if (factory)
-      clone(coll, factory->GetRegistrator(thread_index));
+    if (coll.factory)
+      clone(coll, coll.factory->GetRegistrator(thread_index));
     else
       clone(coll, coll.GetRegistrator());
   }

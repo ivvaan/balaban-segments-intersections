@@ -55,6 +55,7 @@ public:
     InsDel(segments, 0, &stack_rec);
     FindR(segments, bottom_index + 1, bottom_index, 0, nTotX - 1, &stack_rec, 0);
     InsDel(segments, nTotX - 1, &stack_rec);
+    segments.IntersectionsFindingDone();
  }
 
   template<class SegmentsColl>

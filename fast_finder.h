@@ -70,6 +70,8 @@ public:
     else //parallel call
       FindR(*this, segments, bottom_index, from, to, &stack_rec/*, 0, get_max_call(to - from)*/);
     InsDel(segments, to, &stack_rec);
+    if(not_parallel)
+      segments.IntersectionsFindingDone();
   }
 
   template<class SegmentsColl>
@@ -100,6 +102,7 @@ public:
     for (auto& cur_thread : wrk_threads)
       cur_thread.join(); //waiting for calculation of all threads are finished
 #endif
+    segments.IntersectionsFindingDone();
   }
 
   template<class SegmentsColl>

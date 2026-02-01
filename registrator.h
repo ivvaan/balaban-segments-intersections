@@ -61,6 +61,13 @@ public:
     : main_reg_owner(std::make_unique<Registrar>())
   {}
 
+  void Reset()
+  {
+    reg_objects.clear();
+    reg_pointers.clear();
+    //nSegm = 0;
+  }
+
   void InitClone(uint4 n_threads)
   {
       reg_objects.resize((n_threads-1) * reg_margin);
@@ -105,6 +112,10 @@ public:
     return  main_reg_owner->get_stat(stat_type);
   };
 
+  void write_SVG(uint4 alg, chostream* SVG_text) {
+    main_reg_owner->write_SVG(alg, SVG_text);
+  }
+
 };
 
 template <uint4 r_type = 0>
@@ -135,6 +146,8 @@ public:
     }
   };
   void Alloc(uint4 _N) {};
+
+  void Reset() { counter = 0; };
 
   void Flash() {};
 
@@ -172,6 +185,13 @@ public:
       segm_counters = new uint4[N];
       std::fill_n(segm_counters,N,0);
     }
+  };
+
+  void Reset() 
+  { 
+    counter = 0; 
+    if(segm_counters)
+      std::fill_n(segm_counters,N,0);
   };
 
   void Flash() {};
@@ -217,6 +237,11 @@ public:
 
 
   ~PairRegistrator() {
+  };
+
+  void Reset() {
+    intersections.clear();
+    counter = 0;
   };
 
   void Flash() {};
@@ -356,7 +381,10 @@ public:
 
   ~PairAndPointRegistrator() {
   };
-
+  void Reset() {
+    intersections.clear();
+    counter = 0;
+  };
   void Flash() {};
 
   void register_pair(uint4 s1, uint4 s2) noexcept {

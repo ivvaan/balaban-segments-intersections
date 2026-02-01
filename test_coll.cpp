@@ -187,10 +187,7 @@ auto find_int(int4 n, SegColl& coll, int4 alg)
 };
 
 template<class Counter>
-uint8 _find_int(const SegmentsAndRegOptions& opt, PSeg segs, int4 alg)
-{
-  CRegistratorFactory<Counter> reg;
-  reg.PrepareAlloc(opt.n);
+void RegisterAllIntersection(const SegmentsAndRegOptions& opt, PSeg segs, int4 alg, CRegistratorFactory<Counter>& reg) {
   switch (opt.seg_type) {
   case _Segment::line1: {
     CLine1SegmentCollection<Counter> coll(opt.n, segs, &reg);
@@ -213,8 +210,19 @@ uint8 _find_int(const SegmentsAndRegOptions& opt, PSeg segs, int4 alg)
     find_int(opt.n, coll, alg);
   }; break;
   };
-  reg.combine_reg_data();
-  return reg.get_stat(opt.reg_stat);
+
+}
+
+
+
+template<class Counter>
+uint8 _find_int(const SegmentsAndRegOptions& opt, PSeg segs, int4 alg)
+{
+  CRegistratorFactory<Counter> reg_factory;
+  reg_factory.PrepareAlloc(opt.n);
+  RegisterAllIntersection(opt, segs, alg, reg_factory);
+  reg_factory.combine_reg_data();
+  return reg_factory.get_stat(opt.reg_stat);
 };
 
 find_intersections_func get_find_intersections_func(uint4 reg_type)
@@ -231,40 +239,36 @@ void write_SVG(std::ostream* svg_stream, const SegmentsAndRegOptions& opt, PSeg 
 {
   if (!svg_stream)
     return;
-
-  auto apply_algs = [&](auto& coll) {
-    coll.coll_to_SVG(svg_stream);
-    for (int4 a = sizeof(alg_list) / sizeof(alg_list[0]) - 1; a > -1; --a)
-      if (algs & alg_list[a]) {
-        auto alg = alg_list[a];
-        TrueRegistrator reg;
-        coll.SetRegistrator(&reg);
-        find_int(opt.n, coll, alg);
-        reg.write_SVG(alg, svg_stream);
-      }
-    };
-
-  switch (opt.seg_type) {
+  switch (opt.seg_type) {//first draw segments
     case _Segment::intline: {
       CIntegerSegmentCollection<SimpleCounter> coll(opt.n, (TLineSegment1*)segs, (SimpleCounter *)nullptr, opt.range_for_int_seg);
       coll.coll_to_SVG(svg_stream);
     }; break;
     case _Segment::line1: {
-      CLine1SegmentCollection<TrueRegistrator> coll(opt.n, segs,(TrueRegistrator*) nullptr);
-      apply_algs(coll);
+      CLine1SegmentCollection<SimpleCounter> coll(opt.n, segs, (SimpleCounter*)nullptr);
+      coll.coll_to_SVG(svg_stream);
     }; break;
     case _Segment::line2: {
-      CLine2SegmentCollection<TrueRegistrator> coll(opt.n, segs, (TrueRegistrator*)nullptr);
-      apply_algs(coll);
+      CLine2SegmentCollection<SimpleCounter> coll(opt.n, segs, (SimpleCounter*)nullptr);
+      coll.coll_to_SVG(svg_stream);
     }; break;
     case _Segment::arc: {
-      CArcSegmentCollection<TrueRegistrator>  coll(opt.n, segs, (TrueRegistrator*)nullptr);
-      apply_algs(coll);
+      CArcSegmentCollection<SimpleCounter>  coll(opt.n, segs, (SimpleCounter*)nullptr);
+      coll.coll_to_SVG(svg_stream);
     }; break;
     case _Segment::graph: {
-      CGraphSegmentCollection<TrueRegistrator> coll(opt.n, segs, (TrueRegistrator*)nullptr);
-      apply_algs(coll);
+      CGraphSegmentCollection<SimpleCounter> coll(opt.n, segs, (SimpleCounter*)nullptr);
+      coll.coll_to_SVG(svg_stream);
     }; break;
   };
+  for (int4 a = sizeof(alg_list) / sizeof(alg_list[0]) - 1; a > -1; --a)
+    if (algs & alg_list[a]) {//draw intersections found by alg_list[a]
+      auto alg = alg_list[a];
+      CRegistratorFactory<TrueRegistrator> reg_factory;
+      reg_factory.PrepareAlloc(opt.n);
+      RegisterAllIntersection(opt, segs, alg, reg_factory);
+      reg_factory.combine_reg_data();
+      reg_factory.write_SVG(alg, svg_stream);
+    }
 };
 
