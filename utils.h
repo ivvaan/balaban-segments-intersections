@@ -352,7 +352,7 @@ struct minmaxrect {
     return rt.x - ld.x;
   }
   auto get_height() const {
-    return rt.x - ld.x;
+    return rt.y - ld.y;
   }
 
   minmaxrect get_scaled(REAL factor) {// enlage rectangle into factor times 

@@ -38,7 +38,7 @@ public:
     uint4 remap_size = 0;
     remapped_SN = 0;
 
-    bool not_remapped = initial_SN == nonzero_N;
+    bool not_remapped = true;// initial_SN == nonzero_N;
     for (int4 i = 0, size = 0; i < (int4)N; ++i) {
       auto pt = indexes[i];
       size += is_last(pt) ? -1 : 1;
@@ -53,9 +53,11 @@ public:
         }
       };
     }
-    not_remapped = not_remapped && (remapped_SN == initial_SN) ;
-    if (not_remapped)
+    not_remapped = not_remapped && (remapped_SN == nonzero_N) ;
+    if (not_remapped) {
+      remapped_SN = initial_SN;
       return true;//not remapped
+    }
     rrec = set_size(rrec_v, remapped_SN);
     auto remap = set_size(remap_v, remap_size);
 
@@ -118,6 +120,63 @@ public:
     remap_size = remaper_pos;
     return not_remapped;
   }
+
+  template<bool leave_zero_seg = false>
+  auto TurnRemapOn(CTHIS& collection) {
+    auto points = std::move(collection.points);
+    seg_v = std::move(collection.segments);
+    seg = seg_v.data();
+    std::vector<uint4> indexes;
+    auto n = initial_SN;
+    indexes.reserve(2 * n);
+
+    for (uint4 i = 0; i < 2 * n; ++i)
+      if (leave_zero_seg || seg[get_segm(i)].shift.is_non_zero())
+        indexes.push_back(i);
+
+    nonzero_N = indexes.size() / 2;
+
+    auto comparator = [segments = seg, pts = points.data()](uint4 pt1, uint4 pt2) {
+      auto i1 = get_segm(pt1);
+      auto i2 = get_segm(pt2);
+      if (i1 == i2)
+        return pt1 < pt2; //same segment
+      auto& s1 = segments[i1];
+      auto& s2 = segments[i2];
+      auto S = s1.shift % s2.shift;
+      if (S != 0)//segments non parallel
+        return S < 0;
+      //segments parallel
+      auto shift = s1.shift;// +s2.shift;
+      assert(shift.is_non_zero());
+      auto oo = pts[pt2] - pts[pt1];
+      S = shift % oo;
+      if (S != 0)// segments on different lines
+        return  S < 0;
+      //segments parallel and lies on one line
+      auto prod = oo * shift;
+      if (prod != 0)// points not coinside
+        return  0 < prod;
+      // points coinside
+      if (is_last(pt1) != is_last(pt2))
+        return is_last(pt1) > is_last(pt2); //different segments end first
+      return pt1 < pt2;
+      };
+
+    std::sort(indexes.begin(), indexes.end(), comparator);
+
+    bool not_remapped = prepare_remap(indexes, points.data(), collection.segments, collection.points);
+    if (not_remapped) {
+      collection.segments = std::move(seg_v);
+      collection.points = std::move(points);
+      return false;
+    }
+    remapped_segs = collection.segments.data();
+    remapped_ends = collection.points.data();
+
+    return true;
+  };
+
 
   void register_pair(uint4 s1, uint4 s2, uint4 int_type) {
     auto orig_int_type = seg[s1].get_int_type_beg(seg[s2]);
@@ -222,66 +281,10 @@ public:
     return;
   };
 
-  template<bool leave_zero_seg = false>
-  auto TurnRemapOn(CTHIS& collection) {
-    auto points = std::move(collection.points);
-    seg_v = std::move(collection.segments);
-    seg = seg_v.data();
-    std::vector<uint4> indexes;
-    auto n = initial_SN;
-    indexes.reserve(2 * n);
-
-    for (uint4 i = 0; i < 2 * n; ++i)
-      if (leave_zero_seg || seg[get_segm(i)].shift.is_non_zero())
-        indexes.push_back(i);
-
-    nonzero_N = indexes.size() / 2;
-
-    auto comparator = [segments = seg, pts = points.data()](uint4 pt1, uint4 pt2) {
-      auto i1 = get_segm(pt1);
-      auto i2 = get_segm(pt2);
-      if (i1 == i2)
-        return pt1 < pt2; //same segment
-      auto& s1 = segments[i1];
-      auto& s2 = segments[i2];
-      auto S = s1.shift % s2.shift;
-      if (S != 0)//segments non parallel
-        return S < 0;
-      //segments parallel
-      auto shift = s1.shift;// +s2.shift;
-      assert(shift.is_non_zero());
-      auto oo = pts[pt2] - pts[pt1];
-      S = shift % oo;
-      if (S != 0)// segments on different lines
-        return  S < 0;
-      //segments parallel and lies on one line
-      auto prod = oo * shift;
-      if (prod != 0)// points not coinside
-        return  0 < prod;
-      // points coinside
-      if (is_last(pt1) != is_last(pt2))
-        return is_last(pt1) > is_last(pt2); //different segments end first
-      return pt1 < pt2;
-      };
-
-    std::sort(indexes.begin(), indexes.end(), comparator);
-
-    bool not_remapped = prepare_remap(indexes, points.data(), collection.segments, collection.points);
-    if (not_remapped) {
-      collection.segments = std::move(seg_v);
-      collection.points = std::move(points);
-      return false;
-    }
-    remapped_segs = collection.segments.data();
-    remapped_ends = collection.points.data();
-
-    return true;
-  };
 
   TIntegerSegment& get_original_segment(uint4 s) {
     return seg[s];
   }
-
 
   auto get_N() {
     return remapped_SN;

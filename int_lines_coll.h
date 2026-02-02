@@ -133,29 +133,15 @@ public:
     }
     return { unique_count, duplicated_elements_count };
   }
-  template<bool filter_zero_length = true>
   uint4 PrepareEndpointsSortedList(uint4* epoints)
   {
     // Fills `epoints` with all endpoint indices `[0..2*nSegments)` and sorts them by:
     // X, then Y, then (first before last), then angular tie-break for stable ordering.
     // The output is later collapsed into "multi-events" (same-X groups) in `Prepare()`.
-    uint4 nPoints = 0;
-    if constexpr (filter_zero_length) {
-      // Filter out zero-length segments.
-      uint4 nSeg = GetSegmNumb();
-      for (uint4 s = 0; s < nSeg; ++s) {
-        if (collection[s].shift.is_non_zero())
-        {
-          epoints[nPoints++] = first_point(s);
-          epoints[nPoints++] = last_point(s);
-        }
-      }
-    }
-    else {
-      nPoints = GetSegmNumb() << 1;
-      std::iota(epoints, epoints + nPoints, 0);
-    }
-
+    uint4 nPoints=0;
+    for (auto NN = GetSegmNumb() << 1, i = 0U; i < NN; ++i)
+      if (collection[get_segm(i)].shift.is_non_zero())
+        epoints[nPoints++] = i;
     auto is_below = [pts = pts, coll = collection](uint4 pt1, uint4 pt2) {
       if (pts[pt1].x != pts[pt2].x)
         return pts[pt1].x < pts[pt2].x;
@@ -200,7 +186,7 @@ public:
     if (nSeg == 0) return {};
     auto __tmpENDS__ = std::make_unique<uint4[]>(nSeg*2);
     uint4* tmpENDS = __tmpENDS__.get();
-    uint4 nEnds = PrepareEndpointsSortedList<false>(tmpENDS);
+    uint4 nEnds = PrepareEndpointsSortedList(tmpENDS);
 
     auto [nX, nV] = get_dublicate_stat(nEnds, tmpENDS);
     auto nAll = nEnds + nV;
@@ -908,6 +894,7 @@ public:
     uint4 n_zero_seg = 0;
     for (uint4 m = 0; m != n; ++m) {
       s.Init(sc[m], si, co, x_transf, y_transf);
+      assert(s.is_inside_int_range());
       if (s.shift.is_zero()) 
           ++n_zero_seg;
       seg[i] = s;
@@ -934,6 +921,7 @@ public:
     uint4 n_zero_seg = 0;
     auto seg = set_size(segments, n);
     for (uint4 m = 0; m != n; ++m) {
+      assert(sc[m].is_inside_int_range());
       if (sc[m].shift.is_zero())
         ++n_zero_seg;
       seg[i] = sc[m];
@@ -978,8 +966,6 @@ public:
     factory->PrepareAlloc(n);
     Init(n, c, factory->GetRegistrator(0),range);
   }
-
-
 
   void FromIntSegVect(std::vector<TIntegerSegment> &v, IntersectionRegistrator* r)
   {

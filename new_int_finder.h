@@ -289,23 +289,20 @@ protected:
   {
     auto last_L = _L + L_size;
     auto first_L = _L + 1;
-    auto _Q_pos = _Q;
+    int4 * _Q_pos = _Q + 1;
     auto T_pos = GetQTail();
     do
     {
       auto new_L_pos = _L;
-      _Q_pos = _Q;
-      segments.SetCurSegCutBE(*++_Q_pos = _L[0]);
+      *_Q_pos = _L[0];
+      if constexpr (SegmentsColl::get_coll_flag(_Coll_flags::needs_SetCurSegCutBE_at_start) == _Coll_flag_state::state_true)
+        segments.SetCurSegCutBE(_L[0]);
       auto Q_tail = T_pos;
       auto cur_L = first_L;
       for (CSentinel sentinel(segments , *_Q); cur_L < last_L; ++cur_L)
       {
         segments.SetCurSegCutBE(*cur_L);
         
-        //auto step = _Q_pos;
-        //while ((step!=_Q) && (segments.FindCurSegIntDownWith(*step))) --step;
-        //if (_Q_pos == step)
-
         if (_Q_pos == segments.FindCurSegIntDownWith(_Q_pos, _Q))
           *++_Q_pos = *cur_L;
         else
@@ -329,10 +326,9 @@ protected:
         segments.FindCurSegIntUpWith(cur_Q, _Q_pos);
         cur_Q = _Q + *--Q_tail;
       }
-      _Q = --_Q_pos;
+      _Q = _Q_pos - 1;
       last_L = new_L_pos;
     } while (last_L > first_L);//L contains >1 segment
-//    if (last_L == first_L)
       *++_Q = _L[0];
   };
 
@@ -355,11 +351,12 @@ protected:
 };
 
 
-uint4 get_max_call(uint4 N) {
+/*inline uint4 get_max_call(uint4 N) {
     uint4 max_call = 24;
     for (; N; N >>= 1) max_call += 2;
     return max_call;
 };
+*/
 
 //#undef MY_FREE_ARR_MACRO
 #endif
