@@ -28,59 +28,115 @@ public:
     std::vector<TIntegerSegment>& res_coll,
     std::vector<TIntegerVect>& res_pts)
   {
-    // Takes endpoints sorted along each supporting line (see comparator in TurnRemapOn()),
-    // then builds a new collection where every maximal overlapping interval is split out
-    // as a separate segment.
+    // Input:
+    // - `indexes`: endpoint ids sorted by the comparator from TurnRemapOn().
+    //   Endpoint id is an encoded integer where:
+    //     - `get_segm(pt)` gives the segment index,
+    //     - `is_last(pt)` distinguishes start/end.
+    // - `points[pt]`: the integer endpoint coordinate for that encoded endpoint id.
     //
-    // `rrec[new_seg]` stores the back-reference list boundaries into `remap_v`,
-    // i.e., which original segments contributed to this new segment.
-    auto N = indexes.size();
-    uint4 remap_size = 0;
-    remapped_SN = 0;
+    // Output:
+    // - `res_coll` / `res_pts`: normalized (remapped) segments and their endpoints.
+    // - `rrec[new_seg]`: [beg,end) slice inside `remap_v` telling which original segments
+    //   contributed to the normalized segment `new_seg`.
+    //
+    // Key invariant relied upon by the sweep code:
+    // After normalization, on a given supporting line there are no overlapping 1D intervals.
+    // Any maximal collinear overlap is split into disjoint pieces; each piece remembers
+    // the list of original segments that cover it.
 
+    auto N = indexes.size();
+    uint4 remap_size = 0; // total number of back-references that will be stored in `remap_v`
+    remapped_SN = 0;      // total count of produced (normalized) segments
+
+    // Pass #1:
+    // Sweep over the sorted endpoints and determine:
+    // - how many normalized segments will be created (`remapped_SN`),
+    // - how many original-segment references we will need in total (`remap_size`).
+    //
+    // `size` is the current active set size on the current supporting line:
+    // it is incremented at "first" endpoints and decremented at "last" endpoints.
+    //
+    // For a non-degenerate interval between `indexes[i]` and `indexes[i+1]`:
+    // - if `size>0` and `points differ`, there is a real 1D piece covered by `size` segments.
+    //
+    // Degenerate (zero-length) intervals are normally ignored, BUT:
+    // - for true zero segments (segment length == 0) we *do* want to keep a piece even though
+    //   `beg==end`, because that piece represents an actual input segment.
+    //   This is handled by `allow_zero_len_piece` below.
     bool not_remapped = true;// initial_SN == nonzero_N;
     for (int4 i = 0, size = 0; i < (int4)N; ++i) {
       auto pt = indexes[i];
       size += is_last(pt) ? -1 : 1;
       assert(size >= 0);
+
       if (size != 0) {
         assert(i + 1 < N);
         auto next_pt = indexes[i + 1];
-        if (points[pt] != points[next_pt]) {
+
+        // If pt and next_pt belong to the same original segment, allow zero-length piece.
+        // For non-zero segments this is redundant (their endpoints differ anyway); for zero segments it's required.
+        auto allow_zero_len_piece = (get_segm(pt) == get_segm(next_pt));
+
+        // If there is a real-length interval OR we explicitly allow a zero-length one,
+        // then it will become a normalized segment piece.
+        if (allow_zero_len_piece || (points[pt] != points[next_pt])) {
+          // If `size>=2`, then we are splitting/normalizing overlapping parts => remap happens.
           not_remapped = not_remapped && size < 2;
+
+          // This normalized piece will carry `size` original segment ids in `remap_v`.
           remap_size += size;
           ++remapped_SN;
         }
       };
     }
-    not_remapped = not_remapped && (remapped_SN == nonzero_N) ;
+
+    // If normalization did not change anything (no overlaps and no split points introduced),
+    // we can return without producing remap tables.
+    not_remapped = not_remapped && (remapped_SN == nonzero_N);
     if (not_remapped) {
       remapped_SN = initial_SN;
       return true;//not remapped
     }
+
+    // Allocate remap tables:
+    // - `rrec_v` has one record per produced normalized segment (remapped_SN).
+    // - `remap_v` is a flat array of original segment indices; each normalized segment points
+    //   to its slice via `rrec[new_seg].beg/end`.
     rrec = set_size(rrec_v, remapped_SN);
     auto remap = set_size(remap_v, remap_size);
 
+    // Allocate normalized geometry buffers.
     set_size(res_coll, remapped_SN);
     set_size(res_pts, 2 * remapped_SN);
 
-    uint4 remaper_pos = 0;
-    uint4 new_seg_num = 0;
+    // Pass #2:
+    // Re-run the sweep, maintain the active set, and actually emit normalized segments.
+    //
+    // `stack` holds the currently active original segment indices on the current line.
+    // For each emitted normalized piece we:
+    // - copy `stack` into `remap_v`,
+    // - store the slice bounds into `rrec`,
+    // - store the geometry (beg/end points) into `res_coll` / `res_pts`.
+    uint4 remaper_pos = 0; // current write position inside `remap_v`
+    uint4 new_seg_num = 0; // current normalized segment index
 
     std::vector<uint4> stack;
     stack.reserve(nonzero_N);
 
     for (uint4 i = 0; i < N; ++i) {
       auto pt = indexes[i];
+
+      // Update active set.
       if (is_last(pt)) {
         remove_by_val(stack, get_segm(pt));
       }
       else {
         auto s = get_segm(pt);
 
-        // Every time a new segment enters an active overlap stack on the same line,
-        // it overlaps the currently active ones. Those "overlap intersections" can be
-        // recorded here while full 1D overlap information is available.
+        // When a segment becomes active on a line, it overlaps the ones already active on that line.
+        // That overlap is a "collinear intersection" and is easiest to register right here
+        // because we still have the full 1D overlap context.
         for (auto p : stack)
           registrator->register_pair(s, p);
 
@@ -95,33 +151,44 @@ public:
         auto beg = points[pt];
         auto end = points[next_pt];
 
-        if (beg != end) {
+        // Same special-case: keep a zero-length piece only when it is exactly a zero segment's endpoints.
+        // All other zero-length "gaps" between unrelated endpoints are ignored.
+        auto allow_zero_len_piece = (get_segm(pt) == get_segm(next_pt));
+
+        if (allow_zero_len_piece || (beg != end)) {
+          // Store back-references to original segments.
           std::copy(stack.begin(), stack.end(), remap + remaper_pos);
 
-          uint4 is_mapped_entirely = 0;
-          if (size == 1) {
-            auto s = remap[remaper_pos];
-            if (pt == first_point(s) && (next_pt == last_point(s)))
-              is_mapped_entirely = 1;
-          }
+          // flags: for fast path in register_pair(s1,s2):
+          // If a normalized segment maps to exactly one original segment AND corresponds to
+          // that original segment entirely, we can skip list expansion later.
+          //
+          // For an allowed zero-length piece (which is always "entirely" that segment),
+          // this is true whenever only one segment is active.
+          uint4 is_mapped_entirely = allow_zero_len_piece && (size == 1);
 
           rrec[new_seg_num] = { remaper_pos, remaper_pos + size, is_mapped_entirely };
           remaper_pos += size;
 
+          // Store normalized geometry.
           res_coll[new_seg_num] = { beg, end };
           res_pts[first_point(new_seg_num)] = beg;
           res_pts[last_point(new_seg_num)] = end;
+
           ++new_seg_num;
         }
       }
     }
 
+    // Consistency checks.
     assert(remapped_SN == new_seg_num);
     remap_size = remaper_pos;
+
+    // If we got here, remap definitely happened.
     return not_remapped;
   }
 
-  template<bool leave_zero_seg = false>
+  template<bool leave_zero_seg = true>
   auto TurnRemapOn(CTHIS& collection) {
     auto points = std::move(collection.points);
     seg_v = std::move(collection.segments);
@@ -141,29 +208,73 @@ public:
       auto i2 = get_segm(pt2);
       if (i1 == i2)
         return pt1 < pt2; //same segment
+
       auto& s1 = segments[i1];
       auto& s2 = segments[i2];
-      auto S = s1.shift % s2.shift;
+
+      // Treat "zero segments" (degenerate to a point) as vertical for grouping purposes,
+      // and force their endpoints to come first when point coordinates coincide.
+      auto is_zero1 = s1.shift.is_zero();
+      auto is_zero2 = s2.shift.is_zero();
+
+      TIntegerVect shift1 = is_zero1 ? TIntegerVect(0, 1) : s1.shift;
+      TIntegerVect shift2 = is_zero2 ? TIntegerVect(0, 1) : s2.shift;
+
+      auto S = shift1 % shift2;
       if (S != 0)//segments non parallel
         return S < 0;
+
       //segments parallel
-      auto shift = s1.shift;// +s2.shift;
+      auto shift = shift1;// +shift2;
       assert(shift.is_non_zero());
       auto oo = pts[pt2] - pts[pt1];
       S = shift % oo;
       if (S != 0)// segments on different lines
         return  S < 0;
+
       //segments parallel and lies on one line
       auto prod = oo * shift;
       if (prod != 0)// points not coinside
         return  0 < prod;
-      // points coinside
+      // here points coinside, but segments can be different (zero-seg can coincide with non-zero seg)
       if (is_last(pt1) != is_last(pt2))
         return is_last(pt1) > is_last(pt2); //different segments end first
+      // Both endpoints are at the same coordinate and are of the same kind (both first or both last).
+      // Among FIRST endpoints: zero first. Among LAST endpoints: non-zero first.
+      // here is_last(pt1) == is_last(pt2)
+      if (is_zero1 != is_zero2)
+        return is_last(pt1) ? (is_zero1 < is_zero2) : (is_zero2 < is_zero1);
+        //return is_last(pt1) == (is_zero1 < is_zero2);
+
+      // add consistent tie-breaker for stable sort
       return pt1 < pt2;
       };
 
     std::sort(indexes.begin(), indexes.end(), comparator);
+
+    // Zero-length (degenerate) segments are allowed (see comparator/prepare_remap), but the algorithm
+    // assumes that there are NO two distinct zero segments that coincide as points.
+    // Coinciding zero segments would create ambiguous endpoint ordering and can break sweep invariants.
+
+#ifndef NDEBUG
+    {
+      for (uint4 i = 1; i < (uint4)indexes.size(); ++i) {
+        auto pt1 = indexes[i - 1];
+        auto pt2 = indexes[i];
+        if (points[pt1] != points[pt2])
+          continue;
+
+        auto s1 = get_segm(pt1);
+        auto s2 = get_segm(pt2);
+        if (s1 == s2)
+          continue;
+
+        // At the same coordinate, two different segments are both zero => forbidden case.
+        assert(!(seg[s1].shift.is_zero() && seg[s2].shift.is_zero()));
+      }
+    }
+#endif
+
 
     bool not_remapped = prepare_remap(indexes, points.data(), collection.segments, collection.points);
     if (not_remapped) {
@@ -330,6 +441,11 @@ private:
   //CRemaper* clone_of = nullptr;
 
 };
+
+
+
+
+
 
 
 

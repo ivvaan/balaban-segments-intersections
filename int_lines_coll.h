@@ -371,6 +371,7 @@ public:
     auto prev_vert = vertical_segments[0];
     for (uint4 i = 1; i < v_size; ++i) { // vertical-vertical intersections
       auto cur_vert = vertical_segments[i];
+      // fix me: check for zero-length vertical segments!!
       if (pts[first_point(cur_vert)].y == pts[last_point(prev_vert)].y)
         register_pair(this, prev_vert, cur_vert);
       prev_vert = cur_vert;
