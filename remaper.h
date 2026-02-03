@@ -197,6 +197,34 @@ public:
     auto n = initial_SN;
     indexes.reserve(2 * n);
 
+// Precondition: no two distinct zero-length segments coincide as points.
+// This must hold in release too; otherwise event ordering becomes ambiguous
+// and downstream degenerate-case handling can misbehave.
+    {
+      std::vector<TIntegerVect> zero_pts;
+      zero_pts.reserve(n);
+
+      for (uint4 s = 0; s < n; ++s) {
+        if (seg[s].shift.is_zero())
+          zero_pts.push_back(seg[s].BegPoint());
+      }
+
+      if (zero_pts.size() > 1) {
+        std::sort(zero_pts.begin(), zero_pts.end());
+
+        auto it = std::adjacent_find(zero_pts.begin(), zero_pts.end(),
+          [](TIntegerVect a, TIntegerVect b) { return a == b; });
+
+        // If you want hard-fail in release, keep assert + early return false.
+        // If you prefer throwing, replace with a throw (but this codebase seems assert-based).
+        assert(it == zero_pts.end());
+        if (it != zero_pts.end()) {
+          printf("Error: coinciding zero-length segments found during remapping.\n");
+          return false;
+        }
+      }
+    }
+
     for (uint4 i = 0; i < 2 * n; ++i)
       if (leave_zero_seg || seg[get_segm(i)].shift.is_non_zero())
         indexes.push_back(i);
@@ -244,36 +272,13 @@ public:
       // here is_last(pt1) == is_last(pt2)
       if (is_zero1 != is_zero2)
         return is_last(pt1) ? (is_zero1 < is_zero2) : (is_zero2 < is_zero1);
-        //return is_last(pt1) == (is_zero1 < is_zero2);
+        //return is_last(pt1) == is_zero2;
 
       // add consistent tie-breaker for stable sort
       return pt1 < pt2;
       };
 
     std::sort(indexes.begin(), indexes.end(), comparator);
-
-    // Zero-length (degenerate) segments are allowed (see comparator/prepare_remap), but the algorithm
-    // assumes that there are NO two distinct zero segments that coincide as points.
-    // Coinciding zero segments would create ambiguous endpoint ordering and can break sweep invariants.
-
-#ifndef NDEBUG
-    {
-      for (uint4 i = 1; i < (uint4)indexes.size(); ++i) {
-        auto pt1 = indexes[i - 1];
-        auto pt2 = indexes[i];
-        if (points[pt1] != points[pt2])
-          continue;
-
-        auto s1 = get_segm(pt1);
-        auto s2 = get_segm(pt2);
-        if (s1 == s2)
-          continue;
-
-        // At the same coordinate, two different segments are both zero => forbidden case.
-        assert(!(seg[s1].shift.is_zero() && seg[s2].shift.is_zero()));
-      }
-    }
-#endif
 
 
     bool not_remapped = prepare_remap(indexes, points.data(), collection.segments, collection.points);

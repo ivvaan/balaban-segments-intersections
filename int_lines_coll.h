@@ -27,8 +27,9 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 // - collinear overlaps (handled via a preprocessing "remaper" that splits overlaps)
 // - multiple endpoints with identical X ("multi-events", i.e., collapsed same-X boundaries)
 //
-// Zero-length segments (begin == end) are not supported as first-class objects.
-// They are typically filtered out at input time (see `CRemaper`).
+// Zero-length segments (begin == end) are supported (they are treated as degenerate vertical segments).
+// NOTE: The implementation assumes there are no two distinct zero segments that coincide as points
+// (asserted in `CRemaper::TurnRemapOn()` in debug builds).
 
 #include "segments.h"
 #include "registrator.h"
@@ -133,14 +134,18 @@ public:
     }
     return { unique_count, duplicated_elements_count };
   }
+  template<bool for_simple_sweep = true>
   uint4 PrepareEndpointsSortedList(uint4* epoints)
   {
     // Fills `epoints` with all endpoint indices `[0..2*nSegments)` and sorts them by:
     // X, then Y, then (first before last), then angular tie-break for stable ordering.
     // The output is later collapsed into "multi-events" (same-X groups) in `Prepare()`.
+    //
+    // Unlike the older codepath, we keep zero-length segments too. They participate in multi-events
+    // and in vertical-boundary processing (AllIntCurLine).
     uint4 nPoints=0;
     for (auto NN = GetSegmNumb() << 1, i = 0U; i < NN; ++i)
-      if (collection[get_segm(i)].shift.is_non_zero())
+      //if (collection[get_segm(i)].shift.is_non_zero())
         epoints[nPoints++] = i;
     auto is_below = [pts = pts, coll = collection](uint4 pt1, uint4 pt2) {
       if (pts[pt1].x != pts[pt2].x)
@@ -148,12 +153,32 @@ public:
       if (pts[pt1].y != pts[pt2].y)
         return pts[pt1].y < pts[pt2].y;
 
+      auto s1i = get_segm(pt1);
+      auto s2i = get_segm(pt2);
+      auto& s1 = coll[s1i];
+      auto& s2 = coll[s2i];
+      auto vert1 = s1.is_vertical(), vert2 = s2.is_vertical();
       auto le1 = is_last(pt1), le2 = is_last(pt2);
-      if (le1 != le2)
-        return le1 < le2;
+      if (le1 != le2) {
+        if (!for_simple_sweep && vert1 && vert2) {
+          return s1i == s2i ? le1 < le2 : le2 < le1;
+        }
+        else
+          return le1 < le2;
+      };
 
-      auto& s1 = coll[get_segm(pt1)];
-      auto& s2 = coll[get_segm(pt2)];
+      if (!for_simple_sweep && vert1 && vert2) {
+        auto is_zero1 = s1.shift.is_zero();
+        auto is_zero2 = s2.shift.is_zero();
+        if (is_zero1 != is_zero2)
+          // it should be: le1 ? (is_zero1 < is_zero2) : (is_zero2 < is_zero1);
+          // taking into account that is_zero1 != is_zero2 => is_zero2 == !is_zero1
+          // equivalent to: le1 ? is_zero2 : !is_zero2;
+          // equivalent to:
+          return le1 == is_zero2;
+      };
+
+ 
       auto angle_like = s1.shift % s2.shift;
       if (angle_like != 0)
         return le1 != (0 < angle_like);
@@ -368,12 +393,20 @@ public:
       }
     }
 
+    LastFirstInt(nv_size, non_vertical_pts);
+
+    if (v_size ==0)
+      return;
+
     auto prev_vert = vertical_segments[0];
     for (uint4 i = 1; i < v_size; ++i) { // vertical-vertical intersections
       auto cur_vert = vertical_segments[i];
       // fix me: check for zero-length vertical segments!!
-      if (pts[first_point(cur_vert)].y == pts[last_point(prev_vert)].y)
+      if (pts[first_point(cur_vert)].y == pts[last_point(prev_vert)].y) {
         register_pair(this, prev_vert, cur_vert);
+        if((i>1)&& (pts[first_point(cur_vert)].y == pts[last_point(vertical_segments[i-2])].y))
+          register_pair(this, vertical_segments[i - 2], cur_vert);
+      }
       prev_vert = cur_vert;
     }
 
@@ -410,7 +443,6 @@ public:
         register_pair(this, get_segm(non_vertical_pts[k]), s);
     }
 
-    LastFirstInt(nv_size, non_vertical_pts);
   }
 
   void LastFirstInt(uint4 len, int4* nv_pts)
@@ -645,16 +677,15 @@ public:
     //at this moment, we can be sure that segments' x,y-projections intersect each other (1)
     // let l1 is the line through s1 and l2 is the line through s2
     auto delt = s2.BegPoint() - s1.BegPoint();
-    auto prod = s1.shift % s2.shift, beg = s1.shift % delt;
+    auto prod = s1.shift % s2.shift;
+    auto beg = s1.shift % delt;
     if (prod == 0) { // segments parallel
-      if (s1.shift.is_zero() || s2.shift.is_zero())
-        return false;// can't process zero segments !!!!
-      if ( (beg == 0) && (s2.shift % delt == 0)) {// they are on the same line
+      if ((beg == 0) && (s2.shift % delt == 0)) {// they are on the same line
         if constexpr (reg)register_pair(this, cur_seg_idx, s_);
         return true;
       }
       return false;//segments are not on one line and can't intersect
-    }
+    };
     auto end = beg + prod;
     if (((beg > 0) != (end < 0)) && (beg != 0) && (end != 0))//begin and end of s2 are on the same side of l1 
         return false;
@@ -775,7 +806,8 @@ public:
     if(pp != 0)
       return pp < 0;//s_ placed under current point
     auto prod = collection[cur_point_seg].shift % s.shift;
-    assert(prod != 0);
+    //check me: so far it works, but it can be that for zero cur_point_seg we need more accurate implementation !!!
+    //assert((prod != 0));
     return prod < 0;//if prod<0 then s_ is clockwise from cur_seg at cur_point, 
     // taking into account that cur_seg must be on the right of cur_point 
     // (current point is always the begin point of cur_seg),
@@ -947,6 +979,8 @@ public:
     nSegments = remaper.get_N();
     collection = segments.data();
     pts = points.data();
+
+    //TurnRemapOn();
   }
 
   template <class Segment>

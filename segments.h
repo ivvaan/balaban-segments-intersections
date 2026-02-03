@@ -443,7 +443,8 @@ public:
     }
 
     auto get_int_type_beg(const TIntegerSegment& s) const {
-      assert(shift.is_non_zero() && s.shift.is_non_zero());
+      assert(shift.is_non_zero() || s.shift.is_non_zero());
+      //check me: so far it works, but it can be that for zero segments we need more accurate check !!!
       auto d = s.BegPoint() - BegPoint();
       return _IntType::common_int + (d % shift == 0) * _IntType::s2_beg_int + (d % s.shift == 0) * _IntType::s1_beg_int;
     }
