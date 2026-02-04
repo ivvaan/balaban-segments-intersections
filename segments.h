@@ -444,11 +444,32 @@ public:
 
     auto get_int_type_beg(const TIntegerSegment& s) const {
       assert(shift.is_non_zero() || s.shift.is_non_zero());
-      //check me: so far it works, but it can be that for zero segments we need more accurate check !!!
+
       auto d = s.BegPoint() - BegPoint();
+#ifndef EXCLUDE_ZERO_SEG
+      // `get_int_type_beg()` is a cheap "intersection-kind fingerprint" used to filter duplicates
+      // when expanding remapped (normalized) segment pairs back into original segment pairs.
+      //
+      // For non-degenerate segments it relies on orientation tests `d % shift == 0` that detect
+      // whether `s.BegPoint()` lies on the supporting line of `*this` and vice versa.
+      //
+      // Degenerate (zero-length) segments have `shift == {0,0}` and do not define a supporting line.
+      // For them we treat the segment as a single point P = BegPoint() and only report a "beg-touch"
+      // when the other segment's begin point is exactly the same point (d == 0). This makes the
+      // duplicate-filter logic consistent between original and remapped segments for zero segments.
+      if (shift.is_zero()) {
+        return _IntType::common_int + _IntType::s1_beg_int +
+          d.is_zero() * _IntType::s2_beg_int;
+      }
+
+      // Symmetric case: `s` is a point segment.
+      if (s.shift.is_zero()) {
+        return _IntType::common_int + _IntType::s2_beg_int +
+          d.is_zero() * _IntType::s1_beg_int;
+      }
+#endif
       return _IntType::common_int + (d % shift == 0) * _IntType::s2_beg_int + (d % s.shift == 0) * _IntType::s1_beg_int;
     }
-
 
     friend std::ostream& operator<<(std::ostream& os, const TIntegerSegment& s) {
       os <<"{"<<s.bx() << "," << s.by() << "," << s.sx() << "," << s.sy() << "}"; //" " <<double(s.shift.y)/ s.shift.x<< std::endl;

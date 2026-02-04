@@ -143,42 +143,57 @@ public:
     //
     // Unlike the older codepath, we keep zero-length segments too. They participate in multi-events
     // and in vertical-boundary processing (AllIntCurLine).
+#ifdef EXCLUDE_ZERO_SEG
     uint4 nPoints=0;
     for (auto NN = GetSegmNumb() << 1, i = 0U; i < NN; ++i)
-      //if (collection[get_segm(i)].shift.is_non_zero())
+      if (collection[get_segm(i)].shift.is_non_zero())
+
         epoints[nPoints++] = i;
+#else
+    uint4 nPoints = GetSegmNumb() << 1;
+    std::iota(epoints, epoints + nPoints, 0);
+#endif    
     auto is_below = [pts = pts, coll = collection](uint4 pt1, uint4 pt2) {
       if (pts[pt1].x != pts[pt2].x)
         return pts[pt1].x < pts[pt2].x;
       if (pts[pt1].y != pts[pt2].y)
         return pts[pt1].y < pts[pt2].y;
 
+      auto le1 = is_last(pt1), le2 = is_last(pt2);
       auto s1i = get_segm(pt1);
       auto s2i = get_segm(pt2);
       auto& s1 = coll[s1i];
       auto& s2 = coll[s2i];
-      auto vert1 = s1.is_vertical(), vert2 = s2.is_vertical();
-      auto le1 = is_last(pt1), le2 = is_last(pt2);
-      if (le1 != le2) {
-        if (!for_simple_sweep && vert1 && vert2) {
-          return s1i == s2i ? le1 < le2 : le2 < le1;
-        }
-        else
-          return le1 < le2;
-      };
 
-      if (!for_simple_sweep && vert1 && vert2) {
-        auto is_zero1 = s1.shift.is_zero();
-        auto is_zero2 = s2.shift.is_zero();
-        if (is_zero1 != is_zero2)
-          // it should be: le1 ? (is_zero1 < is_zero2) : (is_zero2 < is_zero1);
-          // taking into account that is_zero1 != is_zero2 => is_zero2 == !is_zero1
-          // equivalent to: le1 ? is_zero2 : !is_zero2;
-          // equivalent to:
-          return le1 == is_zero2;
-      };
+      if constexpr (for_simple_sweep) {
+        if (le1 != le2) {
+          return le2;
+        };
+      }
+      else{
+        auto vert1 = s1.is_vertical(), vert2 = s2.is_vertical();
 
- 
+        if (vert1 != vert2)
+          return vert2; // vertical segments are "above" non-vertical ones at shared endpoints.
+        // both vertical or both non-vertical
+        if (le1 != le2) 
+          return vert1 ? (s1i == s2i) == le2 : le2;
+
+        if (vert1) {
+          //ends of vertical segments both first or both last
+          //first -> zero - first
+          //last -> zero - last
+          auto is_zero1 = s1.shift.is_zero();
+          auto is_zero2 = s2.shift.is_zero();
+          if (is_zero1 != is_zero2)
+            // it should be: le1 ? (is_zero1 < is_zero2) : (is_zero2 < is_zero1);
+            // taking into account that is_zero1 != is_zero2 => is_zero2 == !is_zero1
+            // equivalent to: le1 ? is_zero2 : !is_zero2;
+            // equivalent to:
+            return le1 == is_zero2;
+        };
+      };
+      //ends of non-vertical segments both first or both last
       auto angle_like = s1.shift % s2.shift;
       if (angle_like != 0)
         return le1 != (0 < angle_like);
@@ -211,7 +226,7 @@ public:
     if (nSeg == 0) return {};
     auto __tmpENDS__ = std::make_unique<uint4[]>(nSeg*2);
     uint4* tmpENDS = __tmpENDS__.get();
-    uint4 nEnds = PrepareEndpointsSortedList(tmpENDS);
+    uint4 nEnds = PrepareEndpointsSortedList<false>(tmpENDS);
 
     auto [nX, nV] = get_dublicate_stat(nEnds, tmpENDS);
     auto nAll = nEnds + nV;
@@ -680,6 +695,11 @@ public:
     auto prod = s1.shift % s2.shift;
     auto beg = s1.shift % delt;
     if (prod == 0) { // segments parallel
+#ifdef EXCLUDE_ZERO_SEG
+      if (s1.shift.is_zero()||s2.shift.is_zero())
+        return false;//zero segments are excluded
+#endif
+
       if ((beg == 0) && (s2.shift % delt == 0)) {// they are on the same line
         if constexpr (reg)register_pair(this, cur_seg_idx, s_);
         return true;
@@ -1103,6 +1123,13 @@ public:
   auto &get_segments() {
     return segments;
   };
+
+  auto& get_ini_segments() {
+    if(is_collection_remapped)
+      return remaper.get_seg_v();
+    return segments;
+  };
+
 
   auto XAtRank(uint4 rank) const {
     auto pt = PointAtRank(rank);

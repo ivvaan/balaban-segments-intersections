@@ -28,6 +28,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <vector>
 //#define DEBUG_INTERSECTION_SET
+//#define EXCLUDE_ZERO_SEG
 
 typedef int int4;
 typedef unsigned int uint4;
