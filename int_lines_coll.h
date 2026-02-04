@@ -143,16 +143,16 @@ public:
     //
     // Unlike the older codepath, we keep zero-length segments too. They participate in multi-events
     // and in vertical-boundary processing (AllIntCurLine).
-#ifdef EXCLUDE_ZERO_SEG
-    uint4 nPoints=0;
-    for (auto NN = GetSegmNumb() << 1, i = 0U; i < NN; ++i)
-      if (collection[get_segm(i)].shift.is_non_zero())
-
-        epoints[nPoints++] = i;
-#else
-    uint4 nPoints = GetSegmNumb() << 1;
-    std::iota(epoints, epoints + nPoints, 0);
-#endif    
+    uint4 nPoints = 0;
+    if (exclude_zero_segs) {
+      for (auto NN = GetSegmNumb() << 1, i = 0U; i < NN; ++i)
+        if (collection[get_segm(i)].shift.is_non_zero())
+          epoints[nPoints++] = i;
+    }
+    else {
+      nPoints = GetSegmNumb() << 1;
+      std::iota(epoints, epoints + nPoints, 0);
+    }
     auto is_below = [pts = pts, coll = collection](uint4 pt1, uint4 pt2) {
       if (pts[pt1].x != pts[pt2].x)
         return pts[pt1].x < pts[pt2].x;
@@ -695,10 +695,8 @@ public:
     auto prod = s1.shift % s2.shift;
     auto beg = s1.shift % delt;
     if (prod == 0) { // segments parallel
-#ifdef EXCLUDE_ZERO_SEG
-      if (s1.shift.is_zero()||s2.shift.is_zero())
+      if(always_exclude_zero_segs() && (s1.shift.is_zero()||s2.shift.is_zero()))
         return false;//zero segments are excluded
-#endif
 
       if ((beg == 0) && (s2.shift % delt == 0)) {// they are on the same line
         if constexpr (reg)register_pair(this, cur_seg_idx, s_);
@@ -994,19 +992,50 @@ public:
        intersection points don't have integer coords ",
       (IntersectionRegistrator::reg_type & _RegistrationType::point) == 0));
     NoRemapInit(n, c, r, range);
+
+    // Precondition: no two distinct zero-length segments coincide as points.
+    // This must hold in release too; otherwise event ordering becomes ambiguous
+    // and downstream degenerate-case handling can misbehave.
+    exclude_zero_segs = false;
+    {
+      std::vector<TIntegerVect> zero_pts;
+      zero_pts.reserve(n);
+      for (auto& s : segments) 
+        if (s.shift.is_zero())
+          zero_pts.push_back(s.BegPoint());
+
+      if (zero_pts.size() > 1) {
+        std::sort(zero_pts.begin(), zero_pts.end());
+
+        auto it = std::adjacent_find(zero_pts.begin(), zero_pts.end(),
+          [](TIntegerVect a, TIntegerVect b) { return a == b; });
+
+        auto has_coinciding_zero_segs = (it != zero_pts.end());
+#ifndef NDEBUG
+        //        assert(!has_coinciding_zero_segs);
+#endif
+
+        if (has_coinciding_zero_segs)// Fallback: drop zero segments and proceed deterministically.
+        {
+          if (print_msg_on_coincide_zero())
+            printf("CRemaper: coinciding zero-length segments encounter. Dropping all zero-length segments and proceeding.\n");
+          exclude_zero_segs = true;
+        }
+      }
+    }
     is_collection_remapped = false;
     register_pair = reg_pair;
     nSegments = remaper.get_N();
     collection = segments.data();
     pts = points.data();
 
-    //TurnRemapOn();
   }
 
   template <class Segment>
-  CIntegerSegmentCollection(uint4 n, Segment* c, IntersectionRegistrator *r, int4 range)
+  CIntegerSegmentCollection(const CollectionOptions& co, Segment* c, IntersectionRegistrator *r)
   {
-    Init(n, c, r, range);
+    coincide_zero_segm_flags = co.coincide_zero_segm_flags;
+    Init(co.n, c, r, co.range_for_int_seg);
   }
 
   void InitClone(uint4 n_threads) {
@@ -1015,11 +1044,12 @@ public:
   }
 
   template <class Segment>
-  CIntegerSegmentCollection(uint4 n, Segment* c, CRegistratorFactory<IntersectionRegistrator>* f, int4 range)
+  CIntegerSegmentCollection(const CollectionOptions& co, Segment* c, CRegistratorFactory<IntersectionRegistrator>* f)
   {
     factory = f;
-    factory->PrepareAlloc(n);
-    Init(n, c, factory->GetRegistrator(0),range);
+    factory->PrepareAlloc(co.n);
+    coincide_zero_segm_flags = co.coincide_zero_segm_flags;
+    Init(co.n, c, factory->GetRegistrator(0), co.range_for_int_seg);
   }
 
   void FromIntSegVect(std::vector<TIntegerSegment> &v, IntersectionRegistrator* r)
@@ -1038,7 +1068,10 @@ public:
 
 
   bool TurnRemapOn() {
-    is_collection_remapped = remaper.TurnRemapOn(*this);
+    if(exclude_zero_segs)
+      is_collection_remapped = remaper.TurnRemapOn<false>(*this);
+    else
+      is_collection_remapped = remaper.TurnRemapOn<true>(*this);
 
 #ifdef DEBUG_INTERSECTION_SET
     register_pair = reg_pair;
@@ -1135,6 +1168,14 @@ public:
     auto pt = PointAtRank(rank);
     return GetXEx(pt);
   };
+  bool always_exclude_zero_segs() const {
+    return exclude_zero_segs && 
+      ((coincide_zero_segm_flags & coincide_zero_filter_type)== coincide_zero_filter_for_all);
+  };
+
+  bool print_msg_on_coincide_zero() const {
+    return (coincide_zero_segm_flags & coincide_zero_print_warning) == coincide_zero_print_warning;
+  };
 
 private:
   auto GetXEx(uint4 pt) const {
@@ -1168,9 +1209,11 @@ private:
 
   uint4 cur_seg_idx = 0xFFFFFFFF;// , cur_point_idx = 0xFFFFFFFF;
   uint4 cur_point_seg = 0xFFFFFFFF;// , active_end_idx = 0xFFFFFFFF;
+  uint4 coincide_zero_segm_flags = _CoincideZeroSegmFlags::coincide_zero_filter_for_all;
   bool is_rstump = false;
   bool is_collection_remapped = false;
   bool cur_seg_pt_on_right_bound = false;
+  bool exclude_zero_segs = false;
 //  bool rbelong_to_stripe=true;
 };
 

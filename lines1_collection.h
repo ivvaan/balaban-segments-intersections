@@ -458,9 +458,9 @@ public:
     SetRegistrator(r);
   };
 
-  CLine1SegmentCollection(uint4 n, void* c, IntersectionRegistrator* r)
+  CLine1SegmentCollection(const CollectionOptions& co, void* c, IntersectionRegistrator* r)
   {
-    Init(n, c, r);
+    Init(co.n, c, r);
     chopped_Y = new REAL[N + 2];
     if constexpr (THIS_HAS_SENTINELS) {
       chopped_Y[this->get_sentinel(false)] = std::numeric_limits<REAL>::lowest();
@@ -468,11 +468,11 @@ public:
     }
   }
 
-  CLine1SegmentCollection(uint4 n, void* c, CRegistratorFactory<IntersectionRegistrator>* f)
+  CLine1SegmentCollection(const CollectionOptions& co, void* c, CRegistratorFactory<IntersectionRegistrator>* f)
   {
     factory = f;
-    factory->PrepareAlloc(n);
-    Init(n, c, factory->GetRegistrator(0));
+    factory->PrepareAlloc(co.n);
+    Init(co.n, c, factory->GetRegistrator(0));
     chopped_Y = new REAL[N + 2];
     if constexpr (THIS_HAS_SENTINELS) {
       chopped_Y[this->get_sentinel(false)] = std::numeric_limits<REAL>::lowest();

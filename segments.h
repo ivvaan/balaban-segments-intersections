@@ -446,7 +446,7 @@ public:
       assert(shift.is_non_zero() || s.shift.is_non_zero());
 
       auto d = s.BegPoint() - BegPoint();
-#ifndef EXCLUDE_ZERO_SEG
+
       // `get_int_type_beg()` is a cheap "intersection-kind fingerprint" used to filter duplicates
       // when expanding remapped (normalized) segment pairs back into original segment pairs.
       //
@@ -467,7 +467,6 @@ public:
         return _IntType::common_int + _IntType::s2_beg_int +
           d.is_zero() * _IntType::s1_beg_int;
       }
-#endif
       return _IntType::common_int + (d % shift == 0) * _IntType::s2_beg_int + (d % s.shift == 0) * _IntType::s1_beg_int;
     }
 

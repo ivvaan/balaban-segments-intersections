@@ -28,13 +28,12 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <cstddef>
 #include <ostream>
 
-struct SegmentsAndRegOptions
+struct SegmentsAndRegOptions:CollectionOptions
 {
-  int4 n = 10000;
+
   int4 seg_type = 2;
   int4 distr_type = 0;
   REAL distr_param = 1.0;
-  int4 range_for_int_seg = full_int_range;
   uint4 reg_stat = 2;
 };
 

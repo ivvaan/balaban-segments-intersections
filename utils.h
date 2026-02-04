@@ -28,7 +28,6 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <vector>
 //#define DEBUG_INTERSECTION_SET
-//#define EXCLUDE_ZERO_SEG
 
 typedef int int4;
 typedef unsigned int uint4;
@@ -135,6 +134,20 @@ enum class _Coll_flags
   needs_SetCurSegCutBE_at_start
 };
 
+enum _CoincideZeroSegmFlags
+{
+  coincide_zero_filter_for_all = 0,
+  coincide_zero_filter_for_balaban = 1,
+  coincide_zero_filter_type = 1,
+  coincide_zero_print_warning = 2
+};
+
+struct CollectionOptions
+{
+  int4 n = 10000;
+  int4 range_for_int_seg = full_int_range;
+  uint4 coincide_zero_segm_flags = _CoincideZeroSegmFlags::coincide_zero_filter_for_all;
+};
 
 class CRandomValueGen
 {

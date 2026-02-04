@@ -454,16 +454,16 @@ public:
       factory->InitClone(n_threads);
   }
 
-  CGraphSegmentCollection(uint4 n, void* c, IntersectionRegistrator *r)
+  CGraphSegmentCollection(const CollectionOptions& co, void* c, IntersectionRegistrator *r)
   {
-    Init(n, c, r);
+    Init(co.n, c, r);
   }
 
-  CGraphSegmentCollection(uint4 n, void* c, CRegistratorFactory<IntersectionRegistrator>* f)
+  CGraphSegmentCollection(const CollectionOptions& co, void* c, CRegistratorFactory<IntersectionRegistrator>* f)
   {
     factory = f;
-    factory->PrepareAlloc(n);
-    Init(n, c, factory->GetRegistrator(0));
+    factory->PrepareAlloc(co.n);
+    Init(co.n, c, factory->GetRegistrator(0));
   }
 
   CGraphSegmentCollection() {};

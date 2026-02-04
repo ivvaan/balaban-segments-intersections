@@ -188,46 +188,16 @@ public:
     return not_remapped;
   }
 
-#ifdef EXCLUDE_ZERO_SEG
-  template<bool leave_zero_seg = false>
-#else
-  template<bool leave_zero_seg = true>
-#endif
+  template<bool leave_zero_seg>
   auto TurnRemapOn(CTHIS& collection) {
+    auto n = initial_SN;
+
     auto points = std::move(collection.points);
     seg_v = std::move(collection.segments);
     seg = seg_v.data();
     std::vector<uint4> indexes;
-    auto n = initial_SN;
     indexes.reserve(2 * n);
 
-// Precondition: no two distinct zero-length segments coincide as points.
-// This must hold in release too; otherwise event ordering becomes ambiguous
-// and downstream degenerate-case handling can misbehave.
-    if constexpr (leave_zero_seg)
-    {
-      std::vector<TIntegerVect> zero_pts;
-      zero_pts.reserve(n);
-
-      for (uint4 s = 0; s < n; ++s) {
-        if (seg[s].shift.is_zero())
-          zero_pts.push_back(seg[s].BegPoint());
-      }
-
-      if (zero_pts.size() > 1) {
-        std::sort(zero_pts.begin(), zero_pts.end());
-
-        auto it = std::adjacent_find(zero_pts.begin(), zero_pts.end(),
-          [](TIntegerVect a, TIntegerVect b) { return a == b; });
-
-        assert(it == zero_pts.end());
-        if (it != zero_pts.end()) {
-          printf("Error: coinciding zero-length segments found during remapping.\n");
-          // do somthing reasonable, e.g., throw or return false
-          throw 0;
-        }
-      }
-    }
 
     for (uint4 i = 0; i < 2 * n; ++i)
       if (leave_zero_seg || seg[get_segm(i)].shift.is_non_zero())

@@ -190,23 +190,23 @@ template<class Counter>
 void RegisterAllIntersection(const SegmentsAndRegOptions& opt, PSeg segs, int4 alg, CRegistratorFactory<Counter>& reg) {
   switch (opt.seg_type) {
   case _Segment::line1: {
-    CLine1SegmentCollection<Counter> coll(opt.n, segs, &reg);
+    CLine1SegmentCollection<Counter> coll(opt, segs, &reg);
     find_int(opt.n, coll, alg);
   }; break;
   case _Segment::intline: {
-    CIntegerSegmentCollection<Counter> coll(opt.n, (TLineSegment1*)segs, &reg, opt.range_for_int_seg);
+    CIntegerSegmentCollection<Counter> coll(opt, (TLineSegment1*)segs, &reg);
     find_int(opt.n, coll, alg);
   }; break;
   case _Segment::line2: {
-    CLine2SegmentCollection<Counter> coll(opt.n, segs, &reg);
+    CLine2SegmentCollection<Counter> coll(opt, segs, &reg);
     find_int(opt.n, coll, alg);
   }; break;
   case _Segment::arc: {
-    CArcSegmentCollection<Counter>  coll(opt.n, segs, &reg);
+    CArcSegmentCollection<Counter>  coll(opt, segs, &reg);
     find_int(opt.n, coll, alg);
   }; break;
   case _Segment::graph: {
-    CGraphSegmentCollection<Counter> coll(opt.n, segs, &reg);
+    CGraphSegmentCollection<Counter> coll(opt, segs, &reg);
     find_int(opt.n, coll, alg);
   }; break;
   };
@@ -241,23 +241,23 @@ void write_SVG(std::ostream* svg_stream, const SegmentsAndRegOptions& opt, PSeg 
     return;
   switch (opt.seg_type) {//first draw segments
     case _Segment::intline: {
-      CIntegerSegmentCollection<SimpleCounter> coll(opt.n, (TLineSegment1*)segs, (SimpleCounter *)nullptr, opt.range_for_int_seg);
+      CIntegerSegmentCollection<SimpleCounter> coll(opt, (TLineSegment1*)segs, (SimpleCounter *)nullptr);
       return coll.coll_to_SVG(svg_stream);
     }; break;
     case _Segment::line1: {
-      CLine1SegmentCollection<SimpleCounter> coll(opt.n, segs, (SimpleCounter*)nullptr);
+      CLine1SegmentCollection<SimpleCounter> coll(opt, segs, (SimpleCounter*)nullptr);
       coll.coll_to_SVG(svg_stream);
     }; break;
     case _Segment::line2: {
-      CLine2SegmentCollection<SimpleCounter> coll(opt.n, segs, (SimpleCounter*)nullptr);
+      CLine2SegmentCollection<SimpleCounter> coll(opt, segs, (SimpleCounter*)nullptr);
       coll.coll_to_SVG(svg_stream);
     }; break;
     case _Segment::arc: {
-      CArcSegmentCollection<SimpleCounter>  coll(opt.n, segs, (SimpleCounter*)nullptr);
+      CArcSegmentCollection<SimpleCounter>  coll(opt, segs, (SimpleCounter*)nullptr);
       coll.coll_to_SVG(svg_stream);
     }; break;
     case _Segment::graph: {
-      CGraphSegmentCollection<SimpleCounter> coll(opt.n, segs, (SimpleCounter*)nullptr);
+      CGraphSegmentCollection<SimpleCounter> coll(opt, segs, (SimpleCounter*)nullptr);
       coll.coll_to_SVG(svg_stream);
     }; break;
   };
