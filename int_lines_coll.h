@@ -726,53 +726,42 @@ public:
   template<bool is_way_up>
   bool IsCurSegIntWith(int4 s_) {//checks if cur_seg and s intersects
     if (is_rstump) // can be in stage_split only
-      return BoundIntersect<left_bound>(s_,B) || RStumpIntersect<is_way_up>(s_);
-    if (stage == _Stages::stage_split) 
-      return BoundIntersect<left_bound>(s_, B) || ActiveEndIntersect<is_way_up>(s_);
+      return RStumpIntersect<is_way_up>(s_) || BoundIntersect<left_bound>(s_, B);
+    if (stage == _Stages::stage_split)
+      return ActiveEndIntersect<is_way_up>(s_) || BoundIntersect<left_bound>(s_, B);
     if (stage == _Stages::stage_merge)
-      return BoundIntersect<right_bound>(s_, E) || ActiveEndIntersect<is_way_up>(s_);
+      return ActiveEndIntersect<is_way_up>(s_) || BoundIntersect<right_bound>(s_, E);
     // no need to check BoundIntersect in stage_bubble but check cur_point intersection
-    return CurPointIntersect(s_)||ActiveEndIntersect<is_way_up>(s_);
+    return ActiveEndIntersect<is_way_up>(s_) || CurPointIntersect(s_);
   };
-
-  bool IsIntersectsCurSegDown(int4 s_) //check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
-  {
-    return IsCurSegIntWith<way_down>(s_);
-  };
-
-  bool IsIntersectsCurSegUp(int4 s_) //check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
-  {
-    return IsCurSegIntWith<way_up>(s_);
-  };
-
 
   template<bool is_way_up>
-  auto FindCurSegIntWith(int4 s_){//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+  auto FindCurSegIntWith(int4 s_) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
     auto cs = cur_seg_idx;
     if (is_rstump) {//can be in stage_split only
-      if (BoundIntersect<left_bound>(s_, B) || RStumpIntersect<is_way_up>(s_)) {
+      if (RStumpIntersect<is_way_up>(s_) || BoundIntersect<left_bound>(s_, B)) {
         register_pair(this, cs, s_);
         return true;
       };
       return false;
     };
     if (stage == _Stages::stage_split) {
-      if (BoundIntersect<left_bound>(s_, B) || ActiveEndIntersect<is_way_up>(s_)) {
-          register_pair(this, cs, s_);
+      if (ActiveEndIntersect<is_way_up>(s_) || BoundIntersect<left_bound>(s_, B)) {
+        register_pair(this, cs, s_);
         return true;
       };
       return false;
     };
     if (stage == _Stages::stage_merge) {
-      if (BoundIntersect<right_bound>(s_, E) || ActiveEndIntersect<is_way_up>(s_)) {
+      if (ActiveEndIntersect<is_way_up>(s_) || BoundIntersect<right_bound>(s_, E)) {
         register_pair(this, cs, s_);
         return true;
       };
       return false;
     };
     // no need to check BoundIntersect in stage_bubble but check cur_point intersection
-    if (CurPointIntersect(s_)||ActiveEndIntersect<is_way_up>(s_)) {
-        register_pair(this, cs, s_);
+    if (ActiveEndIntersect<is_way_up>(s_) || CurPointIntersect(s_)) {
+      register_pair(this, cs, s_);
       return true;
     };
     return false;
@@ -784,36 +773,45 @@ public:
     int4 increment = is_way_up ? 1 : -1;
     if (is_rstump) {//can be in stage_split only
       auto X = B;
-      while ((s_ != last) && (BoundIntersect<left_bound>(*s_, X) || RStumpIntersect<is_way_up>(*s_))) {
-          register_pair(this, cs, *s_);
+      while ((s_ != last) && (RStumpIntersect<is_way_up>(*s_) || BoundIntersect<left_bound>(*s_, X))) {
+        register_pair(this, cs, *s_);
         s_ += increment;
       }
       return s_;
     }
     if (stage == _Stages::stage_split) {
       auto X = B;
-      while ((s_ != last) && (BoundIntersect<left_bound>(*s_, X) || ActiveEndIntersect<is_way_up>(*s_))) {
-          register_pair(this, cs, *s_);
+      while ((s_ != last) && (ActiveEndIntersect<is_way_up>(*s_) || BoundIntersect<left_bound>(*s_, X))) {
+        register_pair(this, cs, *s_);
         s_ += increment;
       }
       return s_;
     }
     if (stage == _Stages::stage_merge) {
       auto X = E;
-      while ((s_ != last) && (BoundIntersect<right_bound>(*s_, X) || ActiveEndIntersect<is_way_up>(*s_))) {
+      while ((s_ != last) && (ActiveEndIntersect<is_way_up>(*s_) || BoundIntersect<right_bound>(*s_, X))) {
         register_pair(this, cs, *s_);
         s_ += increment;
       }
       return s_;
     }
-
     // no need to check BoundIntersect in stage_bubble
     // but check cur_point intersection
-    while ((s_ != last) && (CurPointIntersect(*s_) || ActiveEndIntersect<is_way_up>(*s_))) {
-        register_pair(this, cs, *s_);
+    while ((s_ != last) && (ActiveEndIntersect<is_way_up>(*s_) || CurPointIntersect(*s_))) {
+      register_pair(this, cs, *s_);
       s_ += increment;
     }
     return s_;
+  };
+
+  bool IsIntersectsCurSegDown(int4 s_) //check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
+  {
+    return IsCurSegIntWith<way_down>(s_);
+  };
+
+  bool IsIntersectsCurSegUp(int4 s_) //check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
+  {
+    return IsCurSegIntWith<way_up>(s_);
   };
 
   auto FindCurSegIntDownWith(int4 s_) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
