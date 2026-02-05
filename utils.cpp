@@ -108,14 +108,10 @@ TIntegerVect operator*(TIntegerVect t, int4 r) {
 }
 
 std::strong_ordering comp_prod(int64_t a, int64_t b, int64_t c, int64_t d) {
+  // compares products a*b and c*d, returns -1 if a*b < c*d, 0 if a*b == c*d, 1 if a*b > c*d
   int64_t hi1, hi2;
-  uint64_t lo1 = _mul128(a, b, &hi1); // product1 = (hi1, lo1)
-  uint64_t lo2 = _mul128(c, d, &hi2); // product2 = (hi2, lo2)
-
-  if (hi1 != hi2)
-    return hi1 <=> hi2;
-
-  return lo1 <=> lo2;
+  uint64_t lo1 = _mul128(a, b, &hi1); // product a and b = (hi1, lo1)
+  uint64_t lo2 = _mul128(c, d, &hi2); // product c and d = (hi2, lo2)
+  return (hi1 != hi2)? hi1 <=> hi2: lo1 <=> lo2;
 }
 
-// some string
