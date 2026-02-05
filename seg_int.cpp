@@ -379,8 +379,9 @@ int main(int argc, char* argv[])
           case 'B':opt.coincide_zero_segm_flags = _CoincideZeroSegmFlags::coincide_zero_filter_for_balaban | _CoincideZeroSegmFlags::coincide_zero_print_warning; break;
           default:
             opt.coincide_zero_segm_flags = _CoincideZeroSegmFlags::coincide_zero_filter_for_all;
-          };
+          }; 
         };
+        break;
         case 'n':
         {
           opt.n = atoi(argv[i] + 2);
