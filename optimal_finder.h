@@ -136,9 +136,8 @@ private:
       c--;
     }
 
-    //constexpr bool line_seg = (SegmentsColl::get_coll_flag(_Coll_flags::line_segments) == _Coll_flag_state::state_true);
-    constexpr const bool line_seg = false;
-
+    constexpr const bool line_seg = (SegmentsColl::get_coll_flag(_Coll_flags::line_segments) == _Coll_flag_state::state_true);
+    
     if (line_seg && (c != l))
       return l-c;
     ++c; ++l;

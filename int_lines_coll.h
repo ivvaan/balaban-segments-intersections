@@ -326,7 +326,7 @@ public:
       }
 
       int4 i = L_size;
-      for (auto _L = L - 1; (i != 0) && (!UnderCurPoint(_L[i])); --i)
+      for (auto _L = L - 1; (i != 0) && (UpperCurPoint(_L[i])); --i)
         L[i] = _L[i];
       L[i] = sn;
       ++L_size;
@@ -367,7 +367,6 @@ public:
 
   void ReorderStep(int4 x, uint4 L_size, int4* L)
   {
-//#ifdef TURN_ON_ADDITIONAL_ORDER
     // Optional experiment: for segments with equal YAtX at the boundary, reverse order.
     // This is related to the "node on boundary" phenomenon described in Degenerate-cases.md.
     // Left disabled by default because normal split/merge tends to reestablish correct order anyway.
@@ -384,7 +383,6 @@ public:
             register_pair(this, L[k], L[m]);
       }
     }
-//#endif
   }
 
   void EndInresect(uint4 pt, uint4 L_size, int4* L)
@@ -847,11 +845,20 @@ public:
     auto prod = collection[cur_point_seg].shift % s.shift;
     //check me: so far it works, but it can be that for zero cur_point_seg we need more accurate implementation !!!
     //assert((prod != 0));
-    return prod < 0;//if prod<0 then s_ is clockwise from cur_seg at cur_point, 
-    // taking into account that cur_seg must be on the right of cur_point 
-    // (current point is always the begin point of cur_seg),
-    //s_ is under cur_seg
+    return prod >= 0;
   };
+
+  bool UpperCurPoint(int4 s_) const { //returns true if s_ is upper current point 
+    auto& s = collection[s_];
+    auto pp = s.point_pos(cur_point);
+    if (pp != 0)
+      return pp > 0;//s_ placed under current point
+    auto prod = collection[cur_point_seg].shift % s.shift;
+    //check me: so far it works, but it can be that for zero cur_point_seg we need more accurate implementation !!!
+    //assert((prod != 0));
+    return prod >= 0;
+  };
+
 
  
   bool CurPointIntersect(int4 s_) const { //
