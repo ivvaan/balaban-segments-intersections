@@ -86,7 +86,7 @@ public:
       // With degeneracies enabled (exact endpoint-on-stair cases),
       // "line segment monotonicity" optimizations are impossible. Treat as non-linear
       // so algorithms check intersections in both directions.
-      return _Coll_flag_state::state_false;
+      return _Coll_flag_state::state_true;
 
     return _Coll_flag_state::state_unimplemented;
   }

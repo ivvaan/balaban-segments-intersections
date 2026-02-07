@@ -275,8 +275,8 @@ protected:
     while ((c != qb) && segments.FindCurSegIntDownWith(*c)) //first get intersections below
       --c;
 
-    constexpr bool line_seg = (SegmentsColl::get_coll_flag(_Coll_flags::line_segments) == _Coll_flag_state::state_true);
-
+    //constexpr const bool line_seg = (SegmentsColl::get_coll_flag(_Coll_flags::line_segments) == _Coll_flag_state::state_true);
+    constexpr const bool line_seg = false;
     if ((line_seg && (c != l)))
       return; //if found and segment is line or no stair above it can't be any more
     do {
