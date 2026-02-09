@@ -1,7 +1,7 @@
 #pragma once
 /*
 *
-*      Copyright (c)  2011-2020  Ivan Balaban
+*      Copyright (c)  2011-2026  Ivan Balaban
 *      ivvaan@gmail.com
 *
 This file is part of Seg_int library.
@@ -143,16 +143,8 @@ public:
     //
     // Unlike the older codepath, we keep zero-length segments too. They participate in multi-events
     // and in vertical-boundary processing (AllIntCurLine).
-    uint4 nPoints = 0;
-    if (exclude_zero_segs) {
-      for (auto NN = GetSegmNumb() << 1, i = 0U; i < NN; ++i)
-        if (collection[get_segm(i)].shift.is_non_zero())
-          epoints[nPoints++] = i;
-    }
-    else {
-      nPoints = GetSegmNumb() << 1;
-      std::iota(epoints, epoints + nPoints, 0);
-    }
+    uint4 nPoints = GetSegmNumb() << 1;
+    std::iota(epoints, epoints + nPoints, 0);
     auto is_below = [pts = pts, coll = collection](uint4 pt1, uint4 pt2) {
       if (pts[pt1].x != pts[pt2].x)
         return pts[pt1].x < pts[pt2].x;
@@ -600,7 +592,6 @@ public:
     E = XAtRank(right_rank);
   };
 
-
   void SetCurPointAtBeg(uint4 s) {
     cur_point_seg = s;
     cur_point = collection[s].BegPoint();
@@ -671,9 +662,6 @@ public:
     auto prod = s1.shift % s2.shift;
     auto beg = s1.shift % delt;
     if (prod == 0) { // segments parallel
-      if(always_exclude_zero_segs() && (s1.shift.is_zero()||s2.shift.is_zero()))
-        return false;//zero segments are excluded
-
       if ((beg == 0) && (s2.shift % delt == 0)) {// they are on the same line
         if constexpr (reg)register_pair(this, cur_seg_idx, s_);
         return true;
@@ -1011,38 +999,6 @@ public:
        intersection points don't have integer coords ",
       (IntersectionRegistrator::reg_type & _RegistrationType::point) == 0));
     NoRemapInit(n, c, r, range);
-
-    // Precondition: no two distinct zero-length segments coincide as points.
-    // This must hold in release too; otherwise event ordering becomes ambiguous
-    // and downstream degenerate-case handling can misbehave.
-    exclude_zero_segs = false;
-    {
-      std::vector<TIntegerVect> zero_pts;
-      zero_pts.reserve(n);
-      for (auto& s : segments) 
-        if (s.shift.is_zero())
-          zero_pts.push_back(s.BegPoint());
-
-      if (zero_pts.size() > 1) {
-        std::sort(zero_pts.begin(), zero_pts.end());
-
-        auto it = std::adjacent_find(zero_pts.begin(), zero_pts.end(),
-          [](TIntegerVect a, TIntegerVect b) { return a == b; });
-
-        auto has_coinciding_zero_segs = (it != zero_pts.end());
-#ifndef NDEBUG
-        //        assert(!has_coinciding_zero_segs);
-#endif
-
-        if (has_coinciding_zero_segs)// Fallback: drop zero segments and proceed deterministically.
-        {
-          if (print_msg_on_coincide_zero())
-            printf("CRemaper: coinciding zero-length segments encounter. Dropping all zero-length segments and proceeding.\n");
-          exclude_zero_segs = true;
-        }
-      }
-    }
-
     is_collection_remapped = false;
     register_pair = reg_pair;
     nSegments = remaper.get_N();
@@ -1054,7 +1010,6 @@ public:
   template <class Segment>
   CIntegerSegmentCollection(const CollectionOptions& co, Segment* c, IntersectionRegistrator *r)
   {
-    coincide_zero_segm_flags = co.coincide_zero_segm_flags;
     Init(co.n, c, r, co.range_for_int_seg);
   }
 
@@ -1068,7 +1023,6 @@ public:
   {
     factory = f;
     factory->PrepareAlloc(co.n);
-    coincide_zero_segm_flags = co.coincide_zero_segm_flags;
     Init(co.n, c, factory->GetRegistrator(0), co.range_for_int_seg);
   }
 
@@ -1088,10 +1042,7 @@ public:
 
 
   bool TurnRemapOn() {
-    if(exclude_zero_segs)
-      is_collection_remapped = remaper.TurnRemapOn<false>(*this);
-    else
-      is_collection_remapped = remaper.TurnRemapOn<true>(*this);
+    is_collection_remapped = remaper.TurnRemapOn(*this);
 
 #ifdef DEBUG_INTERSECTION_SET
     register_pair = reg_pair;
@@ -1173,10 +1124,14 @@ public:
       << (mmr.rt.x - mmr.ld.x) * crd_scaler << " " << (mmr.rt.y - mmr.ld.y) * crd_scaler << "' transform='scale(1, -1)'>\n";
     for (int4 i = 0; i < n; ++i)collection[i].write_SVG(i, SVG_stream);
   };
+  
+
+  //for debug purposes
   auto &get_segments() {
     return segments;
   };
 
+  //for debug purposes
   auto& get_ini_segments() {
     if(is_collection_remapped)
       return remaper.get_seg_v();
@@ -1187,14 +1142,6 @@ public:
   auto XAtRank(uint4 rank) const {
     auto pt = PointAtRank(rank);
     return GetXEx(pt);
-  };
-  bool always_exclude_zero_segs() const {
-    return exclude_zero_segs && 
-      ((coincide_zero_segm_flags & coincide_zero_filter_type)== coincide_zero_filter_for_all);
-  };
-
-  bool print_msg_on_coincide_zero() const {
-    return (coincide_zero_segm_flags & coincide_zero_print_warning) == coincide_zero_print_warning;
   };
 
 private:
@@ -1229,11 +1176,10 @@ private:
 
   uint4 cur_seg_idx = 0xFFFFFFFF;// , cur_point_idx = 0xFFFFFFFF;
   uint4 cur_point_seg = 0xFFFFFFFF;// , active_end_idx = 0xFFFFFFFF;
-  uint4 coincide_zero_segm_flags = _CoincideZeroSegmFlags::coincide_zero_filter_for_all;
+  //uint4 coincide_zero_segm_flags = _CoincideZeroSegmFlags::coincide_zero_filter_for_all;
   bool is_rstump = false;
   bool is_collection_remapped = false;
   bool cur_seg_pt_on_right_bound = false;
-  bool exclude_zero_segs = false;
-//  bool rbelong_to_stripe=true;
+  //bool exclude_zero_segs = false;
 };
 

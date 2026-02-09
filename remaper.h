@@ -188,7 +188,7 @@ public:
     return not_remapped;
   }
 
-  template<bool leave_zero_seg>
+  template<bool leave_zero_seg=true>
   auto TurnRemapOn(CTHIS& collection) {
     auto n = initial_SN;
 
@@ -239,17 +239,24 @@ public:
       if (prod != 0)// points not coinside
         return  0 < prod;
       // here points coinside, but segments can be different (zero-seg can coincide with non-zero seg)
-      if (is_last(pt1) != is_last(pt2))
-        return is_last(pt1) > is_last(pt2); //different segments end first
+      bool last1 = is_last(pt1);
+      bool last2 = is_last(pt2);
+      if (last1 != last2) {
+        //return (is_zero1 && is_zero2) ? last1 < last2 : last1 > last2; //different segments end first exept when both zero, then start first
+        return (is_zero1 && is_zero2) == last2; //equal to previous line, but faster to compute
+
+      }
       // Both endpoints are at the same coordinate and are of the same kind (both first or both last).
       // Among FIRST endpoints: zero first. Among LAST endpoints: non-zero first.
       // here is_last(pt1) == is_last(pt2)
       if (is_zero1 != is_zero2)
-        return is_last(pt1) ? (is_zero1 < is_zero2) : (is_zero2 < is_zero1);
-        //return is_last(pt1) == is_zero2;
-
-      // add consistent tie-breaker for stable sort
-      return pt1 < pt2;
+        //return last2 ? (is_zero1 < is_zero2) : (is_zero1 > is_zero2);
+        return last2 == is_zero2;//equal to previous line, but faster to compute
+      // Both endpoints are at the same coordinate, are of the same kind, and either both zero or both non-zero.
+      return last2 ? pt1 > pt2:pt1 < pt2; //  LAST endpoints in reverse order to FIRST. As a result segments form piramid like structure.
+        //      |---------------|
+        //   |------------------------|
+        // |---------------------------------|
       };
 
     std::sort(indexes.begin(), indexes.end(), comparator);

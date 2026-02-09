@@ -123,13 +123,6 @@ example: seg_int -a14 -sa -dp -n20000 -p5.5
   if E not presented (just -e), program calculates ICT from trivial algorithm run. In the later 
   case trivial algorithm must be selected for testing and for the large N it can take quite a time.
 -SR: capital S for random seed; R - random seed value; if R=0 - non pseudo random generator used
--vV: in violation of noncoinciding zero segments assumption (see documentation)  what to do
- V=a: filter all zero segments (default) for all algorithms
- V=b: filter all zero segments only for balaban algorithms (algoritms will show different results!)
- V=A: same as v=a but print warning message
- V=B: same as v=b but print warning message
-    Note: filtering means dropping zero segments from the collection
-    Note: noncoinciding zero segments assumption means that no two zero segments coincide as points
 -fhtmfile: if presented, program writes SVG picture to htmfile. For examle -fC:/tmp/res.htm
   To limit resulting file size option works only for 5000 segments and less, also only first 
   150000 intersections are drawn.
@@ -291,7 +284,7 @@ int main(int argc, char* argv[])
 
   if (argc == 1)
   {
-    printf("usage: seg_int -aA -sS -SR -dD -nN -pP -rR -m -eE -w -SN -vV -fhtmfile\n");
+    printf("usage: seg_int -aA -sS -SR -dD -nN -pP -rR -m -eE -w -SN -fhtmfile\n");
     printf(help_msg);
     return 0;
   }
@@ -367,19 +360,6 @@ int main(int argc, char* argv[])
           default:
             opt.reg_stat = 2;
           };
-        };
-        break;
-        case 'v':
-        {
-          switch (argv[i][2])
-          {
-          case 'a':opt.coincide_zero_segm_flags = _CoincideZeroSegmFlags::coincide_zero_filter_for_all; break;
-          case 'b':opt.coincide_zero_segm_flags = _CoincideZeroSegmFlags::coincide_zero_filter_for_balaban; break;
-          case 'A':opt.coincide_zero_segm_flags = _CoincideZeroSegmFlags::coincide_zero_filter_for_all | _CoincideZeroSegmFlags::coincide_zero_print_warning; break;
-          case 'B':opt.coincide_zero_segm_flags = _CoincideZeroSegmFlags::coincide_zero_filter_for_balaban | _CoincideZeroSegmFlags::coincide_zero_print_warning; break;
-          default:
-            opt.coincide_zero_segm_flags = _CoincideZeroSegmFlags::coincide_zero_filter_for_all;
-          }; 
         };
         break;
         case 'n':

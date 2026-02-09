@@ -2,7 +2,7 @@
 #define UTILS_FOR_SEGMENT_INTERSECTION
 /*
 *
-*      Copyright (c)  2011-2020  Ivan Balaban
+*      Copyright (c)  2011-2026  Ivan Balaban
 *      ivvaan@gmail.com
 *
 This file is part of Seg_int library.
@@ -134,19 +134,11 @@ enum class _Coll_flags
   needs_SetCurSegCutBE_at_start
 };
 
-enum _CoincideZeroSegmFlags
-{
-  coincide_zero_filter_for_all = 0,
-  coincide_zero_filter_for_balaban = 1,
-  coincide_zero_filter_type = 1,
-  coincide_zero_print_warning = 2
-};
 
 struct CollectionOptions
 {
   int4 n = 10000;
   int4 range_for_int_seg = full_int_range;
-  uint4 coincide_zero_segm_flags = _CoincideZeroSegmFlags::coincide_zero_filter_for_all;
 };
 
 class CRandomValueGen
