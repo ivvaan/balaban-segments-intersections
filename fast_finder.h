@@ -152,12 +152,12 @@ public:
     {
       if (segments.RBelow(cur_seg, *cur_stair))
       {
-        if (segments.GetSegL(cur_seg) >LBoundIdx)
+        if (segments.GetSegL(cur_seg) > LBoundIdx)
         {
           segments.SetCurSegCutEnd(cur_seg);
           {
             auto c = segments.FindCurSegIntUpWith(cur_stair, top_Q); 
-            constexpr bool non_line_seg = (SegmentsColl::get_coll_flag(_Coll_flags::line_segments) != _Coll_flag_state::state_true);
+            constexpr const bool non_line_seg = (SegmentsColl::get_coll_flag(_Coll_flags::line_segments) != _Coll_flag_state::state_true);
             if (non_line_seg || (c == cur_stair))
               segments.FindCurSegIntDownWith(cur_stair-1, bot_Q);
           };
@@ -215,9 +215,10 @@ public:
     for (CSentinel sentinel(segments, *_Q); cur < last_L; ++cur) {
       auto cur_seg = *cur;
       segments.SetCurSegCutBE(cur_seg);
-      if (segments.FindCurSegIntDownWith(*_Q_pos)) {//segment  intersects upper ladder stair
-          // finding another ledder intersections
-        n_int += _Q_pos - segments.FindCurSegIntDownWith(_Q_pos - 1, _Q);//increment found int number
+      auto k= _Q_pos - segments.FindCurSegIntDownWith(_Q_pos, _Q);
+      if (k) {//segment  intersects upper ladder stair
+        // add number of intersections with stairs to counter
+        n_int += k;//increment found int number
         *(new_L_pos++) = cur_seg;//place segment in L
         continue;
       }
