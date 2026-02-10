@@ -17,7 +17,7 @@ The aim of the project is to show practical behavior of the algorithms.
 Project was compiles under MS VisualStudio 2019. Hopefully it can be compiled in any other C++ enviroment.
 More information on [wiki](https://github.com/ivvaan/balaban-segments-intersections/wiki) pages.
 
-**No degenerate case processing is implemented in the master branch. If you need to process them, see the degenerate\_cases branch: CIntegerSegmentCollection class**
+**No [degenerate case](https://github.com/ivvaan/balaban-segments-intersections/wiki/Degenerate-cases) processing is implemented in the master branch. If you need to process them, see the degenerate\_cases branch: CIntegerSegmentCollection class**
 
 
 The project contains implementations of several segment‑intersection algorithms. 
