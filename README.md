@@ -20,7 +20,7 @@ More information on [wiki](https://github.com/ivvaan/balaban-segments-intersecti
 **No degenerate case processing is implemented in the master branch. If you need to process them, see the degenerate\_cases branch: CIntegerSegmentCollection class**
 
 
-The project contains implementations of several segment‑intersection algorithms. The main focus is on the suboptimal and optimal algorithms from Ivan J. Balaban: "An optimal algorithm for finding segments intersections", Proceedings of the 11th Annual Symposium on Computational Geometry, p.211–219, June 05–07, 1995, Vancouver, British Columbia, Canada.
+The project contains implementations of several segment‑intersection algorithms. 
 
 There are two implementations: [Old](https://github.com/ivvaan/balaban-segments-intersections/wiki/Old-implementation) and [New](https://github.com/ivvaan/balaban-segments-intersections/wiki/New-implementation). They differ in the way segments are handled — i.e., they use different segment‑handling functions (SHF).
 
