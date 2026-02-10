@@ -13,7 +13,6 @@ Suboptimal algorithm called "fast" in the implementation because it is faster th
 For comparison trivial algorithm, simple sweep line and Bentley \& Ottmann algorithms are presented too.
 
 The aim of the project is to show practical behavior of the algorithms.
-No any degenerate cases processing is implemented.
 So only segments in common situation are processed correctly.
 For example all segment ends must have different x coordinates.
 
