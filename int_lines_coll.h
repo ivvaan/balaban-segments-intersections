@@ -777,20 +777,20 @@ public:
     auto cs = cur_seg_idx;
     int4 increment = is_way_up ? 1 : -1;
     if (is_rstump) {//can be in stage_split only
-      while ((s_ != last) && RStumpIntersect<is_way_up>(*s_)) {
+      while ((THIS_HAS_SENTINELS || (s_ != last)) && RStumpIntersect<is_way_up>(*s_)) {
         register_pair(this, cs, *s_);
         s_ += increment;
       }
       return s_;
     }
     if (stage != _Stages::stage_bubble) {
-      while ((s_ != last) && ActiveEndIntersect<is_way_up>(*s_)) {
+      while ((THIS_HAS_SENTINELS || (s_ != last)) && ActiveEndIntersect<is_way_up>(*s_)) {
         register_pair(this, cs, *s_);
         s_ += increment;
       }
       return s_;
     }
-    while ((s_ != last) && (ActiveEndIntersect<is_way_up>(*s_) || CurPointIntersect(*s_))) {
+    while ((THIS_HAS_SENTINELS || (s_ != last)) && (ActiveEndIntersect<is_way_up>(*s_) || CurPointIntersect(*s_))) {
       register_pair(this, cs, *s_);
       s_ += increment;
     }
@@ -942,7 +942,7 @@ public:
       .scale = 2. * range / mm_rect.get_width() };
     auto y_transf = transf1D{ .shift = -mm_rect.ld.y - mm_rect.get_height() / 2.,
       .scale = 2. * range / mm_rect.get_height() };
-    auto seg = set_size(segments, n);
+    auto seg = set_size(segments, n + 2);// +2 for possible sentinels
     set_size(points, 2 * n);
 #ifdef PRINT_SEG_AND_INT
     TIntegerSegment::coll_begin = coll_begin;
@@ -960,8 +960,16 @@ public:
       points[last_point(i)] = s.EndPoint();
       ++i;
     }
+    constexpr const int4 marging_range = full_int_range + 1; // we are going to use -full_int_range-1 and full_int_range+1 as sentinels 
+    seg[n] = TIntegerSegment{ -marging_range ,-marging_range , marging_range * 2 , 0 };//bottom sentinel
+    seg[n+1] = TIntegerSegment{ -marging_range ,marging_range , marging_range * 2 , 0 };//top sentinel
     return i - n_zero_seg;
   }
+
+  // delete or comment if you don't want sentinels
+  int4 get_sentinel(bool is_top_sentinel) {
+    return nSegments + is_top_sentinel;
+  };
 
 
   auto NoRemapInit(uint4 n, TLineSegment1* sc, IntersectionRegistrator* r, int4 range) {

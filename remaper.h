@@ -107,7 +107,7 @@ public:
     auto remap = set_size(remap_v, remap_size);
 
     // Allocate normalized geometry buffers.
-    set_size(res_coll, remapped_SN);
+    set_size(res_coll, remapped_SN + 2);// +2 for sentinels
     set_size(res_pts, 2 * remapped_SN);
 
     // Pass #2:
@@ -269,6 +269,8 @@ public:
       return false;
     }
     remapped_segs = collection.segments.data();
+    remapped_segs[remapped_SN] = seg[n];//bottom sentinel
+    remapped_segs[remapped_SN + 1] = seg[n + 1];//top sentinel
     remapped_ends = collection.points.data();
 
     return true;
