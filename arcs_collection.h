@@ -20,166 +20,113 @@ You should have received a copy of the GNU General Public License
 along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 */
 // NEW IMPLEMENTATION
+
 #include "segments.h"
+#include "collection_base.h"
 
 template<class IntersectionRegistrator>
 class CArcSegmentCollection
+  : public CollectionBase<CArcSegmentCollection<IntersectionRegistrator>, IntersectionRegistrator>
 {
+  using Base = CollectionBase<CArcSegmentCollection<IntersectionRegistrator>, IntersectionRegistrator>;
+  friend Base;
+
+  using Base::ENDS;
+  using Base::seg_L_rank;
+  using Base::seg_R_rank;
+  using Base::factory;
+  using Base::registrator;
+  using Base::clone_of;
+
 public:
   using this_T = CArcSegmentCollection;
   static constexpr _Coll_flag_state get_coll_flag(_Coll_flags flag) {
     if (flag == _Coll_flags::line_segments)
       return _Coll_flag_state::state_false;
-   
     return _Coll_flag_state::state_unimplemented;
   }
 
+  using Base::Prepare;
+  using Base::InsDel;
+  using Base::Reset;
+  using Base::ResetRegistration;
+  using Base::CombineRegData;
+  using Base::IntersectionsFindingDone;
+  using Base::SortAt;
+  using Base::InitClone;
+  using Base::GetSegR;
+  using Base::GetSegL;
+  using Base::PointAtRank;
+  using Base::SetRegistrator;
+  using Base::GetRegistrator;
 
-  PrepareResult Prepare()
-  {
-    Reset();
-    uint4 Nn = GetSegmNumb();
-    if (Nn == 0) return {};
-    uint4 NN = Nn << 1;
-    ENDS = new uint4[NN];
-    PrepareEndpointsSortedList(ENDS);
-    seg_L_rank = new uint4[Nn];
-    seg_R_rank = new uint4[Nn];
-    uint4 max_segm_on_vline = 0, nsegm_on_vline = 0;
-    double avr = 0;
-    for (uint4 i = 0; i < NN; ++i) {
-      if (is_last(ENDS[i])) {
-        seg_R_rank[get_segm(ENDS[i])] = i;
-        --nsegm_on_vline;
-      }
-      else {
-        seg_L_rank[get_segm(ENDS[i])] = i;
-        ++nsegm_on_vline;
-        if (nsegm_on_vline > max_segm_on_vline) max_segm_on_vline = nsegm_on_vline;
-      }
-      avr += nsegm_on_vline;
-    }
-    avr /= (double)NN;
-    return { NN, max_segm_on_vline, avr };
+  // --- Endpoint encoding ---
+
+  static bool is_last(uint4 pt) { return pt & 1; }
+  static uint4 get_segm(uint4 pt) { return pt / 6; }
+
+  // --- Segment count ---
+
+  uint4 GetSegmNumb() const { return N; }
+
+  // --- Stripe bounds ---
+
+  void SetCurStripe(uint4 left_rank, uint4 right_rank) {
+    B = GetX(ENDS[left_rank]);
+    E = GetX(ENDS[right_rank]);
   }
-
-  template<class IntersectionFinder, class ProgramStackRec>
-  void InsDel(IntersectionFinder& i_f,uint4 & L_size,int4 *L, uint4 end_rank, ProgramStackRec* stack_pos) {
-    auto pt = PointAtRank(end_rank);
-    auto sn = get_segm(pt);
-    if (is_last(pt)) // if endpoint - remove
-    {
-      auto last = std::remove(L,L + L_size,sn);
-      assert(last + 1 == L + L_size);
-      --L_size;
-    }
-    else// if startpoint - insert
-    {
-      if (stack_pos->isnot_top()) {
-        SetCurSegAndPoint(sn);
-        i_f.FindIntI(*this, sn, stack_pos);// get internal intersections
-      }
-      else {
-        SetCurPointAtBeg(sn);//sets collection current point at the begin of the segment sn
-      }
-      int4 i = L_size;
-      for (auto _L = L - 1; (i != 0) && (!UnderCurPoint(_L[i])); --i)
-        L[i] = _L[i];
-      L[i] = sn; ++L_size;
-    }
-  }
-
-
-  static bool is_last(uint4 pt)
-  {
-    return pt & 1;
-  };
-  static uint4 get_segm(uint4 pt)
-  {
-    return pt / 6;
-  };
-
-  uint4  GetSegmNumb() const {
-    return N; 
-  };
-  uint4 GetSegR(uint4 sn) const {
-    return seg_R_rank[sn];
-  };
-  uint4 GetSegL(uint4 sn) const {
-    return seg_L_rank[sn];
-  };
-  uint4 PointAtRank(uint4 rank) const {
-    return ENDS[rank];
-  }
-
-  void SetCurStripe(uint4 left_rank, uint4 right_rank){
-    auto left = ENDS[left_rank];
-    auto right = ENDS[right_rank];
-
-    B = GetX(left);
-    E = GetX(right);
-  };
 
   void SetCurStripeLeft(uint4 left_rank) {
-    auto left = ENDS[left_rank];
-    B = GetX(left);
-  };
+    B = GetX(ENDS[left_rank]);
+  }
 
-  void SetCurStripeRight(uint4 right_rank) { 
-    auto right = ENDS[right_rank];
-    E = GetX(right); 
-  };
+  void SetCurStripeRight(uint4 right_rank) {
+    E = GetX(ENDS[right_rank]);
+  }
+
+  // --- Current point / segment ---
 
   void SetCurPointAtBeg(uint4 s) {
-    cur_point=collection[s].BegPoint();
-  };
+    cur_point = collection[s].BegPoint();
+  }
 
-  void SetCurSegAndPoint(uint4 s)  {
+  void SetCurSegAndPoint(uint4 s) {
     cur_point = collection[s].BegPoint();
     SetCurSeg(s);
-  };
+  }
 
-  void SetCurSeg(uint4 s)
-  {
+  void SetCurSeg(uint4 s) {
     cur_seg_idx = s;
     cur_seg = collection[s];
-  };
+  }
 
-  void SetCurSegCutBE(uint4 s)
-  {
+  void SetCurSegCutBE(uint4 s) {
     SetCurSeg(s);
     cur_seg.x1 = MAX(cur_seg.x1, B);
     cur_seg.x2 = MIN(cur_seg.x2, E);
-  };
-  void SetCurSegCutBeg(uint4 s)
-  {
+  }
+
+  void SetCurSegCutBeg(uint4 s) {
     SetCurSeg(s);
     cur_seg.x1 = MAX(cur_seg.x1, B);
-  };
-  void SetCurSegCutEnd(uint4 s)
-  {
+  }
+
+  void SetCurSegCutEnd(uint4 s) {
     SetCurSeg(s);
     cur_seg.x2 = MIN(cur_seg.x2, E);
-  };
+  }
 
-  bool LBelow(int4 s_1, int4 s_2) const //retuns if s1 below s2 at current vertical line
-  {
+  // --- Ordering predicates ---
+
+  bool LBelow(int4 s_1, int4 s_2) const {
     return collection[s_1].under(collection[s_2].PointAtX(B));
-  };
+  }
 
-  bool RBelow(int4 s_1, int4 s_2) const //retuns if s1 below s2 at current vertical line
-  {
+  bool RBelow(int4 s_1, int4 s_2) const {
     return collection[s_1].under(collection[s_2].PointAtX(E));
-  };
+  }
 
-#define REGISTER_INTERSECTION(s1,s2,p)\
-  if constexpr((_RegistrationType::point & IntersectionRegistrator::reg_type) != 0)\
-    registrator->register_pair_and_point(s1, s2-collection, p);\
-  else\
-    registrator->register_pair(s1, s2-collection);
-
-
-
+  // --- Intersection detection & registration ---
 
   template <bool not_register>
   bool IntPointsInStripe(REAL x1, REAL x2, TArcSegment* s2) {
@@ -188,237 +135,167 @@ public:
     REAL org_dist2 = oo.get_norm();
     REAL delta = 0.5 * (s1->r2 - s2->r2 + org_dist2);
     REAL l2 = s1->r2 * org_dist2 - delta * delta;
-    if (l2 < 0)return false;
+    if (l2 < 0) return false;
     oo /= org_dist2;
     auto m = s1->org + delta * oo;
     oo.rotate_prod(sqrt(l2));
     auto res = m + oo;
     bool ret = false;
-    if ((res.x >= x1) && (res.x <= x2) && (s1->IsTheSamePart(res)) && (s2->IsTheSamePart(res)))
-    {
+    if ((res.x >= x1) && (res.x <= x2) && (s1->IsTheSamePart(res)) && (s2->IsTheSamePart(res))) {
       if constexpr (not_register) return true;
       ret = true;
-      REGISTER_INTERSECTION(cur_seg_idx, s2, res);
+      RegisterIntersection(cur_seg_idx, s2, res);
     }
-    if (l2 == 0)return ret;
+    if (l2 == 0) return ret;
     res = m - oo;
-    if ((res.x >= x1) && (res.x <= x2) && (s1->IsTheSamePart(res)) && (s2->IsTheSamePart(res)))
-    {
+    if ((res.x >= x1) && (res.x <= x2) && (s1->IsTheSamePart(res)) && (s2->IsTheSamePart(res))) {
       if constexpr (not_register) return true;
       ret = true;
-      REGISTER_INTERSECTION(cur_seg_idx, s2, res);
+      RegisterIntersection(cur_seg_idx, s2, res);
     }
     return ret;
-  };
+  }
 
-
-
-  bool TrivCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
-  {
+  bool TrivCurSegIntWith(int4 s_) {
     auto s = collection + s_;
     auto x1 = MAX(cur_seg.x1, s->x1);
     auto x2 = MIN(cur_seg.x2, s->x2);
-    if (x1 >= x2)return false;
+    if (x1 >= x2) return false;
     return IntPointsInStripe<false>(x1, x2, s);
+  }
 
-  };
-
-  bool SSCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
-  {
+  bool SSCurSegIntWith(int4 s_) {
     auto s = collection + s_;
     auto x1 = MAX(cur_seg.x1, s->x1);
     auto x2 = MIN(cur_seg.x2, s->x2);
     return IntPointsInStripe<false>(x1, x2, s);
-  };
+  }
 
-  bool FindCurSegIntDownWith(int4 s_) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+  bool FindCurSegIntDownWith(int4 s_) {
     return IntPointsInStripe<false>(cur_seg.x1, cur_seg.x2, collection + s_);
-  };
+  }
 
-  auto FindCurSegIntDownWith(int4 *s_,int4 *last) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
-    while((THIS_HAS_SENTINELS || (s_ != last)) && IntPointsInStripe<false>(cur_seg.x1, cur_seg.x2, collection + *s_))
+  auto FindCurSegIntDownWith(int4* s_, int4* last) {
+    while ((THIS_HAS_SENTINELS || (s_ != last)) && IntPointsInStripe<false>(cur_seg.x1, cur_seg.x2, collection + *s_))
       --s_;
     return s_;
-  };
+  }
 
-  auto FindCurSegIntUpWith(int4* s_, int4* last) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+  auto FindCurSegIntUpWith(int4* s_, int4* last) {
     while ((THIS_HAS_SENTINELS || (s_ != last)) && IntPointsInStripe<false>(cur_seg.x1, cur_seg.x2, collection + *s_))
       ++s_;
     return s_;
-  };
+  }
 
-  bool FindCurSegIntUpWith(int4 s_) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+  bool FindCurSegIntUpWith(int4 s_) {
     return IntPointsInStripe<false>(cur_seg.x1, cur_seg.x2, collection + s_);
-  };
+  }
 
-  bool IsIntersectsCurSegDown(int4 s_){//check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
+  bool IsIntersectsCurSegDown(int4 s_) {
     return IntPointsInStripe<true>(cur_seg.x1, cur_seg.x2, collection + s_);
-  };
+  }
 
-  bool IsIntersectsCurSegUp(int4 s_){//check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
+  bool IsIntersectsCurSegUp(int4 s_) {
     return IntPointsInStripe<true>(cur_seg.x1, cur_seg.x2, collection + s_);
-  };
-
-  bool UnderCurPoint(int4 s_) const { return collection[s_].under(cur_point); };//returns true if s is under current point 
-
-  void ResetRegistration()
-  {
-    if (factory) {// only main collection has factory, not clones
-      if (registrator)//regstrar of main collection, clones will reset via factory
-        registrator->Reset();
-      factory->Reset();
-    }
   }
 
-  void CombineRegData()
-  {
-    if (factory) {// only main collection has factory, not clones
-      factory->combine_reg_data();
-    }
-  }
+  bool UnderCurPoint(int4 s_) const { return collection[s_].under(cur_point); }
 
-  void IntersectionsFindingDone()
-  {// to be called after all intersections found
-// empty function for the future use
-  }
+  // --- Endpoint sorting ---
 
-
-  void Reset()
-  {
-    MY_FREE_ARR_MACRO(ENDS);
-    MY_FREE_ARR_MACRO(seg_L_rank);
-    MY_FREE_ARR_MACRO(seg_R_rank);
-  }
-
-  uint4 PrepareEndpointsSortedList(uint4 *epoints)// endpoints allocated by caller and must contain space for at least 2*GetSegmNumb() points 
-  {
+  uint4 PrepareEndpointsSortedList(uint4* epoints) {
     auto NN = N << 1;
-    for (uint4 i = 0; i < NN; ++i)     epoints[i] = i * 3;
+    for (uint4 i = 0; i < NN; ++i) epoints[i] = i * 3;
     std::sort(epoints, epoints + NN,
       [x = ends](uint4 pt1, uint4 pt2) {
-      return ((x[pt1] < x[pt2]) || ((x[pt1] == x[pt2]) && (pt1 < pt2)));
-    }
+        return ((x[pt1] < x[pt2]) || ((x[pt1] == x[pt2]) && (pt1 < pt2)));
+      }
     );
     return NN;
-  };
-
-  void SetRegistrator(IntersectionRegistrator *r){
-    registrator = r;
-  };
-
-  IntersectionRegistrator *GetRegistrator() { return registrator; };
-
-  void Init(uint4 n, void* c, IntersectionRegistrator *r)
-  {
-    N = n;
-    collection = reinterpret_cast<TArcSegment*>(c);
-
-    static_assert(sizeof(TArcSegment) == 6 * sizeof(REAL), "one segment should occupy 6 reals space");
-    static_assert(offsetof(TArcSegment, x1) == 0, "TArcSegment.x1 should have 0 offset");
-    static_assert(offsetof(TArcSegment, x2) == 3 * sizeof(REAL), "TArcSegment.x2 should have 3 reals offset");
-    ends = reinterpret_cast<REAL*>(collection);
-    SetRegistrator(r);
-  };
-
-  void SortAt(uint4 rank, uint4 n, int4* L) {
-    SetCurStripeLeft(rank);
-    std::sort(L, L + n, [this](int4 s1, int4 s2) {return LBelow(s1, s2); });
-  };
-
-  void clone(CArcSegmentCollection& coll, IntersectionRegistrator* r)
-  {
-    clone_of = &coll;
-    ENDS = coll.ENDS;
-    seg_L_rank = coll.seg_L_rank;
-    seg_R_rank = coll.seg_R_rank;
-
-    Init(coll.N, coll.collection, r);
-  };
-
-  void unclone() {
-    if (registrator)
-      registrator->Flash();
-
-    if (clone_of == nullptr)
-      return;
-    ENDS = nullptr;
-    seg_L_rank = nullptr;
-    seg_R_rank = nullptr;
-    collection = nullptr;
-    clone_of = nullptr;
-  };
-
-  CArcSegmentCollection() {};
-
-  void InitClone(uint4 n_threads) {
-    if (factory)
-      factory->InitClone(n_threads);
   }
 
-
-  CArcSegmentCollection(const CollectionOptions &co, void* c, IntersectionRegistrator* r)
-  {
-    Init(co.n, c, r);
-  }
-
-  CArcSegmentCollection(const CollectionOptions& co, void* c, CRegistratorFactory<IntersectionRegistrator>* f)
-  {
-    factory = f;
-    factory->PrepareAlloc(co.n);
-    Init(co.n, c, factory->GetRegistrator(0));
-  }
-
-  CArcSegmentCollection(CArcSegmentCollection& coll, IntersectionRegistrator* r)
-  {
-    clone(coll,r);
-  }
-
-  CArcSegmentCollection(CArcSegmentCollection& coll, uint4 thread_index) 
-  {
-    if (coll.factory)
-      clone(coll, coll.factory->GetRegistrator(thread_index));
-    else
-      clone(coll, coll.GetRegistrator());
-  }
-
-  ~CArcSegmentCollection()
-  {
-    unclone();
-    Reset();
-  }
+  // --- SVG ---
 
   void coll_to_SVG(chostream* SVG_stream) {
-    if (!SVG_stream)return;
+    if (!SVG_stream) return;
     int4 n = MIN(max_SVG_items, N);
     auto mmr = get_mmrect01(collection, n);
     *SVG_stream << "<svg height='100%' width='100%' viewBox='";
     *SVG_stream << mmr.ld.x << " " << mmr.ld.y << " "
       << mmr.rt.x - mmr.ld.x << " " << mmr.rt.y - mmr.ld.y << "' transform='scale(1, -1)'>\n";
-    for (int4 i = 0; i < n; ++i)collection[i].write_SVG(i, SVG_stream);
-  };
+    for (int4 i = 0; i < n; ++i) collection[i].write_SVG(i, SVG_stream);
+  }
 
+  // --- Construction / Destruction ---
+
+  CArcSegmentCollection() {}
+
+  CArcSegmentCollection(const CollectionOptions& co, void* c, IntersectionRegistrator* r) {
+    InitDerived(co.n, c, r);
+  }
+
+  CArcSegmentCollection(const CollectionOptions& co, void* c, CRegistratorFactory<IntersectionRegistrator>* f) {
+    factory = f;
+    factory->PrepareAlloc(co.n);
+    InitDerived(co.n, c, factory->GetRegistrator(0));
+  }
+
+  CArcSegmentCollection(CArcSegmentCollection& coll, IntersectionRegistrator* r) {
+    Base::clone(coll, r);
+  }
+
+  CArcSegmentCollection(CArcSegmentCollection& coll, uint4 thread_index) {
+    if (coll.factory)
+      Base::clone(coll, coll.factory->GetRegistrator(thread_index));
+    else
+      Base::clone(coll, coll.GetRegistrator());
+  }
+
+  ~CArcSegmentCollection() {
+    Base::unclone();
+    Base::Reset();
+  }
 
 private:
-  auto GetX(uint4 pt) const { return ends[pt]; };
-  //{ return is_last(pt) ? collection[get_segm(pt)].x2 :collection[get_segm(pt)].x1; };
+  auto GetX(uint4 pt) const { return ends[pt]; }
 
-  CRegistratorFactory<IntersectionRegistrator>* factory = nullptr;
-  IntersectionRegistrator *registrator = nullptr;
-  CArcSegmentCollection *clone_of = nullptr;
-  uint4 N=0;
-  REAL B, E, X;
+  void RegisterIntersection(uint4 s1, TArcSegment* s2, const TPlaneVect& p) {
+    if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) != 0)
+      registrator->register_pair_and_point(s1, static_cast<uint4>(s2 - collection), p);
+    else
+      registrator->register_pair(s1, static_cast<uint4>(s2 - collection));
+  }
+
+  void InitDerived(uint4 n, void* c, IntersectionRegistrator* r) {
+    N = n;
+    collection = reinterpret_cast<TArcSegment*>(c);
+    static_assert(sizeof(TArcSegment) == 6 * sizeof(REAL), "one segment should occupy 6 reals space");
+    static_assert(offsetof(TArcSegment, x1) == 0, "TArcSegment.x1 should have 0 offset");
+    static_assert(offsetof(TArcSegment, x2) == 3 * sizeof(REAL), "TArcSegment.x2 should have 3 reals offset");
+    ends = reinterpret_cast<REAL*>(collection);
+    Base::SetRegistrator(r);
+  }
+
+  void ResetDerived() {}
+
+  void CloneDerived(CArcSegmentCollection& src) {
+    N = src.N;
+    collection = src.collection;
+    ends = src.ends;
+  }
+
+  void UncloneDerived() {
+    collection = nullptr;
+    ends = nullptr;
+  }
+
+  uint4 N = 0;
+  REAL B, E;
   TPlaneVect cur_point;
-
   uint4 cur_seg_idx = 0xFFFFFFFF;
   TArcSegment cur_seg;
-  TArcSegment *collection= nullptr;
-  REAL *ends= nullptr;
-
-  // moved arrays for endpoints
-  uint4* ENDS = nullptr;
-  uint4* seg_L_rank = nullptr;
-  uint4* seg_R_rank = nullptr;
-
+  TArcSegment* collection = nullptr;
+  REAL* ends = nullptr;
 };
 
 

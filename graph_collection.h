@@ -1,5 +1,4 @@
 #pragma once
-#pragma once
 /*
 *
 *      Copyright (c)  2011-2026  Ivan Balaban
@@ -22,203 +21,139 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 */
 // NEW IMPLEMENTATION
 
-/*struct SegmEndIndexes
-{
-  int4 B, E;
-  bool operator<(SegmEndIndexes si) { return (B<si.B) || ((B == si.B) && (E<si.E)); };
-  bool operator!=(SegmEndIndexes si) { return (B != si.B) || (E != si.E); };
-};*/
-
 #include "segments.h"
-#include <iostream>
+#include "collection_base.h"
+
 template<class IntersectionRegistrator>
 class CGraphSegmentCollection
+  : public CollectionBase<CGraphSegmentCollection<IntersectionRegistrator>, IntersectionRegistrator>
 {
+  using Base = CollectionBase<CGraphSegmentCollection<IntersectionRegistrator>, IntersectionRegistrator>;
+  friend Base;
+
+  using Base::ENDS;
+  using Base::seg_L_rank;
+  using Base::seg_R_rank;
+  using Base::factory;
+  using Base::registrator;
+  using Base::clone_of;
+
 public:
   using this_T = CGraphSegmentCollection;
   static constexpr _Coll_flag_state get_coll_flag(_Coll_flags flag) {
     if (flag == _Coll_flags::line_segments)
       return _Coll_flag_state::state_true;
-
     return _Coll_flag_state::state_unimplemented;
   }
 
-  PrepareResult Prepare()
-  {
-    Reset();
-    uint4 Nn = GetSegmNumb();
-    if (Nn == 0) return {};
-    uint4 NN = Nn << 1;
-    ENDS = new uint4[NN];
-    PrepareEndpointsSortedList(ENDS);
-    seg_L_rank = new uint4[Nn];
-    seg_R_rank = new uint4[Nn];
-    uint4 max_segm_on_vline = 0, nsegm_on_vline = 0;
-    double avr = 0;
-    for (uint4 i = 0; i < NN; ++i) {
-      if (is_last(ENDS[i])) {
-        seg_R_rank[get_segm(ENDS[i])] = i;
-        --nsegm_on_vline;
-      }
-      else {
-        seg_L_rank[get_segm(ENDS[i])] = i;
-        ++nsegm_on_vline;
-        if (nsegm_on_vline > max_segm_on_vline) max_segm_on_vline = nsegm_on_vline;
-      }
-      avr += nsegm_on_vline;
-    }
-    avr /= (double)NN;
-    return { NN, max_segm_on_vline, avr };
-  }
+  using Base::Prepare;
+  using Base::InsDel;
+  using Base::Reset;
+  using Base::ResetRegistration;
+  using Base::CombineRegData;
+  using Base::IntersectionsFindingDone;
+  using Base::SortAt;
+  using Base::InitClone;
+  using Base::GetSegR;
+  using Base::GetSegL;
+  using Base::PointAtRank;
+  using Base::SetRegistrator;
+  using Base::GetRegistrator;
 
-  template<class IntersectionFinder, class ProgramStackRec>
-  void InsDel(IntersectionFinder& i_f, uint4& L_size, int4* L, uint4 end_rank, ProgramStackRec* stack_pos) {
-    auto pt = PointAtRank(end_rank);
-    auto sn = get_segm(pt);
-    if (is_last(pt)) // if endpoint - remove
-    {
-      auto last = std::remove(L, L + L_size, sn);
-      assert(last + 1 == L + L_size);
-      --L_size;
-    }
-    else// if startpoint - insert
-    {
-      if (stack_pos->isnot_top()) {
-        SetCurSegAndPoint(sn);
-        i_f.FindIntI(*this, sn, stack_pos);// get internal intersections
-      }
-      else {
-        SetCurPointAtBeg(sn);//sets collection current point at the begin of the segment sn
-      }
-      int4 i = L_size;
-      for (auto _L = L - 1; (i != 0) && (!UnderCurPoint(_L[i])); --i)
-        L[i] = _L[i];
-      L[i] = sn; ++L_size;
-    }
-  }
+  // --- Endpoint encoding ---
 
-  static bool is_last(uint4 pt)
-  {
-    return pt & 1;
-  };
-  static uint4 get_segm(uint4 pt)
-  {
-    return pt >> 1;
-  };
-  static uint4 get_first_pt(uint4 s)
-  {
-    return s << 1;
-  };
-  static uint4 get_last_pt(uint4 s)
-  {
-    return (s << 1) + 1;
-  };
-  static uint4 get_other_pt(uint4 pt)
-  {
-    return pt ^ 1;
-  };
- uint4 get_first_idx(uint4 s) const
-  {
-    return vertex_idx[get_first_pt(s)];
-  };
- uint4 get_last_idx(uint4 s) const
-  {
-    return vertex_idx[get_last_pt(s)];
-  };
- uint4 get_other_idx(uint4 pt) const
-  {
-    return vertex_idx[get_other_pt(pt)];
-  };
+  static bool is_last(uint4 pt) { return pt & 1; }
+  static uint4 get_segm(uint4 pt) { return pt >> 1; }
+  static uint4 get_first_pt(uint4 s) { return s << 1; }
+  static uint4 get_last_pt(uint4 s) { return (s << 1) + 1; }
+  static uint4 get_other_pt(uint4 pt) { return pt ^ 1; }
 
-  uint4  GetSegmNumb() const { return nEdges; };
+  uint4 get_first_idx(uint4 s) const { return vertex_idx[get_first_pt(s)]; }
+  uint4 get_last_idx(uint4 s) const { return vertex_idx[get_last_pt(s)]; }
+  uint4 get_other_idx(uint4 pt) const { return vertex_idx[get_other_pt(pt)]; }
 
-  uint4 GetSegR(uint4 sn) const {
-    return seg_R_rank[sn];
-  };
-  uint4 GetSegL(uint4 sn) const {
-    return seg_L_rank[sn];
-  };
-  uint4 PointAtRank(uint4 rank) const {
-    return ENDS[rank];
-  }
+  // --- Segment count ---
+
+  uint4 GetSegmNumb() const { return nEdges; }
+
+  // --- Stripe bounds ---
 
   void SetCurStripe(uint4 left_rank, uint4 right_rank) {
     SetCurStripeLeft(left_rank);
     SetCurStripeRight(right_rank);
-  };
+  }
 
   void SetCurStripeLeft(uint4 left_rank) {
     auto left = ENDS[left_rank];
     ptB = left;
     idxB = vertex_idx[left];
     B = vertices[idxB].x;
-  };
+  }
 
   void SetCurStripeRight(uint4 right_rank) {
     auto right = ENDS[right_rank];
     ptE = right;
-    idxE = vertex_idx[right]; 
+    idxE = vertex_idx[right];
     E = vertices[idxE].x;
-  };
+  }
 
-  void SetCurPointAtBeg(uint4 s)
-  {
+  // --- Current point / segment ---
+
+  void SetCurPointAtBeg(uint4 s) {
     cur_pt = get_first_pt(s);
     cur_pt_idx = vertex_idx[cur_pt];
     cur_point = vertices[cur_pt_idx];
-  };
-  void SetCurSegAndPoint(uint4 s)
-  {
+  }
+
+  void SetCurSegAndPoint(uint4 s) {
     SetCurPointAtBeg(s);
     SetCurSeg(s);
-  };
+  }
 
-  void SetCurSegCutBE(uint4 s)
-  {
-    SetCurSeg(s);
-    curB = MAX(curB, B);
-    curE = MIN(curE, E);
-  };
-  void SetCurSegCutBeg(uint4 s)
-  {
-    SetCurSeg(s);
-    curB = MAX(curB, B);
-  };
-  void SetCurSegCutEnd(uint4 s)
-  {
-    SetCurSeg(s);
-    curE = MIN(curE, E);
-  };
-
-  void SetCurSeg(uint4 s)
-  {
+  void SetCurSeg(uint4 s) {
     cur_seg_idx = s;
     cur_seg_beg_idx = get_first_idx(s);
     cur_seg_end_idx = get_last_idx(s);
-
-    cur_seg = TLineSegment1(vertices[cur_seg_beg_idx],vertices[cur_seg_end_idx]);
+    cur_seg = TLineSegment1(vertices[cur_seg_beg_idx], vertices[cur_seg_end_idx]);
     curB = cur_seg.org.x;
     curE = cur_seg.org.x + cur_seg.shift.x;
-  };
+  }
 
-  bool LBelow(int4 s_1, int4 s_2) const //retuns if s1 below s2 at current vertical line
-  {
+  void SetCurSegCutBE(uint4 s) {
+    SetCurSeg(s);
+    curB = MAX(curB, B);
+    curE = MIN(curE, E);
+  }
+
+  void SetCurSegCutBeg(uint4 s) {
+    SetCurSeg(s);
+    curB = MAX(curB, B);
+  }
+
+  void SetCurSegCutEnd(uint4 s) {
+    SetCurSeg(s);
+    curE = MIN(curE, E);
+  }
+
+  // --- Ordering predicates ---
+
+  bool LBelow(int4 s_1, int4 s_2) const {
     auto beg1 = get_first_idx(s_1);
     auto beg2 = get_first_idx(s_2);
     auto end1 = get_last_idx(s_1);
     auto end2 = get_last_idx(s_2);
     auto org1 = vertices[beg1];
-    if ((beg1 == beg2)&&(beg1==idxB)) 
+    if ((beg1 == beg2) && (beg1 == idxB))
       return (vertices[end1] - org1) % (vertices[end2] - org1) > 0;
     auto org2 = vertices[beg2];
     auto shift1 = vertices[end1] - org1;
     auto shift2 = vertices[end2] - org2;
-    auto y1 = (org1.y*shift1.x + (B - org1.x)*shift1.y)*shift2.x;
-    auto y2 = (org2.y*shift2.x + (B - org2.x)*shift2.y)*shift1.x;
-    return y1<y2;
-  };
-  bool RBelow(int4 s_1, int4 s_2) const //retuns if s1 below s2 at current vertical line
-  {
+    auto y1 = (org1.y * shift1.x + (B - org1.x) * shift1.y) * shift2.x;
+    auto y2 = (org2.y * shift2.x + (B - org2.x) * shift2.y) * shift1.x;
+    return y1 < y2;
+  }
+
+  bool RBelow(int4 s_1, int4 s_2) const {
     auto beg1 = get_first_idx(s_1);
     auto beg2 = get_first_idx(s_2);
     auto end1 = get_last_idx(s_1);
@@ -229,33 +164,31 @@ public:
     auto org2 = vertices[end2];
     auto shift1 = vertices[beg1] - org1;
     auto shift2 = vertices[beg2] - org2;
-    auto y1 = (org1.y*shift1.x + (E - org1.x)*shift1.y)*shift2.x;
-    auto y2 = (org2.y*shift2.x + (E - org2.x)*shift2.y)*shift1.x;
-    return y1<y2;
-  };
+    auto y1 = (org1.y * shift1.x + (E - org1.x) * shift1.y) * shift2.x;
+    auto y2 = (org2.y * shift2.x + (E - org2.x) * shift2.y) * shift1.x;
+    return y1 < y2;
+  }
+
+  // --- Intersection detection & registration ---
 
   template <bool register_int>
-  bool FindIntWith(REAL x1, REAL x2, uint4 s_)
-  {
+  bool FindIntWith(REAL x1, REAL x2, uint4 s_) {
     auto beg = get_first_idx(s_);
     auto end = get_last_idx(s_);
-    if ((cur_seg_beg_idx == beg) || (cur_seg_end_idx == end))return false;
+    if ((cur_seg_beg_idx == beg) || (cur_seg_end_idx == end)) return false;
     auto s2 = TLineSegment1(vertices[beg], vertices[end]);
     TPlaneVect delt = s2.org - cur_seg.org;
-    REAL prod = cur_seg.shift%s2.shift, mul, xc;
-    mul = cur_seg.shift%delt;
-    if ((mul>0) ^ (mul + prod>0))
-    {
+    REAL prod = cur_seg.shift % s2.shift, mul, xc;
+    mul = cur_seg.shift % delt;
+    if ((mul > 0) ^ (mul + prod > 0)) {
       if (prod == 0) return false;
       mul = mul / prod;
-      xc = s2.org.x - mul*s2.shift.x;
-      if (((xc <= x1) || (xc>x2))) return false;
-      if constexpr(register_int)
-      {
-        if constexpr((_RegistrationType::point & IntersectionRegistrator::reg_type) != 0)
-        {
-          TPlaneVect p(xc, s2.org.y - mul*s2.shift.y);
-          registrator->register_pair_and_point(cur_seg_idx, s_,p);
+      xc = s2.org.x - mul * s2.shift.x;
+      if (((xc <= x1) || (xc > x2))) return false;
+      if constexpr (register_int) {
+        if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) != 0) {
+          TPlaneVect p(xc, s2.org.y - mul * s2.shift.y);
+          registrator->register_pair_and_point(cur_seg_idx, s_, p);
         }
         else
           registrator->register_pair(cur_seg_idx, s_);
@@ -263,98 +196,61 @@ public:
       return true;
     }
     return false;
-  };
+  }
 
-
-  bool TrivCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
-  {
+  bool TrivCurSegIntWith(int4 s_) {
     auto x1 = std::max(curB, vertices[get_first_idx(s_)].x);
     auto x2 = std::min(curE, vertices[get_last_idx(s_)].x);
-    if (x1 >= x2)return false;
+    if (x1 >= x2) return false;
     return FindIntWith<true>(x1, x2, s_);
-  };
+  }
 
-  bool SSCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
-  {
+  bool SSCurSegIntWith(int4 s_) {
     return FindIntWith<true>(curB, curE, s_);
-  };
+  }
 
-  auto FindCurSegIntDownWith(int4* s_, int4* last)
-  {
+  auto FindCurSegIntDownWith(int4* s_, int4* last) {
     while ((THIS_HAS_SENTINELS || (s_ != last)) && FindIntWith<true>(curB, curE, *s_))
       --s_;
     return s_;
-  };
+  }
 
-  auto FindCurSegIntUpWith(int4* s_, int4* last) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+  auto FindCurSegIntUpWith(int4* s_, int4* last) {
     while ((THIS_HAS_SENTINELS || (s_ != last)) && FindIntWith<true>(curB, curE, *s_))
       ++s_;
     return s_;
-  };
+  }
 
-  bool FindCurSegIntDownWith(int4 s_)
-  {
+  bool FindCurSegIntDownWith(int4 s_) {
     return FindIntWith<true>(curB, curE, s_);
-  };
+  }
 
-  bool FindCurSegIntUpWith(int4 s_) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+  bool FindCurSegIntUpWith(int4 s_) {
     return FindIntWith<true>(curB, curE, s_);
-  };
+  }
 
-  bool IsIntersectsCurSegDown(int4 s_)//check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
-  {
+  bool IsIntersectsCurSegDown(int4 s_) {
     return FindIntWith<false>(curB, curE, s_);
-  };
+  }
 
-  bool IsIntersectsCurSegUp(int4 s_)//check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
-  {
+  bool IsIntersectsCurSegUp(int4 s_) {
     return FindIntWith<false>(curB, curE, s_);
-  };
+  }
 
-  bool UnderCurPoint(int4 s_) const
-  {
-    auto beg= get_first_idx(s_);
+  bool UnderCurPoint(int4 s_) const {
+    auto beg = get_first_idx(s_);
     auto org = vertices[beg];
     if (beg != cur_pt_idx)
-      return (vertices[get_last_idx(s_)] - org) % (cur_point - org) >0;
-    return (vertices[get_last_idx(s_)] - org) % (vertices[get_other_idx(cur_pt)] - org) >0;
-  };//returns true if s is under current point 
-
-
-  void ResetRegistration()
-  {
-    if (factory) {// only main collection has factory, not clones
-      if (registrator)//regstrar of main collection, clones will reset via factory
-        registrator->Reset();
-      factory->Reset();
-    }
+      return (vertices[get_last_idx(s_)] - org) % (cur_point - org) > 0;
+    return (vertices[get_last_idx(s_)] - org) % (vertices[get_other_idx(cur_pt)] - org) > 0;
   }
 
-  void CombineRegData()
-  {
-    if (factory) {// only main collection has factory, not clones
-      factory->combine_reg_data();
-    }
-  }
+  // --- Endpoint sorting ---
 
-  void IntersectionsFindingDone()
-  {// to be called after all intersections found
-// empty function for the future use
-  }
-
-  void Reset()
-  {
-    MY_FREE_ARR_MACRO(ENDS);
-    MY_FREE_ARR_MACRO(seg_L_rank);
-    MY_FREE_ARR_MACRO(seg_R_rank);
-  }
-
-
-  uint4 PrepareEndpointsSortedList(uint4 *epoints)// endpoints allocated by caller and must contain space for at least 2*GetSegmNumb() points 
-  {
+  uint4 PrepareEndpointsSortedList(uint4* epoints) {
     auto NN = nEdges * 2;
-    for (uint4 i = 0; i < NN; ++i)     epoints[i] = i;
-    std::sort(epoints, epoints + NN, 
+    for (uint4 i = 0; i < NN; ++i) epoints[i] = i;
+    std::sort(epoints, epoints + NN,
       [this](uint4 pt1, uint4 pt2) {
         auto idx1 = vertex_idx[pt1];
         auto idx2 = vertex_idx[pt2];
@@ -362,136 +258,18 @@ public:
           return vertices[idx1] < vertices[idx2];
         bool l1 = is_last(pt1);
         bool l2 = is_last(pt2);
-        if (l1 < l2)return false;
-        if (l1 > l2)return true;
-    //    return (bool)(l1 ^ ((vertices[get_other_idx(pt1)] - vertices[idx1]) % (vertices[get_other_idx(pt2)] - vertices[idx2])>0));
-        return (vertices[get_other_idx(pt1)] - vertices[idx1]) % (vertices[get_other_idx(pt2)] - vertices[idx2])>0;
-    }
+        if (l1 < l2) return false;
+        if (l1 > l2) return true;
+        return (vertices[get_other_idx(pt1)] - vertices[idx1]) % (vertices[get_other_idx(pt2)] - vertices[idx2]) > 0;
+      }
     );
     return NN;
-  };
-
-  void clone(CGraphSegmentCollection &coll, IntersectionRegistrator *r)
-  {
-    clone_of = &coll;
-    ENDS = coll.ENDS;
-    seg_L_rank = coll.seg_L_rank;
-    seg_R_rank = coll.seg_R_rank;
-
-    nVertices = coll.nVertices;
-    nEdges= coll.nEdges;
-    vertices = coll.vertices;
-    vertex_idx = coll.vertex_idx;
-    SetRegistrator(r);
-  };
-  
-  void unclone() 
-  { 
-    if (registrator)
-      registrator->Flash();
-
-    if (clone_of == nullptr)
-      return; 
-    nVertices = 0;
-    nEdges = 0;
-    vertices = nullptr;
-    vertex_idx = nullptr;
-    ENDS = nullptr;
-    seg_L_rank = nullptr;
-    seg_R_rank = nullptr;
-    clone_of = nullptr;
-  };
-
-  void SortAt(uint4 rank, uint4 n, int4 *L)
-  {
-    SetCurStripeLeft(rank);
-    std::sort(L, L + n, [this](int4 s1, int4 s2) {return LBelow(s1, s2); });
-  };
-
-  void SetRegistrator(IntersectionRegistrator *r)
-  {
-    registrator = r;
-    
-  };
-
-  IntersectionRegistrator *GetRegistrator() { return registrator; };
-
-  void Init(uint4 n, void * c, IntersectionRegistrator *r)
-  {
-    nVertices = n; nEdges=n;
-    vertices = reinterpret_cast<TPlaneVect*>(c);
-    //vertices = new TPlaneVect[n];
-    vertex_idx = new uint4[2 * n];
-    for (uint4 i = 0; i < n; i++)
-    {
-      auto ii = i << 1;
-      auto j = (i + 1) % n;
-      // adding edge connecting current and next points
-      if (vertices[i] < vertices[j])//first point of the edge should be "on the left" from second
-        {
-          vertex_idx[ii] = i;
-          vertex_idx[ii + 1] = j;
-        }
-      else
-        {
-          vertex_idx[ii] = j;
-          vertex_idx[ii + 1] = i;
-        }
-    }
-    /*std::cout << "vertices *********************\n[";
-      for (uint4 i = 0; i < nVertices; ++i)
-        std::cout <<  vertices[i] << ",\n";
-      std::cout << "]\n edges *********************\n[";
-      for (uint4 i = 0; i < nEdges; ++i)
-        std::cout << "[" << vertex_idx[i*2] <<"," << vertex_idx[i * 2+1] << "]\n";
-      std::cout << "]\n";*/
-    SetRegistrator(r);
-
-  };
-
-  void InitClone(uint4 n_threads) {
-    if (factory)
-      factory->InitClone(n_threads);
   }
 
-  CGraphSegmentCollection(const CollectionOptions& co, void* c, IntersectionRegistrator *r)
-  {
-    Init(co.n, c, r);
-  }
-
-  CGraphSegmentCollection(const CollectionOptions& co, void* c, CRegistratorFactory<IntersectionRegistrator>* f)
-  {
-    factory = f;
-    factory->PrepareAlloc(co.n);
-    Init(co.n, c, factory->GetRegistrator(0));
-  }
-
-  CGraphSegmentCollection() {};
-
-  CGraphSegmentCollection(CGraphSegmentCollection& coll, IntersectionRegistrator* r)
-  {
-    clone(coll, r);
-  }
-
-  CGraphSegmentCollection(CGraphSegmentCollection& coll, uint4 thread_index) 
-  {
-    if (coll.factory)
-      clone(coll, coll.factory->GetRegistrator(thread_index));
-    else
-      clone(coll, coll.GetRegistrator());
-  }
-
-  ~CGraphSegmentCollection() 
-  {
-    unclone();
-    Reset();
-    //MY_FREE_ARR_MACRO(vertices);
-    MY_FREE_ARR_MACRO(vertex_idx);
-
-  };
+  // --- SVG ---
 
   void coll_to_SVG(chostream* SVG_text) {
-    if (!SVG_text)return;
+    if (!SVG_text) return;
     uint4 n = MIN(max_SVG_items, GetSegmNumb());
     REAL xmin = 0, ymin = 0, xmax = 1, ymax = 1;
     for (uint4 i = 0; i < nVertices; ++i) {
@@ -503,8 +281,7 @@ public:
     *SVG_text << "<svg height='100%' width='100%' viewBox='";
     *SVG_text << xmin << " " << ymin << " "
       << xmax - xmin << " " << ymax - ymin << "' transform='scale(1, -1)'>\n";
-    for (uint4 s = 0; s != n; ++s)
-    {
+    for (uint4 s = 0; s != n; ++s) {
       auto& bp = vertices[get_first_idx(s)];
       auto& ep = vertices[get_last_idx(s)];
       *SVG_text << "<line id='seg" << s;
@@ -513,39 +290,92 @@ public:
       *SVG_text << "' x2='" << ep.x;
       *SVG_text << "' y2='" << ep.y;
       *SVG_text << "' class='edge'/>\n";
-
     }
+  }
 
-  };
+  // --- Construction / Destruction ---
 
+  CGraphSegmentCollection() {}
+
+  CGraphSegmentCollection(const CollectionOptions& co, void* c, IntersectionRegistrator* r) {
+    InitDerived(co.n, c, r);
+  }
+
+  CGraphSegmentCollection(const CollectionOptions& co, void* c, CRegistratorFactory<IntersectionRegistrator>* f) {
+    factory = f;
+    factory->PrepareAlloc(co.n);
+    InitDerived(co.n, c, factory->GetRegistrator(0));
+  }
+
+  CGraphSegmentCollection(CGraphSegmentCollection& coll, IntersectionRegistrator* r) {
+    Base::clone(coll, r);
+  }
+
+  CGraphSegmentCollection(CGraphSegmentCollection& coll, uint4 thread_index) {
+    if (coll.factory)
+      Base::clone(coll, coll.factory->GetRegistrator(thread_index));
+    else
+      Base::clone(coll, coll.GetRegistrator());
+  }
+
+  ~CGraphSegmentCollection() {
+    Base::unclone();
+    Base::Reset();
+    MY_FREE_ARR_MACRO(vertex_idx);
+  }
 
 private:
-  auto GetX(uint4 pt) const
-  {
+  auto GetX(uint4 pt) const {
     return vertices[vertex_idx[pt]].x;
-  };
+  }
 
-  CRegistratorFactory<IntersectionRegistrator>* factory = nullptr;
-  IntersectionRegistrator *registrator = nullptr;
-  CGraphSegmentCollection *clone_of = nullptr;
-  uint4 nVertices, nEdges;
-  TPlaneVect *vertices=nullptr;
-  uint4 *vertex_idx=nullptr;
-  //SegmEndIndexes *se_index;
+  void InitDerived(uint4 n, void* c, IntersectionRegistrator* r) {
+    nVertices = n;
+    nEdges = n;
+    vertices = reinterpret_cast<TPlaneVect*>(c);
+    vertex_idx = new uint4[2 * n];
+    for (uint4 i = 0; i < n; i++) {
+      auto ii = i << 1;
+      auto j = (i + 1) % n;
+      if (vertices[i] < vertices[j]) {
+        vertex_idx[ii] = i;
+        vertex_idx[ii + 1] = j;
+      }
+      else {
+        vertex_idx[ii] = j;
+        vertex_idx[ii + 1] = i;
+      }
+    }
+    Base::SetRegistrator(r);
+  }
+
+  void ResetDerived() {}
+
+  void CloneDerived(CGraphSegmentCollection& src) {
+    nVertices = src.nVertices;
+    nEdges = src.nEdges;
+    vertices = src.vertices;
+    vertex_idx = src.vertex_idx;
+  }
+
+  void UncloneDerived() {
+    nVertices = 0;
+    nEdges = 0;
+    vertices = nullptr;
+    vertex_idx = nullptr;
+  }
+
+  uint4 nVertices = 0, nEdges = 0;
+  TPlaneVect* vertices = nullptr;
+  uint4* vertex_idx = nullptr;
   REAL B, E, curB, curE;
   uint4 ptB, ptE, idxB, idxE;
-  uint4 cur_pt= 0xFFFFFFFF;
+  uint4 cur_pt = 0xFFFFFFFF;
   uint4 cur_pt_idx = 0xFFFFFFFF;
   TPlaneVect cur_point;
-
   uint4 cur_seg_idx = 0xFFFFFFFF;
   uint4 cur_seg_beg_idx = 0xFFFFFFFF;
   uint4 cur_seg_end_idx = 0xFFFFFFFF;
   TLineSegment1 cur_seg;
-  // moved arrays for endpoints
-  uint4* ENDS = nullptr;
-  uint4* seg_L_rank = nullptr;
-  uint4* seg_R_rank = nullptr;
-
 };
 
