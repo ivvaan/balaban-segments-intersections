@@ -74,9 +74,7 @@ template< class REAL> REAL sq(REAL x) { return x * x; }
 
 using chostream = std::basic_ostream<char>;
 
-typedef void(*PSeg);
-typedef void(*PRegObj);
-
+using PSeg = void*; 
 
 enum _Algorithm{
   triv = 1,

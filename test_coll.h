@@ -2,7 +2,7 @@
 #define TEST_COLL_H
 /*
 *
-*      Copyright (c)  2011-2020  Ivan Balaban
+*      Copyright (c)  2011-2026  Ivan Balaban
 *      ivvaan@gmail.com
 *
 This file is part of Seg_int library.

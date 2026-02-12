@@ -1,7 +1,7 @@
 #pragma once
 /*
 *
-*      Copyright (c)  2011-2020  Ivan Balaban
+*      Copyright (c)  2011-2026  Ivan Balaban
 *      ivvaan@gmail.com
 *
 This file is part of Seg_int library.
@@ -337,9 +337,8 @@ public:
     TIntegerVect EndPoint() const {
       return org + shift;
     };
-    bool operator==(const TIntegerSegment&) const {
-      return (org == org) && (shift == shift);
-    };
+    bool operator==(const TIntegerSegment& s) const = default;
+
     auto PointX(bool is_last) const {
       return is_last ? org.x + shift.x : org.x;
     };

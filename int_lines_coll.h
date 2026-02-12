@@ -910,7 +910,6 @@ public:
     ENDS = nullptr;
     seg_L_rank = nullptr;
     seg_R_rank = nullptr;
-    remaper.unclone();
     MY_FREE_ARR_MACRO(tmp);
 
     //unclone remaper !!!!!!!!
