@@ -1,5 +1,4 @@
-#ifndef OPTIMAL_FINDER_FOR_SEGMENT_INTERSECTION
-#define OPTIMAL_FINDER_FOR_SEGMENT_INTERSECTION
+#pragma once
 /*
 *
 *      Copyright (c)  2011-2026  Ivan Balaban
@@ -361,4 +360,3 @@ private:
 
 };
 
-#endif

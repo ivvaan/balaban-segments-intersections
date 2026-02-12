@@ -1,5 +1,4 @@
-#ifndef UTILS_FOR_SEGMENT_INTERSECTION
-#define UTILS_FOR_SEGMENT_INTERSECTION
+#pragma once
 /*
 *
 *      Copyright (c)  2011-2026  Ivan Balaban
@@ -535,4 +534,3 @@ struct PrepareResult {
 };
 
 
-#endif

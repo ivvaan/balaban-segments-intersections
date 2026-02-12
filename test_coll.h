@@ -1,5 +1,4 @@
-#ifndef TEST_COLL_H
-#define TEST_COLL_H
+#pragma once
 /*
 *
 *      Copyright (c)  2011-2026  Ivan Balaban
@@ -71,5 +70,3 @@ find_intersections_func get_find_intersections_func(uint4 reg_type);
 void write_SVG(std::ostream* svg_stream, const SegmentsAndRegOptions& opt, PSeg segs, int4 algs);
 
 //******************************************************************************************************
-
-#endif

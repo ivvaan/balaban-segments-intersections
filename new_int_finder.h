@@ -1,5 +1,4 @@
-#ifndef NEW_INT_FINDER_FOR_SEGMENT_INTERSECTION
-#define NEW_INT_FINDER_FOR_SEGMENT_INTERSECTION
+#pragma once
 /*
 *
 *      Copyright (c)  2011-2026  Ivan Balaban
@@ -358,5 +357,3 @@ protected:
 };
 */
 
-//#undef MY_FREE_ARR_MACRO
-#endif

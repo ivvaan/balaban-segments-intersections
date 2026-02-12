@@ -1,4 +1,45 @@
+#pragma once
+/*
+*
+*      Copyright (c)  2011-2026  Ivan Balaban
+*      ivvaan@gmail.com
+*
+This file is part of Seg_int library.
+
+Seg_int is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Seg_int is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+#include "segments.h"
+#include "utils.h"
+#include <cassert>
+#include <algorithm>
+#include <vector>
+#include <numeric> // Add this include at the top of the file (with other includes)
+
+// CRemaper is a degenerate-case preprocessor for integer segments.
+//
+// It normalizes a set of potentially overlapping / collinear segments by splitting
+// shared subsegments into separate pieces. After normalization:
+// - no two distinct segments overlap along a 1D interval,
+// - only endpoint-level degeneracies remain (shared endpoints, multi-events handled elsewhere).
+//
+// The sweep algorithms run on the normalized collection, and reported intersecting pairs are
+// expanded back into pairs of original segments via `register_pair(...)`.
+
+template<class IntersectionRegistrator>
 class CRemaper {
+
   struct MarkedListBounds {
     uint4 beg = 0;
     uint4 end = 0;
@@ -12,27 +53,16 @@ class CRemaper {
     }
   };
 
-
-public:
-  // CRemaper is a degenerate-case preprocessor for integer segments.
-  //
-  // It normalizes a set of potentially overlapping / collinear segments by splitting
-  // shared subsegments into separate pieces. After normalization:
-  // - no two distinct segments overlap along a 1D interval,
-  // - only endpoint-level degeneracies remain (shared endpoints, multi-events handled elsewhere).
-  //
-  // The sweep algorithms run on the normalized collection, and reported intersecting pairs are
-  // expanded back into pairs of original segments via `register_pair(...)`.
-
-  bool prepare_remap(std::vector<uint4>& indexes, TIntegerVect points[],
-    std::vector<TIntegerSegment>& res_coll,
-    std::vector<TIntegerVect>& res_pts)
+  template<typename Collection>
+  bool prepare_remap(std::vector<uint4>& indexes, TIntegerVect points[], Collection& collection)
   {
+    std::vector<TIntegerSegment>& res_coll = collection.get_segments();
+    std::vector<TIntegerVect>& res_pts = collection.get_points();
     // Input:
     // - `indexes`: endpoint ids sorted by the comparator from TurnRemapOn().
     //   Endpoint id is an encoded integer where:
-    //     - `get_segm(pt)` gives the segment index,
-    //     - `is_last(pt)` distinguishes start/end.
+    //     - `Collection::get_segm(pt)` gives the segment index,
+    //     - `Collection::is_last(pt)` distinguishes start/end.
     // - `points[pt]`: the integer endpoint coordinate for that encoded endpoint id.
     //
     // Output:
@@ -67,7 +97,7 @@ public:
     bool not_remapped = true;// initial_SN == nonzero_N;
     for (int4 i = 0, size = 0; i < (int4)N; ++i) {
       auto pt = indexes[i];
-      size += is_last(pt) ? -1 : 1;
+      size += Collection::is_last(pt) ? -1 : 1;
       assert(size >= 0);
 
       if (size != 0) {
@@ -76,7 +106,7 @@ public:
 
         // If pt and next_pt belong to the same original segment, allow zero-length piece.
         // For non-zero segments this is redundant (their endpoints differ anyway); for zero segments it's required.
-        auto allow_zero_len_piece = (get_segm(pt) == get_segm(next_pt));
+        auto allow_zero_len_piece = (Collection::get_segm(pt) == Collection::get_segm(next_pt));
 
         // If there is a real-length interval OR we explicitly allow a zero-length one,
         // then it will become a normalized segment piece.
@@ -128,11 +158,11 @@ public:
       auto pt = indexes[i];
 
       // Update active set.
-      if (is_last(pt)) {
-        remove_by_val(stack, get_segm(pt));
+      if (Collection::is_last(pt)) {
+        remove_by_val(stack, Collection::get_segm(pt));
       }
       else {
-        auto s = get_segm(pt);
+        auto s = Collection::get_segm(pt);
 
         // When a segment becomes active on a line, it overlaps the ones already active on that line.
         // That overlap is a "collinear intersection" and is easiest to register right here
@@ -153,7 +183,7 @@ public:
 
         // Same special-case: keep a zero-length piece only when it is exactly a zero segment's endpoints.
         // All other zero-length "gaps" between unrelated endpoints are ignored.
-        auto allow_zero_len_piece = (get_segm(pt) == get_segm(next_pt));
+        auto allow_zero_len_piece = (Collection::get_segm(pt) == Collection::get_segm(next_pt));
 
         if (allow_zero_len_piece || (beg != end)) {
           // Store back-references to original segments.
@@ -172,8 +202,8 @@ public:
 
           // Store normalized geometry.
           res_coll[new_seg_num] = { beg, end };
-          res_pts[first_point(new_seg_num)] = beg;
-          res_pts[last_point(new_seg_num)] = end;
+          res_pts[Collection::first_point(new_seg_num)] = beg;
+          res_pts[Collection::last_point(new_seg_num)] = end;
 
           ++new_seg_num;
         }
@@ -188,26 +218,25 @@ public:
     return not_remapped;
   }
 
-  template<bool leave_zero_seg=true>
-  auto TurnRemapOn(CTHIS& collection) {
+
+public:
+
+  template<typename Collection>
+  auto TurnRemapOn(Collection& collection) {
     auto n = initial_SN;
 
-    auto points = std::move(collection.points);
-    seg_v = std::move(collection.segments);
+    auto points = std::move(collection.get_points());
+    seg_v = std::move(collection.get_segments());
     seg = seg_v.data();
-    std::vector<uint4> indexes;
-    indexes.reserve(2 * n);
+    std::vector<uint4> indexes(2 * n);
 
+    std::iota(indexes.begin(), indexes.end(), 0);
 
-    for (uint4 i = 0; i < 2 * n; ++i)
-      if (leave_zero_seg || seg[get_segm(i)].shift.is_non_zero())
-        indexes.push_back(i);
-
-    nonzero_N = indexes.size() / 2;
+    nonzero_N = n;
 
     auto comparator = [segments = seg, pts = points.data()](uint4 pt1, uint4 pt2) {
-      auto i1 = get_segm(pt1);
-      auto i2 = get_segm(pt2);
+      auto i1 = Collection::get_segm(pt1);
+      auto i2 = Collection::get_segm(pt2);
       if (i1 == i2)
         return pt1 < pt2; //same segment
 
@@ -239,8 +268,8 @@ public:
       if (prod != 0)// points not coinside
         return  0 < prod;
       // here points coinside, but segments can be different (zero-seg can coincide with non-zero seg)
-      bool last1 = is_last(pt1);
-      bool last2 = is_last(pt2);
+      bool last1 = Collection::is_last(pt1);
+      bool last2 = Collection::is_last(pt2);
       if (last1 != last2) {
         //return (is_zero1 && is_zero2) ? last1 < last2 : last1 > last2; //different segments end first exept when both zero, then start first
         return (is_zero1 && is_zero2) == last2; //equal to previous line, but faster to compute
@@ -248,7 +277,7 @@ public:
       }
       // Both endpoints are at the same coordinate and are of the same kind (both first or both last).
       // Among FIRST endpoints: zero first. Among LAST endpoints: non-zero first.
-      // here is_last(pt1) == is_last(pt2)
+      // here Collection::is_last(pt1) == Collection::is_last(pt2)
       if (is_zero1 != is_zero2)
         //return last2 ? (is_zero1 < is_zero2) : (is_zero1 > is_zero2);
         return last2 == is_zero2;//equal to previous line, but faster to compute
@@ -262,16 +291,16 @@ public:
     std::sort(indexes.begin(), indexes.end(), comparator);
 
 
-    bool not_remapped = prepare_remap(indexes, points.data(), collection.segments, collection.points);
+    bool not_remapped = prepare_remap(indexes, points.data(), collection);
     if (not_remapped) {
-      collection.segments = std::move(seg_v);
-      collection.points = std::move(points);
+      collection.get_segments() = std::move(seg_v);
+      collection.get_points() = std::move(points);
       return false;
     }
-    remapped_segs = collection.segments.data();
+    remapped_segs = collection.get_segments().data();
     remapped_segs[remapped_SN] = seg[n];//bottom sentinel
     remapped_segs[remapped_SN + 1] = seg[n + 1];//top sentinel
-    remapped_ends = collection.points.data();
+    remapped_ends = collection.get_points().data();
 
     return true;
   };
@@ -354,34 +383,6 @@ public:
     return;
   }
 
-
-  template<bool remove_zero_seg = true>
-  auto FromIntSegVect(std::vector<TIntegerSegment>& v, IntersectionRegistrator* r, CTHIS& collection) {
-    auto n = nonzero_N = v.size();
-    std::vector<TIntegerVect> points(2 * n);
-    uint4 i = 0;
-    for (auto& s : v) {
-      if (s.shift.is_zero()) {
-        --nonzero_N;
-        continue;
-      }
-      assert(s.is_inside_int_range());
-      seg_v.push_back(s);
-      points[first_point(i)] = s.BegPoint();
-      points[last_point(i)] = s.EndPoint();
-      ++i;
-    }
-    seg = seg_v.data();
-    remapped_SN = nonzero_N;
-    if constexpr (remove_zero_seg)
-      initial_SN = nonzero_N;
-    registrator = r;
-
-    collection.segments = std::move(seg_v);
-    collection.points = std::move(points);
-    return;
-  };
-
   auto& get_seg_v() {
     return seg_v;
   }
@@ -394,14 +395,12 @@ public:
     return remapped_SN;
   }
 
-  IntersectionRegistrator* registrator = nullptr;
-
   void clone_from(CRemaper* other) {
     initial_SN = other->initial_SN;
     nonzero_N = other->nonzero_N;
     remapped_SN = other->remapped_SN;
     remap_size = other->remap_size;
-    range = other->range;
+    //range = other->range;
     registrator = other->registrator;
     remap_v = other->remap_v;//the data mast be copied when cloning (read\write access)
     //just copy pointers (for read only access)
@@ -418,22 +417,33 @@ public:
     registrator = nullptr;
   };
 
+IntersectionRegistrator* registrator = nullptr;
+
 private:
   uint4 initial_SN = 0;
   uint4 nonzero_N = 0;
   uint4 remapped_SN = 0;
   uint4 remap_size = 0;
-  int4 range = 1;
+  //int4 range = 1;
   std::vector<MarkedListBounds> rrec_v;
-  MarkedListBounds* rrec = nullptr;
   std::vector<uint4> remap_v;//mast be copied when cloning
   std::vector<TIntegerSegment> seg_v;//if remapped original int segments are stored here
+  MarkedListBounds* rrec = nullptr;
   TIntegerSegment* seg = nullptr;
   TIntegerSegment* remapped_segs = nullptr;
   TIntegerVect* remapped_ends = nullptr;
   //CRemaper* clone_of = nullptr;
 
 };
+
+
+
+
+
+
+
+
+
 
 
 

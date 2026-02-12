@@ -31,12 +31,14 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 // NOTE: The implementation assumes there are no two distinct zero segments that coincide as points
 // (asserted in `CRemaper::TurnRemapOn()` in debug builds).
 
+#include "remaper.h"
 #include "segments.h"
 #include "registrator.h"
 #include "utils.h"
 #include <cassert>
 #include <algorithm>
 #include <numeric>
+
 
 template<typename Real>
 Real get_max_gap_middle(uint4 N, Real arr[])
@@ -111,7 +113,6 @@ private:
   };
 
   //===========================================================================
-#include "remaper.h"
   //===========================================================================
 
 public:
@@ -1138,6 +1139,10 @@ public:
     return segments;
   };
 
+  auto& get_points() {
+    return points;
+  };
+
   //for debug purposes
   auto& get_ini_segments() {
     if(is_collection_remapped)
@@ -1174,7 +1179,7 @@ private:
   TIntegerVect cur_point, active_end;
   std::vector<TIntegerSegment> segments;
   std::vector<TIntegerVect> points;
-  CRemaper remaper;
+  CRemaper<IntersectionRegistrator> remaper;
   decltype(reg_pair) *register_pair = reg_pair;
   CIntegerSegmentCollection *clone_of = nullptr;
   uint4 nSegments=0,nTotX=0,nCollideX=0;

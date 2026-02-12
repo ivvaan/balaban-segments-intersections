@@ -1,5 +1,4 @@
-#ifndef REGISTRATOR_FOR_SEGMENT_INTERSECTION
-#define REGISTRATOR_FOR_SEGMENT_INTERSECTION
+#pragma once
 
 
 /*
@@ -454,5 +453,3 @@ using SimpleCounter = JustCountingRegistrator<>;
 using SimpleCounter2 = JustCountingRegistrator<_RegistrationType::point>;
 using PerSegmCounter = PerSegmCountingRegistrator;
 using TrueRegistrator = PairAndPointRegistrator<TPlaneVect> ;
-
-#endif // !REGISTRATOR_FOR_SEGMENT_INTERSECTION
