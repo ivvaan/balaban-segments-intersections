@@ -159,14 +159,14 @@ protected:
 
   template<class SegmentsColl, bool HasSentinels = has_sentinels<SegmentsColl> >
   struct CSentinel {
-    CSentinel(SegmentsColl& coll, int4& ini) {};
+    CSentinel(SegmentsColl& coll, int4& ini, bool is_top = false) {};
   };
 
   template<class SegmentsColl>
   struct CSentinel <SegmentsColl, true> {
-    CSentinel(SegmentsColl& coll, int4& ini) : to_restore(ini) {
+    CSentinel(SegmentsColl& coll, int4& ini, bool is_top = false) : to_restore(ini) {
       prev_val = to_restore;
-      to_restore = coll.get_sentinel(false);
+      to_restore = coll.get_sentinel(is_top);
     };
     ~CSentinel() {
       to_restore = prev_val;
@@ -270,17 +270,20 @@ protected:
   template <class SegmentsColl>
   static void FindInt(SegmentsColl& segments, int4* const qb, int4* const qe, int4* l)
   {
-    auto c = l;
-    while ((c != qb) && segments.FindCurSegIntDownWith(*c)) //first get intersections below
-      --c;
+    // Use range overloads with sentinel instead of single-element overloads.
+    // Bottom sentinel is placed via CSentinel RAII (restores *qb on scope exit).
+    // Top sentinel is placed directly at *qe (no restore needed — qe is one past
+    // the last stair, so the caller does not rely on its value).
+    CSentinel bsentinel(segments, *qb);
+    auto c = segments.FindCurSegIntDownWith(l, qb); //first get intersections below
 
     constexpr const bool line_seg = (SegmentsColl::get_coll_flag(_Coll_flags::line_segments) == _Coll_flag_state::state_true);
 
-    if ((line_seg && (c != l)))
-      return; //if found and segment is line or no stair above it can't be any more
-    do {
-      ++l;
-    } while ((l != qe) && segments.FindCurSegIntUpWith(*l)); // get intersections above
+    if (line_seg && (c != l))
+      return; //if found and segment is line there can't be any more intersections above
+
+    CSentinel tsentinel(segments, *qe, true);
+    segments.FindCurSegIntUpWith(l + 1, qe); // get intersections above
   };
 
   template<class SegmentsColl>

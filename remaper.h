@@ -306,6 +306,8 @@ public:
 
 
   void register_pair(uint4 s1, uint4 s2, uint4 int_type) {
+    if(s1 == s2)
+      return;
     auto orig_int_type = seg[s1].get_int_type_beg(seg[s2]);
     if (int_type == orig_int_type)
       registrator->register_pair(s1, s2);

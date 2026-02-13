@@ -36,7 +36,7 @@ public:
  
   ~CFastIntFinder() { unclone(); FreeMem(); };
 
-  template<BalabanSegColl SegmentsColl>
+  template<FastSegColl SegmentsColl>
   void find_intersections(SegmentsColl  &segments,uint4 from=0,uint4 to=0)
   {
     //AllocMem
