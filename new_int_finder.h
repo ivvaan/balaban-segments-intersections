@@ -35,7 +35,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 class CTrivialIntFinder
 {
 public:
-  template<class SegmentsColl>
+  template<TrivialSegColl SegmentsColl>
   void find_intersections(SegmentsColl &segments) 
   {
     uint4 N = segments.GetSegmNumb();
@@ -55,7 +55,7 @@ public:
 
 class CSimpleSweepIntFinder {
 public:
-  template <class SegmentsColl>
+  template <SweepSegColl SegmentsColl>
     void find_intersections(SegmentsColl& segments)
     {
         uint4 n = segments.GetSegmNumb();

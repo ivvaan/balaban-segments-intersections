@@ -35,7 +35,7 @@ public:
   using CFAST = CFastIntFinder;
  
   ~COptimalIntFinder() { FreeMem(); };
-  template<class SegmentsColl>
+  template<OptimalSegColl SegmentsColl>
   void find_intersections(SegmentsColl &segments)
   {
     //AllocMem

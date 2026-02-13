@@ -24,6 +24,8 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include "registrator.h"
 #include <algorithm>
 #include <cassert>
+#include <concepts>
+
 
 // CRTP base class for segment collections.
 //
@@ -192,4 +194,152 @@ protected:
 
   Derived& self() { return static_cast<Derived&>(*this); }
   const Derived& self() const { return static_cast<const Derived&>(*this); }
+};
+
+// =============================================================================
+// Segment collection concept hierarchy.
+//
+// The concepts are layered so that each algorithm requires only what it actually
+// uses. A collection author can check exactly which subset of the interface is
+// needed for the algorithms they care about.
+//
+//   SegCollCore              -- shared by ALL algorithms
+//     ├─ TrivialSegColl      -- + TrivCurSegIntWith              (CTrivialIntFinder)
+//     ├─ SweepSegColl         -- + endpoint sorting, SSCurSegIntWith  (CSimpleSweepIntFinder)
+//     └─ BalabanSegColl       -- + stripe/ordering/InsDel/Split/Merge (CFastIntFinder, COptimalIntFinder)
+//          └─ OptimalSegColl -- + clone/registrator management   (parallel find_intersections)
+//          └─ ParallelSegColl -- + clone/registrator management   (parallel find_intersections)
+// =============================================================================
+
+// ---------------------------------------------------------------------------
+// Core: the absolute minimum every algorithm needs.
+// ---------------------------------------------------------------------------
+template<class C>
+concept SegCollCore = requires(C c, C & cref, uint4 u, int4 i) {
+  // Segment count
+  { c.GetSegmNumb() } -> std::convertible_to<uint4>;
+  // Set current segment for subsequent intersection queries
+  { c.SetCurSeg(u) };
+  // Post-processing hook (may be empty)
+  { c.IntersectionsFindingDone() };
+  // Compile-time flags
+  { C::get_coll_flag(_Coll_flags::line_segments) } -> std::same_as<_Coll_flag_state>;
+};
+
+// ---------------------------------------------------------------------------
+// Trivial O(N^2) algorithm: Core + pairwise check.
+// Used by: CTrivialIntFinder
+// ---------------------------------------------------------------------------
+template<class C>
+concept TrivialSegColl = SegCollCore<C> && requires(C c, int4 i) {
+  // Check and register intersection of current segment with segment i
+  { c.TrivCurSegIntWith(i) } -> std::convertible_to<bool>;
+};
+
+// ---------------------------------------------------------------------------
+// Simple plane sweep: Core + endpoint enumeration + sweep check.
+// Used by: CSimpleSweepIntFinder
+// ---------------------------------------------------------------------------
+template<class C>
+concept SweepSegColl = SegCollCore<C> && requires(C c, uint4 u, uint4 * p) {
+  // Endpoint encoding (static)
+  { C::is_last(u) } -> std::convertible_to<bool>;
+  { C::get_segm(u) } -> std::convertible_to<uint4>;
+  // Build sorted endpoint list (caller-allocated buffer)
+  { c.PrepareEndpointsSortedList(p) } -> std::convertible_to<uint4>;
+  // Sweep-style intersection check with current segment
+  { c.SSCurSegIntWith((int4)0) } -> std::convertible_to<bool>;
+};
+
+// ---------------------------------------------------------------------------
+// Balaban-family algorithms (fast, optimal).
+// Used by: CFastIntFinder, COptimalIntFinder
+//
+// This is the largest interface because these algorithms use stripes,
+// staircases, Split/Merge, InsDel, and directional intersection queries.
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Fast algorithm: Balaban + stripe-based intersection finding + InsDel + Split/Merge.
+// Used by: CFastIntFinder::find_intersections(n_threads, segments)
+// ---------------------------------------------------------------------------
+
+template<class C>
+concept BalabanSegColl = SegCollCore<C> && requires(
+  C c, const C cc,
+  uint4 u, int4 i, int4 * p, int4 * q
+  ) {
+  // Endpoint encoding (static)
+    { C::is_last(u) } -> std::convertible_to<bool>;
+    { C::get_segm(u) } -> std::convertible_to<uint4>;
+
+    // Prepare sorted endpoints, ranks, statistics
+    { c.Prepare() } -> std::same_as<PrepareResult>;
+
+    // Stripe bounds
+    { c.SetCurStripe(u, u) };
+    { c.SetCurStripeLeft(u) };
+    { c.SetCurStripeRight(u) };
+
+    // Ordering at stripe boundaries
+    { cc.LBelow(i, i) } -> std::convertible_to<bool>;
+    { cc.RBelow(i, i) } -> std::convertible_to<bool>;
+
+    // Current point operations (for InsDel and FindIntI)
+    { c.SetCurPointAtBeg(u) };
+    { c.SetCurSegAndPoint(u) };
+    { cc.UnderCurPoint(i) } -> std::convertible_to<bool>;
+
+    // Rank lookups
+    { cc.GetSegR(u) } -> std::convertible_to<uint4>;
+    { cc.GetSegL(u) } -> std::convertible_to<uint4>;
+    { cc.PointAtRank(u) } -> std::convertible_to<uint4>;
+
+    // Segment clipping to stripe
+    { c.SetCurSegCutBE(u) };
+    { c.SetCurSegCutBeg(u) };
+    { c.SetCurSegCutEnd(u) };
+
+    // Directional intersection finding (single-segment overloads)
+    { c.FindCurSegIntDownWith(i) } -> std::convertible_to<bool>;
+    { c.FindCurSegIntUpWith(i) } -> std::convertible_to<bool>;
+
+    // Directional intersection finding (range overloads)
+    { c.FindCurSegIntDownWith(p, q) };
+    { c.FindCurSegIntUpWith(p, q) };
+
+
+    // Sweep-style check (used in SearchInStrip via SISFindR)
+    //{ c.SSCurSegIntWith(i) } -> std::convertible_to<bool>;
+
+    // Sorting segments at a given endpoint rank
+    { c.SortAt(u, u, p) };
+};
+
+// ---------------------------------------------------------------------------
+// Optimal algorithm: Balaban + optimal intersection finding (no InsDel, no Split/Merge).
+// Used by: CFastIntFinder::find_intersections(n_threads, segments)
+// ---------------------------------------------------------------------------
+template<class C>
+concept OptimalSegColl = BalabanSegColl<C> && requires(C c, int4 i) {
+  // Intersection check without registration 
+  { c.IsIntersectsCurSegDown(i) } -> std::convertible_to<bool>;
+  { c.IsIntersectsCurSegUp(i) } -> std::convertible_to<bool>;
+};
+// ---------------------------------------------------------------------------
+// Parallel execution: Balaban + clone/registrator management.
+// Used by: CFastIntFinder::find_intersections(n_threads, segments)
+// ---------------------------------------------------------------------------
+template<class C>
+concept ParallelSegColl = BalabanSegColl<C> && requires(C c, C & cref, uint4 u) {
+  // Clone construction: C(C&, uint4 thread_index)
+  { C(cref, u) };
+  // Prepare clone registrators
+  { c.InitClone(u) };
+  // Registrator access
+  { c.GetRegistrator() };
+  { c.SetRegistrator(c.GetRegistrator()) };
+  // Post-parallel data merging
+  { c.ResetRegistration() };
+  { c.CombineRegData() };
 };

@@ -36,7 +36,7 @@ public:
  
   ~CFastIntFinder() { unclone(); FreeMem(); };
 
-  template<class SegmentsColl>
+  template<BalabanSegColl SegmentsColl>
   void find_intersections(SegmentsColl  &segments,uint4 from=0,uint4 to=0)
   {
     //AllocMem
@@ -68,13 +68,13 @@ public:
         MultipleCutting(*this, segments, bottom_index, from, to, &stack_rec, GetDivPow(to - from));
     }
     else //parallel call
-      FindR(*this, segments, bottom_index, from, to, &stack_rec/*, 0, get_max_call(to - from)*/);
+      FindR(*this, segments, bottom_index, from, to, &stack_rec);
     InsDel(segments, to, &stack_rec);
     if(not_parallel)
       segments.IntersectionsFindingDone();
   }
 
-  template<class SegmentsColl>
+  template<ParallelSegColl SegmentsColl>
   void find_intersections(uint4 n_threads,SegmentsColl& segments)
   {
     using namespace std;
