@@ -20,7 +20,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "segments.h"
 
-void TLineSegment1::InitRandom(CRandomValueGen &rv, int4 seg_n, int4 type, REAL par)
+void TLineSegment1::InitRandom(CRandomValueGen &rv, uint4 seg_n, uint4 type, REAL par)
 {
   if (_Distribution::circle == type)
   {
@@ -135,7 +135,7 @@ uint4 StripePoint(REAL b, REAL e, TLineSegment1* s1, TLineSegment1* s2, TPlaneVe
 template uint4 StripePoint<true>(REAL b, REAL e, TLineSegment1* s1, TLineSegment1* s2, TPlaneVect *p);
 template uint4 StripePoint<false>(REAL b, REAL e, TLineSegment1* s1, TLineSegment1* s2, TPlaneVect *p);
 
-int4 IntInside(REAL b, REAL e, TLineSegment1* s1, TLineSegment1* s2)
+uint4 IntInside(REAL b, REAL e, TLineSegment1* s1, TLineSegment1* s2)
 {
   TPlaneVect delt = s2->org - s1->org;
   REAL prod = s1->shift%s2->shift, mul = s1->shift%delt, xc;
@@ -159,7 +159,7 @@ bool below(REAL X, TLineSegment2* s1, TLineSegment2* s2)
 }
 
 template <bool _ret_ip>
-int4 IntPoint(TLineSegment2* s1, TLineSegment2* s2, TPlaneVect *p)
+uint4 IntPoint(TLineSegment2* s1, TLineSegment2* s2, TPlaneVect *p)
 {
   REAL x1 = MAX(s1->x1, s2->x1);
   REAL x2 = MIN(s1->x2, s2->x2);
@@ -207,7 +207,7 @@ uint4 StripePoint(REAL b, REAL e, TLineSegment2* s1, TLineSegment2* s2, TPlaneVe
 template uint4 StripePoint<true>(REAL b, REAL e, TLineSegment2* s1, TLineSegment2* s2, TPlaneVect *p);
 template uint4 StripePoint<false>(REAL b, REAL e, TLineSegment2* s1, TLineSegment2* s2, TPlaneVect *p);
 
-int4 IntInside(REAL b, REAL e, TLineSegment2 *s1, TLineSegment2 *s2)
+uint4 IntInside(REAL b, REAL e, TLineSegment2 *s1, TLineSegment2 *s2)
 {
   REAL x1 = MAX(s1->x1, s2->x1);
   REAL x2 = MIN(s1->x2, s2->x2);
@@ -247,7 +247,7 @@ uint4 IntPointsInStripe(REAL x1, REAL x2, TArcSegment *s1, TArcSegment *s2, TPla
   }
   t = sqrt(l2 / org_dist2);
   oo = TPlaneVect(oo.y*t, -oo.x*t);
-  int4 npoints = 0;
+  uint4 npoints = 0;
   TPlaneVect res = m + oo;
   if ((res.x >= x1) && (res.x <= x2) && (s1->IsTheSamePart(res)) && (s2->IsTheSamePart(res)))
   {
@@ -262,7 +262,7 @@ uint4 IntPointsInStripe(REAL x1, REAL x2, TArcSegment *s1, TArcSegment *s2, TPla
 };
 
 template <bool _ret_ip>
-int4 IntPoint(TArcSegment* s1, TArcSegment* s2, TPlaneVect *p)
+uint4 IntPoint(TArcSegment* s1, TArcSegment* s2, TPlaneVect *p)
 {
   REAL x1 = MAX(s1->x1, s2->x1);
   REAL x2 = MIN(s1->x2, s2->x2);
@@ -284,7 +284,7 @@ uint4 StripePoint(REAL b, REAL e, TArcSegment* s1, TArcSegment* s2, TPlaneVect *
 template uint4 StripePoint<true>(REAL b, REAL e, TArcSegment* s1, TArcSegment* s2, TPlaneVect *p);
 template uint4 StripePoint<false>(REAL b, REAL e, TArcSegment* s1, TArcSegment* s2, TPlaneVect *p);
 
-int4 IntInside(REAL b, REAL e, TArcSegment* s1, TArcSegment* s2)
+uint4 IntInside(REAL b, REAL e, TArcSegment* s1, TArcSegment* s2)
 {
   REAL x1 = MAX(s1->x1, s2->x1);
   REAL x2 = MIN(s1->x2, s2->x2);
@@ -293,7 +293,7 @@ int4 IntInside(REAL b, REAL e, TArcSegment* s1, TArcSegment* s2)
   return IntPointsInStripe(x1, x2, s1, s2, p);
 }
 
-void TArcSegment::InitRandom(CRandomValueGen &rv, int4 seg_n, int4 type, REAL par)
+void TArcSegment::InitRandom(CRandomValueGen &rv, uint4 seg_n, uint4 type, REAL par)
 {
   if (_Distribution::circle == type)
   {

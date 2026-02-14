@@ -31,7 +31,7 @@ constexpr const double crd_scaler = 1.e-3;
 class TLineSegment1
 {
 public:
-  static const int4 is_line = 1;
+  constexpr static const uint4 is_line = 1;
   TLineSegment1():org(),shift() {};
   TLineSegment1(const TPlaneVect &p1, const TPlaneVect &p2) :org(p1), shift(p2-p1) {
     Refine();
@@ -72,7 +72,7 @@ public:
     return res;
   };
   void Init(const TLineSegment1 &s) { org = s.org; shift = s.shift; };
-  void InitRandom(CRandomValueGen &rv, int4 seg_n, int4 type, REAL par);
+  void InitRandom(CRandomValueGen &rv, uint4 seg_n, uint4 type, REAL par);
   TPlaneVect BegPoint() const {
     return org;
   };
@@ -96,12 +96,6 @@ public:
   }
   TPlaneVect EndPoint() const {
     return org + shift;
-  };
-  void BegPoint(REAL &x, REAL &y) const {
-    x = org.x; y = org.y;
-  };
-  void EndPoint(REAL &x, REAL &y) const {
-    x = org.x + shift.x; y = org.y + shift.y;
   };
   bool under(const TPlaneVect &v) const { //segment placed under point v
     return (v - org) % shift <= 0;
@@ -133,18 +127,18 @@ public:
   template <bool _ret_ip>  uint4 IntPoint(TLineSegment1 *s1, TLineSegment1 *s2, TPlaneVect *p);
   template <bool _ret_ip>  uint4 StripePoint(REAL b, REAL e, TLineSegment1 *s1, TLineSegment1 *s2, TPlaneVect *p);
   //for optimal alg only
-  int4 IntInside(REAL b, REAL e, TLineSegment1 *s1, TLineSegment1 *s2);
+  uint4 IntInside(REAL b, REAL e, TLineSegment1 *s1, TLineSegment1 *s2);
 
 
 class TLineSegment2
 {
 public:
   //int4 seg_n;
-  static const int4 is_line = 1;
+  constexpr static const uint4 is_line = 1;
   REAL x1, a, x2, b;
   TLineSegment2() { x1 = 0; x2 = 0; a = 0; b = 0; };
   void Init(const TLineSegment1 &s) { x1 = s.org.x; x2 = s.org.x + s.shift.x; a = s.shift.y / s.shift.x; b = s.org.y - a*s.org.x; };
-  void InitRandom(CRandomValueGen &rv, int4 s_n, int4 type, REAL par)
+  void InitRandom(CRandomValueGen &rv, uint4 s_n, uint4 type, REAL par)
   {
     TLineSegment1 seg;
     //seg_n=s_n;
@@ -191,14 +185,14 @@ public:
   template <bool _ret_ip>  uint4 IntPoint(TLineSegment2 *s1, TLineSegment2 *s2, TPlaneVect *p);
   template <bool _ret_ip>  uint4 StripePoint(REAL b, REAL e, TLineSegment2 *s1, TLineSegment2 *s2, TPlaneVect *p);
   //for optimal alg only
-  int4 IntInside(REAL b, REAL e, TLineSegment2 *s1, TLineSegment2 *s2);
+  uint4 IntInside(REAL b, REAL e, TLineSegment2 *s1, TLineSegment2 *s2);
 
 
 
 class TArcSegment// arc formed by intersection of a vertical strip [x1,x2] with a circle having center org and square of radius r2 
 {
 public:
-  static const int4 is_line = 0;
+  constexpr static const uint4 is_line = 0;
   REAL x1 = 0;
   TPlaneVect org;
   REAL x2 = 0, r2 = 0;
@@ -207,7 +201,7 @@ public:
   uint4 reserved;// just to have record size 48 bytes
                  //TArcSegment() {};
                  //void Init(TLineSegment1 &s) const {x1=s.org.x;x2=s.org.x+s.shift.x;a=s.shift.y/s.shift.x;b=s.org.y-a*s.org.x;};
-  void InitRandom(CRandomValueGen &rv, int4 seg_n, int4 type, REAL par);
+  void InitRandom(CRandomValueGen &rv, uint4 seg_n, uint4 type, REAL par);
 
 
   TPlaneVect BegPoint() const {
@@ -234,13 +228,6 @@ public:
     else
       return org.y - sqrt(r2 - sq(X - org.x));
   };
-  void BegPoint(REAL& x, REAL& y) const {
-    x = x1; y = is_upper ? org.y + sqrt(r2 - sq(x1 - org.x)) : org.y - sqrt(r2 - sq(x1 - org.x));
-  };
-  void EndPoint(REAL &x, REAL &y) const {
-    x = x2; y = is_upper ? org.y + sqrt(r2 - sq(x2 - org.x)) : org.y - sqrt(r2 - sq(x2 - org.x));
-  };
-
   bool under(const TPlaneVect &v) const//arc placed under point v
   {
     bool is_lower = !is_upper;
@@ -256,7 +243,7 @@ public:
   bool IsTheSamePart(const TPlaneVect &v) const {
     return (!is_upper) ^ (v.y > org.y);
   };
-  void write_SVG(int4 id, chostream* SVG_text) const {
+  void write_SVG(uint4 id, chostream* SVG_text) const {
     if (SVG_text) {
       auto bp = BegPoint();
       auto ep = EndPoint();
@@ -276,11 +263,11 @@ public:
   template <bool _ret_ip>  uint4 IntPoint(TArcSegment *s1, TArcSegment *s2, TPlaneVect *p);
   template <bool _ret_ip>  uint4 StripePoint(REAL b, REAL e, TArcSegment *s1, TArcSegment *s2, TPlaneVect *p);
   //for optimal alg only
-  int4 IntInside(REAL b, REAL e, TArcSegment *s1, TArcSegment *s2);
+  uint4 IntInside(REAL b, REAL e, TArcSegment *s1, TArcSegment *s2);
 
   struct TIntegerSegment
   {
-    constexpr static int4 is_line = 1;
+    constexpr static uint4 is_line = 1;
 #ifdef PRINT_SEG_AND_INT
     static TIntegerSegment* coll_begin;
 #endif
@@ -342,13 +329,6 @@ public:
     auto PointX(bool is_last) const {
       return is_last ? org.x + shift.x : org.x;
     };
-    void BegPoint(int4& x, int4& y) const {
-      x = org.x; y = org.y;
-    };
-    void EndPoint(int4& x, int4& y) const {
-      x = org.x + shift.x; y = org.y + shift.y;
-    };
-
     auto bx() const {
       return org.x;
     }

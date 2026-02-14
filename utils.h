@@ -92,7 +92,7 @@ enum _IntType {
 };
 
 
-constexpr int4 alg_list[] = { triv, simple_sweep, fast, optimal, fast_parallel };
+constexpr uint4 alg_list[] = { triv, simple_sweep, fast, optimal, fast_parallel };
 constexpr const char* alg_names[] = { "trivial","simple_sweep","fast","optimal","fast_parallel" };
 
 enum _Segment
@@ -134,7 +134,7 @@ enum class _Coll_flags
 
 struct CollectionOptions
 {
-  int4 n = 10000;
+  uint4 n = 10000;
   int4 range_for_int_seg = full_int_range;
 };
 
@@ -379,7 +379,7 @@ struct intmmrect {
 };
 
 template<class SegArr>
-minmaxrect get_mmrect01(SegArr c[], int4 N) {
+minmaxrect get_mmrect01(SegArr c[], uint4 N) {
   REAL xmin = 0, ymin = 0, xmax = 1, ymax = 1;
   for (int4 i = 0; i < N; ++i) {
     auto bp = c[i].BegPoint();

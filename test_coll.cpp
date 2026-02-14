@@ -40,7 +40,7 @@ constexpr uint4 n_threads_default = 8;
 // creating and deleting collections
 PSeg first_segment_ptr = NULL;
 
-SegCollection::SegCollection(int4 seg_type, PSeg segs) noexcept
+SegCollection::SegCollection(uint4 seg_type, PSeg segs) noexcept
   : seg_type_(seg_type),
   segs_(segs)
 {
@@ -102,8 +102,8 @@ void SegCollection::reset() noexcept
 
 SegCollection create_test_collection(const SegmentsAndRegOptions& opt, CRandomValueGen& random_gen)
 {
-  int4 i;
-  constexpr int4 sentinels = 2;
+  uint4 i;
+  constexpr const uint4 sentinels = 2;
 
   auto par = opt.distr_param;
   if (opt.distr_type != _Distribution::param_defined)par /= opt.n / 33.0;
@@ -156,7 +156,7 @@ SegCollection create_test_collection(const SegmentsAndRegOptions& opt, CRandomVa
 
 
 template<class SegColl>
-auto find_int(int4 n, SegColl& coll, int4 alg)
+auto find_int(uint4 n, SegColl& coll, int4 alg)
 {
   switch (alg) {
   case triv: {
@@ -187,7 +187,7 @@ auto find_int(int4 n, SegColl& coll, int4 alg)
 };
 
 template<class Counter>
-void RegisterAllIntersection(const SegmentsAndRegOptions& opt, PSeg segs, int4 alg, CRegistratorFactory<Counter>& reg) {
+void RegisterAllIntersection(const SegmentsAndRegOptions& opt, PSeg segs, uint4 alg, CRegistratorFactory<Counter>& reg) {
   switch (opt.seg_type) {
   case _Segment::line1: {
     CLine1SegmentCollection<Counter> coll(opt, segs, &reg);
@@ -216,7 +216,7 @@ void RegisterAllIntersection(const SegmentsAndRegOptions& opt, PSeg segs, int4 a
 
 
 template<class Counter>
-uint8 _find_int(const SegmentsAndRegOptions& opt, PSeg segs, int4 alg)
+uint8 _find_int(const SegmentsAndRegOptions& opt, PSeg segs, uint4 alg)
 {
   CRegistratorFactory<Counter> reg_factory;
   reg_factory.PrepareAlloc(opt.n);
@@ -235,7 +235,7 @@ find_intersections_func get_find_intersections_func(uint4 reg_type)
   return _find_int<PerSegmCounter>;
 };
 
-void write_SVG(std::ostream* svg_stream, const SegmentsAndRegOptions& opt, PSeg segs, int4 algs)
+void write_SVG(std::ostream* svg_stream, const SegmentsAndRegOptions& opt, PSeg segs, uint4 algs)
 {
   if (!svg_stream)
     return;

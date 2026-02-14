@@ -180,7 +180,7 @@ struct Options : public SegmentsAndRegOptions
 double _benchmark_new(const Options& opt, PSeg seg_coll, int4 alg, double& res)
 {
   double timeit, tottime = 0;
-  int4 n_call = 0;
+  uint4 n_call = 0;
   using namespace std::chrono;
   double mint = 1.0e10;
   unsigned long thread_affinity_mask = alg & fast_parallel ? 0 : 8;

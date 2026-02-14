@@ -105,14 +105,14 @@ public:
 
 
 private:
-  static constexpr int4 undef_loc = 0;
+  static constexpr const int4 undef_loc = 0;
 
-  static constexpr int4 max_call = 32; //max number of sequential recursive call (opt)FindR before dividing current strip
+  static constexpr const uint4 max_call = 32; //max number of sequential recursive call (opt)FindR before dividing current strip
 
-  static constexpr int4 inherit_each = 15; // defines how often in optimal algorithm stairs are inherited,  one inherited per inherit_each
-  static constexpr int4 inherit_offset = inherit_each / 2; // first stair to inherit; must be in [1..inherit_each-1]
+  static constexpr const uint4 inherit_each = 15; // defines how often in optimal algorithm stairs are inherited,  one inherited per inherit_each
+  static constexpr const uint4 inherit_offset = inherit_each / 2; // first stair to inherit; must be in [1..inherit_each-1]
                                                        // so inherited stair positions are: inherit_offset,inherit_offset+inherit_each,inherit_offset+2*inherit_each,...
-  static constexpr int4 big_staircase_threshold = 64;// 1024;//used in optFindR
+  static constexpr const uint4 big_staircase_threshold = 64;// 1024;//used in optFindR
 
   int4* father_loc = nullptr;// must be int4 to keep negative values for original stairs and positive for inherited stairs;
 
