@@ -92,7 +92,7 @@ bool below(REAL X, TLineSegment1* s1, TLineSegment1* s2)
 }
 
 template <bool _ret_ip>
-int4 IntPoint(TLineSegment1* s1, TLineSegment1* s2, TPlaneVect *p)
+uint4 IntPoint(TLineSegment1* s1, TLineSegment1* s2, TPlaneVect *p)
 {
   REAL b1 =std::max(s1->org.x, s2->org.x);
   REAL b2 = std::min(s1->org.x + s1->shift.x, s2->org.x + s2->shift.x);
@@ -108,11 +108,11 @@ int4 IntPoint(TLineSegment1* s1, TLineSegment1* s2, TPlaneVect *p)
   return 0;
 }
 
-template int4 IntPoint<true>(TLineSegment1* s1, TLineSegment1* s2, TPlaneVect *p);
-template int4 IntPoint<false>(TLineSegment1* s1, TLineSegment1* s2, TPlaneVect *p);
+template uint4 IntPoint<true>(TLineSegment1* s1, TLineSegment1* s2, TPlaneVect *p);
+template uint4 IntPoint<false>(TLineSegment1* s1, TLineSegment1* s2, TPlaneVect *p);
 
 template <bool _ret_ip>
-int4 StripePoint(REAL b, REAL e, TLineSegment1* s1, TLineSegment1* s2, TPlaneVect *p)
+uint4 StripePoint(REAL b, REAL e, TLineSegment1* s1, TLineSegment1* s2, TPlaneVect *p)
 {
   TPlaneVect delt = s2->org - s1->org;
   REAL prod = s1->shift%s2->shift, mul, xc;
@@ -132,8 +132,8 @@ int4 StripePoint(REAL b, REAL e, TLineSegment1* s1, TLineSegment1* s2, TPlaneVec
   return 0;
 }
 
-template int4 StripePoint<true>(REAL b, REAL e, TLineSegment1* s1, TLineSegment1* s2, TPlaneVect *p);
-template int4 StripePoint<false>(REAL b, REAL e, TLineSegment1* s1, TLineSegment1* s2, TPlaneVect *p);
+template uint4 StripePoint<true>(REAL b, REAL e, TLineSegment1* s1, TLineSegment1* s2, TPlaneVect *p);
+template uint4 StripePoint<false>(REAL b, REAL e, TLineSegment1* s1, TLineSegment1* s2, TPlaneVect *p);
 
 int4 IntInside(REAL b, REAL e, TLineSegment1* s1, TLineSegment1* s2)
 {
@@ -179,11 +179,11 @@ int4 IntPoint(TLineSegment2* s1, TLineSegment2* s2, TPlaneVect *p)
   return 0;
 }
 
-template int4 IntPoint<true>(TLineSegment2* s1, TLineSegment2* s2, TPlaneVect *p);
-template int4 IntPoint<false>(TLineSegment2* s1, TLineSegment2* s2, TPlaneVect *p);
+template uint4 IntPoint<true>(TLineSegment2* s1, TLineSegment2* s2, TPlaneVect *p);
+template uint4 IntPoint<false>(TLineSegment2* s1, TLineSegment2* s2, TPlaneVect *p);
 
 template <bool _ret_ip>
-int4 StripePoint(REAL b, REAL e, TLineSegment2* s1, TLineSegment2* s2, TPlaneVect *p)
+uint4 StripePoint(REAL b, REAL e, TLineSegment2* s1, TLineSegment2* s2, TPlaneVect *p)
 {
   REAL x1 = MAX(s1->x1, s2->x1);
   REAL x2 = MIN(s1->x2, s2->x2);
@@ -204,8 +204,8 @@ int4 StripePoint(REAL b, REAL e, TLineSegment2* s1, TLineSegment2* s2, TPlaneVec
 }
 
 
-template int4 StripePoint<true>(REAL b, REAL e, TLineSegment2* s1, TLineSegment2* s2, TPlaneVect *p);
-template int4 StripePoint<false>(REAL b, REAL e, TLineSegment2* s1, TLineSegment2* s2, TPlaneVect *p);
+template uint4 StripePoint<true>(REAL b, REAL e, TLineSegment2* s1, TLineSegment2* s2, TPlaneVect *p);
+template uint4 StripePoint<false>(REAL b, REAL e, TLineSegment2* s1, TLineSegment2* s2, TPlaneVect *p);
 
 int4 IntInside(REAL b, REAL e, TLineSegment2 *s1, TLineSegment2 *s2)
 {
@@ -228,7 +228,7 @@ bool below(REAL X, TArcSegment* s1, TArcSegment* s2)
 }
 
 
-int4 IntPointsInStripe(REAL x1, REAL x2, TArcSegment *s1, TArcSegment *s2, TPlaneVect *p)
+uint4 IntPointsInStripe(REAL x1, REAL x2, TArcSegment *s1, TArcSegment *s2, TPlaneVect *p)
 {
   TPlaneVect oo = s2->org - s1->org;
   REAL org_dist2 = oo.get_norm();
@@ -270,19 +270,19 @@ int4 IntPoint(TArcSegment* s1, TArcSegment* s2, TPlaneVect *p)
   return IntPointsInStripe(x1, x2, s1, s2, p);
 }
 
-template int4 IntPoint<true>(TArcSegment* s1, TArcSegment* s2, TPlaneVect *p);
-template int4 IntPoint<false>(TArcSegment* s1, TArcSegment* s2, TPlaneVect *p);
+template uint4 IntPoint<true>(TArcSegment* s1, TArcSegment* s2, TPlaneVect *p);
+template uint4 IntPoint<false>(TArcSegment* s1, TArcSegment* s2, TPlaneVect *p);
 
 template <bool _ret_ip>
-int4 StripePoint(REAL b, REAL e, TArcSegment* s1, TArcSegment* s2, TPlaneVect *p)
+uint4 StripePoint(REAL b, REAL e, TArcSegment* s1, TArcSegment* s2, TPlaneVect *p)
 {
   REAL x1 = MAX(s1->x1, s2->x1);
   REAL x2 = MIN(s1->x2, s2->x2);
   x1 = MAX(x1, b); x2 = MIN(x2, e);
   return IntPointsInStripe(x1, x2, s1, s2, p);
 }
-template int4 StripePoint<true>(REAL b, REAL e, TArcSegment* s1, TArcSegment* s2, TPlaneVect *p);
-template int4 StripePoint<false>(REAL b, REAL e, TArcSegment* s1, TArcSegment* s2, TPlaneVect *p);
+template uint4 StripePoint<true>(REAL b, REAL e, TArcSegment* s1, TArcSegment* s2, TPlaneVect *p);
+template uint4 StripePoint<false>(REAL b, REAL e, TArcSegment* s1, TArcSegment* s2, TPlaneVect *p);
 
 int4 IntInside(REAL b, REAL e, TArcSegment* s1, TArcSegment* s2)
 {

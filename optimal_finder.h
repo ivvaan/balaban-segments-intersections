@@ -120,7 +120,7 @@ private:
   static bool is_original(int4 v) { return v < 1; };
 
   template<class SegmentsColl>
-  int4 FindInt(SegmentsColl& segments, uint4 qb, uint4 qe, uint4 l) const
+  uint4 FindInt(SegmentsColl& segments, uint4 qb, uint4 qe, uint4 l) const
   {
     
     auto c = l;
@@ -316,7 +316,7 @@ private:
       stack_rec.Q_pos+=CFAST::Split(segments,Q+ stack_rec.Q_pos,interval_right_rank);
       if ((ladder_start_index < stack_rec.Q_pos))
       {
-        for (int4 i = ladder_start_index + 1; i <= stack_rec.Q_pos; ++i)
+        for (auto i = ladder_start_index + 1; i <= stack_rec.Q_pos; ++i)
           father_loc[i] = undef_loc;
         stack_pos = stack_rec.Set(stack_pos, interval_right_rank);
         father_first_step = ladder_start_index + inherit_offset;

@@ -74,7 +74,7 @@ class CRemaper {
     // Any maximal collinear overlap is split into disjoint pieces; each piece remembers
     // the list of original segments that cover it.
 
-    auto N = indexes.size();
+    uint4 N = indexes.size();
     uint4 remap_size = 0; // total number of back-references that will be stored in `remap_v`
     remapped_SN = 0;      // total count of produced (normalized) segments
 
@@ -94,7 +94,7 @@ class CRemaper {
     //   `beg==end`, because that piece represents an actual input segment.
     //   This is handled by `allow_zero_len_piece` below.
     bool not_remapped = true;// initial_SN == nonzero_N;
-    for (int4 i = 0, size = 0; i < (int4)N; ++i) {
+    for (uint4 i = 0, size = 0; i < N; ++i) {
       auto pt = indexes[i];
       size += Collection::is_last(pt) ? -1 : 1;
       assert(size >= 0);

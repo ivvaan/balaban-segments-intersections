@@ -130,8 +130,8 @@ public:
   };
 };
   bool below(REAL X, TLineSegment1 *s1, TLineSegment1 *s2);
-  template <bool _ret_ip>  int4 IntPoint(TLineSegment1 *s1, TLineSegment1 *s2, TPlaneVect *p);
-  template <bool _ret_ip>  int4 StripePoint(REAL b, REAL e, TLineSegment1 *s1, TLineSegment1 *s2, TPlaneVect *p);
+  template <bool _ret_ip>  uint4 IntPoint(TLineSegment1 *s1, TLineSegment1 *s2, TPlaneVect *p);
+  template <bool _ret_ip>  uint4 StripePoint(REAL b, REAL e, TLineSegment1 *s1, TLineSegment1 *s2, TPlaneVect *p);
   //for optimal alg only
   int4 IntInside(REAL b, REAL e, TLineSegment1 *s1, TLineSegment1 *s2);
 
@@ -188,8 +188,8 @@ public:
   };
   };
   bool below(REAL X, TLineSegment2 *s1, TLineSegment2 *s2);
-  template <bool _ret_ip>  int4 IntPoint(TLineSegment2 *s1, TLineSegment2 *s2, TPlaneVect *p);
-  template <bool _ret_ip>  int4 StripePoint(REAL b, REAL e, TLineSegment2 *s1, TLineSegment2 *s2, TPlaneVect *p);
+  template <bool _ret_ip>  uint4 IntPoint(TLineSegment2 *s1, TLineSegment2 *s2, TPlaneVect *p);
+  template <bool _ret_ip>  uint4 StripePoint(REAL b, REAL e, TLineSegment2 *s1, TLineSegment2 *s2, TPlaneVect *p);
   //for optimal alg only
   int4 IntInside(REAL b, REAL e, TLineSegment2 *s1, TLineSegment2 *s2);
 
@@ -272,9 +272,9 @@ public:
   }
 };
   bool below(REAL X, TArcSegment *s1, TArcSegment *s2);
-  int4 IntPointsInStripe(REAL x1, REAL x2, TArcSegment *s1, TArcSegment *s2, TPlaneVect *p);
-  template <bool _ret_ip>  int4 IntPoint(TArcSegment *s1, TArcSegment *s2, TPlaneVect *p);
-  template <bool _ret_ip>  int4 StripePoint(REAL b, REAL e, TArcSegment *s1, TArcSegment *s2, TPlaneVect *p);
+  uint4 IntPointsInStripe(REAL x1, REAL x2, TArcSegment *s1, TArcSegment *s2, TPlaneVect *p);
+  template <bool _ret_ip>  uint4 IntPoint(TArcSegment *s1, TArcSegment *s2, TPlaneVect *p);
+  template <bool _ret_ip>  uint4 StripePoint(REAL b, REAL e, TArcSegment *s1, TArcSegment *s2, TPlaneVect *p);
   //for optimal alg only
   int4 IntInside(REAL b, REAL e, TArcSegment *s1, TArcSegment *s2);
 

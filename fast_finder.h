@@ -162,7 +162,7 @@ public:
   }
 
   template <class SegmentsColl>
-  void FindRNoChecks(SegmentsColl& segments, int4 ladder_start_index, uint4 interval_left_rank, uint4 interval_right_rank, ProgramStackRec* stack_pos)
+  void FindRNoChecks(SegmentsColl& segments, uint4 ladder_start_index, uint4 interval_left_rank, uint4 interval_right_rank, ProgramStackRec* stack_pos)
   {
     uint4 Q_pos;
     //if L or Q empty cut the strip into 2^divide_pow substrips
@@ -186,7 +186,7 @@ public:
   };
 
   template <class SegmentsColl>
-  void FindR(SegmentsColl& segments, int4 ladder_start_index, uint4 interval_left_rank, uint4 interval_right_rank, ProgramStackRec* stack_pos)
+  void FindR(SegmentsColl& segments, uint4 ladder_start_index, uint4 interval_left_rank, uint4 interval_right_rank, ProgramStackRec* stack_pos)
   {
     if (interval_right_rank < interval_left_rank + min_strip_width) {//end of recursion for narrow stripes
       SISFindR(segments, ladder_start_index, interval_left_rank, interval_right_rank, stack_pos);

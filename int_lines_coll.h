@@ -972,7 +972,7 @@ public:
   }
 
   // delete or comment if you don't want sentinels
-  int4 get_sentinel(bool is_top_sentinel) {
+  uint4 get_sentinel(bool is_top_sentinel) {
     return nSegments + is_top_sentinel;
   };
 

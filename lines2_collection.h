@@ -263,7 +263,7 @@ public:
     return NN;
   }
 
-  int4 get_sentinel(bool is_top_sentinel) {
+  uint4 get_sentinel(bool is_top_sentinel) {
     return N + is_top_sentinel;
   }
 
