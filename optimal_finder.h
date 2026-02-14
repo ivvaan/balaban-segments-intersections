@@ -48,7 +48,7 @@ public:
     DECL_RAII_ARR(father_loc, len_of_Q);
     std::fill_n(father_loc, len_of_Q, undef_loc);
 
-    constexpr int4 bottom_index = inherit_each + 1;
+    constexpr uint4 bottom_index = inherit_each + 1;
     ProgramStackRec stack_rec(bottom_index, nTotX);  //need to be initialized this way
     segments.SetCurStripeRight(0);
     InsDel(segments, 0, &stack_rec);

@@ -253,7 +253,7 @@ template<class C>
 concept SweepSegColl = SegCollCore<C> && requires(C c, uint4 u, uint4 * p) {
   // Endpoint encoding (static)
   { C::is_last(u) } -> std::convertible_to<bool>;
-  { C::get_segm(u) } -> std::convertible_to<int4>;
+  { C::get_segm(u) } -> std::convertible_to<uint4>;
   // Build sorted endpoint list (caller-allocated buffer)
   { c.PrepareEndpointsSortedList(p) } -> std::convertible_to<uint4>;
   // Sweep-style intersection check with current segment

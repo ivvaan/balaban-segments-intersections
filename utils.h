@@ -26,6 +26,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <intrin.h>
 #include <algorithm>
 #include <vector>
+#include <concepts>
 //#define DEBUG_INTERSECTION_SET
 
 typedef int int4;
@@ -460,19 +461,13 @@ minmaxrect get_rot_minmax(int4 n, T coll[], double s, double c)
 };
 
 
-namespace {
-  template<typename SegmentsColl>
-  struct has_get_sentinel
-  {
-    template<typename U, uint4(U::*)(bool)> struct SFINAE {};
-    template<typename U> static char test(SFINAE<U, &U::get_sentinel>*);
-    template<typename U> static int test(...);
-    constexpr static bool value = sizeof(test<SegmentsColl>(nullptr)) == sizeof(char);
-  };
-}
+template<typename SegmentsColl>
+concept has_get_sentinel = requires(SegmentsColl s, bool b) {
+  { s.get_sentinel(b) } -> std::same_as<uint4>;
+};
 
 template< class T >
-constexpr bool has_sentinels = has_get_sentinel<T>::value;
+constexpr bool has_sentinels = has_get_sentinel<T>;
 
 #define THIS_HAS_SENTINELS (has_sentinels<std::remove_pointer_t<decltype(this)> >)
 

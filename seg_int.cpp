@@ -162,7 +162,7 @@ SetPriorityClass(hProcess, dwProcessPriSave);
 struct Options : public SegmentsAndRegOptions
 {
 
-  int4 alg = 31;
+  uint4 alg = 31;
 
   BOOL print_less = FALSE;
   BOOL wait = FALSE;
@@ -275,7 +275,6 @@ int main(int argc, char* argv[])
 {
   Options opt;
   const char* ss = "Llagi", * sd = "rlmspc", * sr = "pPcrC";
-  int4 range_for_int_seg;
 
 #ifdef _DEBUG
   _CrtSetDbgFlag(_CRTDBG_CHECK_ALWAYS_DF);
