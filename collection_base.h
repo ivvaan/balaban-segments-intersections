@@ -220,7 +220,9 @@ protected:
 // Core: the absolute minimum every algorithm needs.
 // ---------------------------------------------------------------------------
 template<class C>
-concept SegCollCore = requires(C c, C & cref, uint4 u, int4 i) {
+concept SegCollCore = requires(C c, C & cref, uint4 u)
+{
+
   // Segment count
   { c.GetSegmNumb() } -> std::convertible_to<uint4>;
   // Set current segment for subsequent intersection queries
@@ -231,8 +233,6 @@ concept SegCollCore = requires(C c, C & cref, uint4 u, int4 i) {
   
   // Post-processing hook (may be empty)
   { c.IntersectionsFindingDone() };
-  // Compile-time flags
-  { C::get_coll_flag(_Coll_flags::line_segments) } -> std::same_as<_Coll_flag_state>;
 };
 
 // ---------------------------------------------------------------------------
@@ -240,9 +240,9 @@ concept SegCollCore = requires(C c, C & cref, uint4 u, int4 i) {
 // Used by: CTrivialIntFinder
 // ---------------------------------------------------------------------------
 template<class C>
-concept TrivialSegColl = SegCollCore<C> && requires(C c, int4 i) {
+concept TrivialSegColl = SegCollCore<C> && requires(C c, int4 s) {
   // Check and register intersection of current segment with segment i
-  { c.TrivCurSegIntWith(i) } -> std::convertible_to<bool>;
+  { c.TrivCurSegIntWith(s) } -> std::convertible_to<bool>;
 };
 
 // ---------------------------------------------------------------------------
@@ -250,14 +250,14 @@ concept TrivialSegColl = SegCollCore<C> && requires(C c, int4 i) {
 // Used by: CSimpleSweepIntFinder
 // ---------------------------------------------------------------------------
 template<class C>
-concept SweepSegColl = SegCollCore<C> && requires(C c, uint4 u, uint4 * p) {
+concept SweepSegColl = SegCollCore<C> && requires(C c, uint4 u,int4 s, uint4 * p) {
   // Endpoint encoding (static)
   { C::is_last(u) } -> std::convertible_to<bool>;
-  { C::get_segm(u) } -> std::convertible_to<uint4>;
+  { C::get_segm(u) } -> std::convertible_to<int4>;
   // Build sorted endpoint list (caller-allocated buffer)
   { c.PrepareEndpointsSortedList(p) } -> std::convertible_to<uint4>;
   // Sweep-style intersection check with current segment
-  { c.SSCurSegIntWith((int4)0) } -> std::convertible_to<bool>;
+  { c.SSCurSegIntWith(s) } -> std::convertible_to<bool>;
 };
 
 // ---------------------------------------------------------------------------
@@ -278,6 +278,11 @@ concept BalabanSegCollBase = SegCollCore<C> && requires(
   C c, const C cc,
   uint4 u, int4 i, int4 * p, int4 * q, uint4 & u_ref, uint4 * up
   ) {
+    // Compile-time flags
+    { C::get_coll_flag(_Coll_flags::line_segments) } -> std::same_as<_Coll_flag_state>;
+    // Endpoint encoding (static)
+    { C::get_segm(u) } -> std::convertible_to<int4>;
+
     // Prepare sorted endpoints, ranks, statistics
     { c.Prepare() } -> std::same_as<PrepareResult>;
 

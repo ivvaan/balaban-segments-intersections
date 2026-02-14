@@ -184,62 +184,6 @@ protected:
   {
   };
 
-
-
-
-  template <class IntersectionFinder, class SegmentsColl>
-  static void SISFindR(IntersectionFinder& i_f, SegmentsColl& segments, int4 ladder_start_index, uint4 interval_left_rank, uint4 interval_right_rank, ProgramStackRec* stack_pos)
-  {
-    for (auto i = interval_left_rank + 1; i != interval_right_rank; ++i) {
-      if (i_f.L_size > 1) {
-        segments.SetCurStripe(i - 1, i);
-        i_f.SearchInStrip(segments, ladder_start_index);
-      }
-      else
-        segments.SetCurStripeRight(i);
-      i_f.InsDel(segments, i, stack_pos);
-    }
-    //the stripe right bound needs to be installed correctly even if i_f.L_size <= 1
-    segments.SetCurStripe(interval_right_rank - 1, interval_right_rank);
-    if (i_f.L_size > 1)i_f.SearchInStrip(segments, ladder_start_index);
-  }
-
-
-  template <class IntersectionFinder, class SegmentsColl>
-  static void FindRNoChecks(IntersectionFinder& i_f, SegmentsColl& segments, int4 ladder_start_index, uint4 interval_left_rank, uint4 interval_right_rank, ProgramStackRec* stack_pos)
-  {
-    int4 Q_pos;
-    //if L or Q empty cut the strip into 2^divide_pow substrips
-    constexpr const uint4 divide_pow = 4;
-    if ((i_f.L_size == 0)||(0 == (Q_pos = i_f.Split(segments, i_f.Q + ladder_start_index, interval_right_rank))))
-      return MultipleCutting(i_f, segments, ladder_start_index, interval_left_rank, interval_right_rank, stack_pos, divide_pow);
-    //normal processing otherwise
-    Q_pos += ladder_start_index;
-    ProgramStackRec stack_rec(Q_pos, interval_right_rank, stack_pos);// creating new stack list entry for "bubbling up" 
-    if (i_f.dont_cut_stripe ) { //if found a lot of intersections repeat FindR
-      FindRNoChecks(i_f, segments, Q_pos, interval_left_rank, interval_right_rank, &stack_rec);
-    }else{// cut at the middle into two substrips 
-      uint4 middle = (interval_left_rank + interval_right_rank) / 2;
-      FindR(i_f, segments, Q_pos, interval_left_rank, middle, &stack_rec);
-      i_f.InsDel(segments, middle, &stack_rec);
-      FindR(i_f, segments, Q_pos, middle, interval_right_rank, &stack_rec);
-      //actually works without SetCurStripeLeft, but it simplifies segment collection class protocol
-      //segments.SetCurStripeLeft(i_f.interval_left_rank);
-    }
-    i_f.Merge(segments, interval_left_rank, ladder_start_index, Q_pos);
-  };
-
-  template <class IntersectionFinder, class SegmentsColl>
-  static void FindR(IntersectionFinder& i_f, SegmentsColl& segments, int4 ladder_start_index, uint4 interval_left_rank, uint4 interval_right_rank, ProgramStackRec* stack_pos)
-  {
-    if (interval_right_rank < interval_left_rank + min_strip_width) {//end of recursion for narrow stripes
-      SISFindR(i_f, segments, ladder_start_index, interval_left_rank, interval_right_rank, stack_pos);
-    } else {// normal step
-      segments.SetCurStripe(interval_left_rank, interval_right_rank);
-      FindRNoChecks(i_f, segments, ladder_start_index, interval_left_rank, interval_right_rank, stack_pos);
-    }
-  }
-
   uint4 GetDivPow(uint4 l) {
     if (l < 64) return 2;
     int4 res = 0;
@@ -247,27 +191,6 @@ protected:
       ++res;
     return MAX(res,4);
   };
-
-  //cuts the strip into 2^divide_pow substrips
-  template <class IntersectionFinder, class SegmentsColl>
-  static void MultipleCutting(IntersectionFinder& i_f,SegmentsColl& segments, int4 ladder_start_index, uint4 left_bound, uint4 interval_right_rank, ProgramStackRec* stack_pos, uint4 divide_pow)
-  {
-    if (interval_right_rank < left_bound + (min_strip_width << divide_pow)) // end of recursion for narrow stripes
-      return SISFindR(i_f, segments, ladder_start_index, left_bound, interval_right_rank, stack_pos);  //if strip narrow just apply SISFindR
-
-    uint8 step = interval_right_rank - left_bound;
-    uint8 rb = (uint8)left_bound << divide_pow;
-    uint4 right_bound = (rb += step) >> divide_pow;
-    segments.SetCurStripe(left_bound, right_bound);
-    FindRNoChecks(i_f, segments, ladder_start_index, left_bound, right_bound, stack_pos);
-    do {
-      left_bound = right_bound;
-      right_bound = (rb += step) >> divide_pow;
-      i_f.InsDel(segments, left_bound, stack_pos);
-      segments.SetCurStripe(left_bound, right_bound);
-      FindRNoChecks(i_f, segments, ladder_start_index, left_bound, right_bound, stack_pos);
-    } while (right_bound != interval_right_rank);
-  }
 
   //functions for fast algorithm
   template <class SegmentsColl>

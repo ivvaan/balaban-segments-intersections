@@ -604,7 +604,7 @@ public:
     cur_point = collection[s].BegPoint();
   };
 
-  void SetCurSeg(uint4 s){
+  void SetCurSeg(int4 s){
     cur_seg_idx = s;
     cur_seg = collection[s];
     is_rstump=false;
