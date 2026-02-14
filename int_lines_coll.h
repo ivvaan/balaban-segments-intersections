@@ -310,7 +310,7 @@ public:
       ReorderStep(E, L_size, L);
       EndInresect(pt, L_size, L);
       SetCurPointAtBeg(sn); // Sets current point to the begin of segment sn.
-      int4 i = L_size;
+      uint4 i = L_size;
       for (auto _L = L - 1; (i != 0) && (UpperCurPoint(_L[i])); --i)
         L[i] = _L[i];
       L[i] = sn;
@@ -544,7 +544,7 @@ public:
           *(last_to_insert++)  = s;
       }
     }
-    auto is_below = [coll = this->collection, pts=this->pts](int4 sL, int4 sI) {
+    auto is_below = [coll = this->collection, pts=this->pts](uint4 sL, uint4 sI) {
       auto& s = coll[sL];
       auto cmp = s.under(pts[first_point(sI)]);
       if (cmp != std::strong_ordering::equal)
@@ -604,7 +604,7 @@ public:
     cur_point = collection[s].BegPoint();
   };
 
-  void SetCurSeg(int4 s){
+  void SetCurSeg(uint4 s){
     cur_seg_idx = s;
     cur_seg = collection[s];
     is_rstump=false;
@@ -702,7 +702,7 @@ public:
   constexpr bool static right_bound = false;
 
   template<bool is_left>
-  bool XBelow(int4 s_1, int4 s_2, int4 X) const {
+  bool XBelow(uint4 s_1, uint4 s_2, int4 X) const {
     auto& s1 = collection[s_1];
     auto& s2 = collection[s_2];//for right bound s2 always a stair
     auto cmp = s1.YAtX_frac(X) <=> s2.YAtX_frac(X);
@@ -722,7 +722,7 @@ public:
   };
 
   template<bool check_way_up_s_is_under_cur_seg>// s_  is_under or is_upper than cur_seg right stump
-  bool RStumpIntersect(int4 s_) const {
+  bool RStumpIntersect(uint4 s_) const {
 
     auto cmpE = collection[s_].YAtX_frac(E) <=> cur_seg.YAtX_frac(E);// cmpE==1 is s.YAtX_frac(E) > cur_seg.YAtX_frac(E)
 
@@ -733,7 +733,7 @@ public:
   };
 
   template<bool is_way_up>
-  bool ActiveEndIntersect(int4 s_) const { //
+  bool ActiveEndIntersect(uint4 s_) const { //
     auto pp = collection[s_].point_pos(active_end);
     if(pp==0)
       return !cur_seg_pt_on_right_bound;//for active_end on right bound we get intersection during InsDel call
@@ -745,7 +745,7 @@ public:
   };
 
   template<bool is_way_up>
-  bool IsCurSegIntWith(int4 s_) {//checks if cur_seg and s intersects
+  bool IsCurSegIntWith(uint4 s_) {//checks if cur_seg and s intersects
     if (is_rstump) // can be in stage_split only
       return RStumpIntersect<is_way_up>(s_);
     if (stage != _Stages::stage_bubble)
@@ -813,7 +813,7 @@ public:
     return IsCurSegIntWith<way_up>(s_);
   };
 
-  auto FindCurSegIntDownWith(int4 s_) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+  auto FindCurSegIntDownWith(uint4 s_) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
     return FindCurSegIntWith<way_down>(s_);
   };
 
@@ -842,7 +842,7 @@ public:
     return prod >= 0;
   };
 
-  bool UpperCurPoint(int4 s_) const { //returns true if s_ is upper current point 
+  bool UpperCurPoint(uint4 s_) const { //returns true if s_ is upper current point 
     auto& s = collection[s_];
     auto pp = s.point_pos(cur_point);
     if (pp != 0)
@@ -855,7 +855,7 @@ public:
 
 
  
-  bool CurPointIntersect(int4 s_) const { //
+  bool CurPointIntersect(uint4 s_) const { //
     return (collection[s_].point_pos(cur_point) == 0);//current point placed on  s_
   };
 
@@ -925,7 +925,7 @@ public:
   void SortAt(uint4 rank, uint4 n, uint4 *L)
   {
     SetCurStripeLeft(rank);
-    std::sort(L, L + n, [this](int4 s1, int4 s2) {return LBelow(s1, s2); });
+    std::sort(L, L + n, [this](uint4 s1, uint4 s2) {return LBelow(s1, s2); });
   };
 
   void SetRegistrator(IntersectionRegistrator* r)
@@ -1188,7 +1188,8 @@ private:
   decltype(reg_pair) *register_pair = reg_pair;
   CIntegerSegmentCollection *clone_of = nullptr;
   uint4 nSegments=0,nTotX=0,nCollideX=0;
-  int4 B, E,  stripe_left_rank, stripe_right_rank;
+  int4 B, E;
+  uint4 stripe_left_rank, stripe_right_rank;
   uint4 stage = _Stages::stage_split;
 
   uint4 cur_seg_idx = 0xFFFFFFFF;// , cur_point_idx = 0xFFFFFFFF;

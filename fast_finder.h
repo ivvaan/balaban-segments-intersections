@@ -53,7 +53,7 @@ public:
       to = nTotX - 1;
       not_parallel = true;
     }
-    constexpr int4 bottom_index = 0;
+    constexpr uint4 bottom_index = 0;
     ProgramStackRec stack_rec(bottom_index, nTotX); //need to be initialized this way
     if (from == 0) {
       segments.SetCurStripeRight(0);
@@ -106,7 +106,7 @@ public:
   }
 
   template<class SegmentsColl>
-  void SearchInStrip(SegmentsColl &segments, int4 qp)
+  void SearchInStrip(SegmentsColl &segments, uint4 qp)
   {
     if constexpr(SegmentsColl::get_coll_flag(_Coll_flags::line_segments)==_Coll_flag_state::state_true)
     {
@@ -125,7 +125,7 @@ public:
       std::swap(L, R);
       //now segments in L once again, but in icorrect order
       //sort it
-      std::sort(L, L + L_size, [&](int4 s1, int4 s2) {return segments.RBelow(s1, s2); });
+      std::sort(L, L + L_size, [&](uint4 s1, uint4 s2) {return segments.RBelow(s1, s2); });
     }
   };
 
@@ -145,7 +145,7 @@ public:
   }
 
   template <class SegmentsColl>
-  void SISFindR(SegmentsColl& segments, int4 ladder_start_index, uint4 interval_left_rank, uint4 interval_right_rank, ProgramStackRec* stack_pos)
+  void SISFindR(SegmentsColl& segments, uint4 ladder_start_index, uint4 interval_left_rank, uint4 interval_right_rank, ProgramStackRec* stack_pos)
   {
     for (auto i = interval_left_rank + 1; i != interval_right_rank; ++i) {
       if (L_size > 1) {
@@ -164,7 +164,7 @@ public:
   template <class SegmentsColl>
   void FindRNoChecks(SegmentsColl& segments, int4 ladder_start_index, uint4 interval_left_rank, uint4 interval_right_rank, ProgramStackRec* stack_pos)
   {
-    int4 Q_pos;
+    uint4 Q_pos;
     //if L or Q empty cut the strip into 2^divide_pow substrips
     constexpr const uint4 divide_pow = 4;
     if ((L_size == 0)||(0 == (Q_pos = Split(segments, Q + ladder_start_index, interval_right_rank))))
@@ -198,7 +198,7 @@ public:
 
   //cuts the strip into 2^divide_pow substrips
   template <class SegmentsColl>
-  void MultipleCutting(SegmentsColl& segments, int4 ladder_start_index, uint4 left_bound, uint4 interval_right_rank, ProgramStackRec* stack_pos, uint4 divide_pow)
+  void MultipleCutting(SegmentsColl& segments, uint4 ladder_start_index, uint4 left_bound, uint4 interval_right_rank, ProgramStackRec* stack_pos, uint4 divide_pow)
   {
     if (interval_right_rank < left_bound + (min_strip_width << divide_pow)) // end of recursion for narrow stripes
       return SISFindR(segments, ladder_start_index, left_bound, interval_right_rank, stack_pos);  //if strip narrow just apply SISFindR
@@ -218,7 +218,7 @@ public:
   }
 
   template<class SegmentsColl>
-  void Merge(SegmentsColl &segments, uint4 LBoundIdx, int4 QB, int4 QE)
+  void Merge(SegmentsColl &segments, uint4 LBoundIdx, uint4 QB, uint4 QE)
   {
     const auto Size = L_size;
     uint4 cur_R_pos = 0, new_size = 0;
@@ -268,7 +268,7 @@ public:
   };
 
   template<class SegmentsColl>
-  int4 Split4LineSeg(SegmentsColl& segments, uint4* _Q, uint4 RBoundIdx)
+  uint4 Split4LineSeg(SegmentsColl& segments, uint4* _Q, uint4 RBoundIdx)
   {
     auto R_pos = R;
     auto new_L_pos = L;
@@ -318,7 +318,7 @@ public:
       // one addition per loop by incrementing _Q later.
     }
     L_size = new_L_pos-L;
-    int4 Q_size=_Q_pos - _Q;
+    uint4 Q_size=_Q_pos - _Q;
     *--Q_tail = Q_size;//place a guard for the loop below
 
     // important to start from stair above current segm, meanwhile _Q[*Q_tail] is stair below
@@ -390,7 +390,7 @@ public:
 
 
   template<class SegmentsColl>
-  int4 Split(SegmentsColl& segments, uint4* _Q, uint4 RBoundIdx)
+  uint4 Split(SegmentsColl& segments, uint4* _Q, uint4 RBoundIdx)
   {
     if constexpr (SegmentsColl::get_coll_flag(_Coll_flags::line_segments)==_Coll_flag_state::state_true)
       return Split4LineSeg(segments, _Q, RBoundIdx);

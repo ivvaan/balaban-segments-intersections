@@ -222,7 +222,7 @@ public:
     return s_;
   }
 
-  bool FindCurSegIntDownWith(int4 s_) {
+  bool FindCurSegIntDownWith(uint4 s_) {
     return FindIntWith<true>(curB, curE, s_);
   }
 

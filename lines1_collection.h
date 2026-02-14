@@ -210,7 +210,7 @@ public:
     return false;
   }
 
-  bool FindCurSegIntDownWith(int4 s_) {
+  bool FindCurSegIntDownWith(uint4 s_) {
     if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0)
       return UnderActiveEnd(s_) ? false : (registrator->register_pair(cur_seg_idx, s_), true);
     return FindIntWith(curB, curE, s_);
@@ -273,7 +273,7 @@ public:
   }
 
   bool UnderCurPoint(uint4 s_) const { return collection[s_].under(cur_point); }
-  bool UnderActiveEnd(int4 s_) const { return collection[s_].under(active_end); }
+  bool UnderActiveEnd(uint4 s_) const { return collection[s_].under(active_end); }
 
   // --- Endpoint sorting ---
 

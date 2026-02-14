@@ -89,12 +89,12 @@ public:
 
   struct ProgramStackRec //structure to use program stack to store list of starcases above current call
   {
-    int4 Q_pos; //starting position and 
+    uint4 Q_pos; //starting position and 
     uint4 right_bound;//right boind of current staircase
     ProgramStackRec* prev = nullptr; //link to program stack record storing parent staircase information 
-    ProgramStackRec(int4 qp) :Q_pos(qp) {};
-    ProgramStackRec(int4 qp, uint4 rb) : Q_pos(qp), right_bound(rb) {};
-    ProgramStackRec(int4 qp, uint4 rb, ProgramStackRec* pr) : Q_pos(qp), right_bound(rb), prev(pr) {};
+    ProgramStackRec(uint4 qp) :Q_pos(qp) {};
+    ProgramStackRec(uint4 qp, uint4 rb) : Q_pos(qp), right_bound(rb) {};
+    ProgramStackRec(uint4 qp, uint4 rb, ProgramStackRec* pr) : Q_pos(qp), right_bound(rb), prev(pr) {};
     ProgramStackRec* Set(ProgramStackRec* p, uint4 rb) { prev = p, right_bound = rb; return this; };
     bool isnot_top() { return prev!=nullptr; };
   };
@@ -118,7 +118,7 @@ public:
     };
 
     template <class SegmentsColl>
-    void FindIntI(SegmentsColl& segments, int4 sn, ProgramStackRec* stack_pos) const
+    void FindIntI(SegmentsColl& segments, uint4 sn, ProgramStackRec* stack_pos) const
     {
       auto r_index = segments.GetSegR(sn);
       while (stack_pos->right_bound <= r_index)
@@ -188,7 +188,7 @@ protected:
 
   uint4 GetDivPow(uint4 l) {
     if (l < 64) return 2;
-    int4 res = 0;
+    uint4 res = 0;
     for (uint4 target = 2.0*l / MAX(avr_segm_on_vline, 8.0);target; target >>= 1)
       ++res;
     return MAX(res,4);

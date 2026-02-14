@@ -177,7 +177,7 @@ public:
   }
 
   template<bool do_register = true>
-  bool FindIntWith(int4 s_) {
+  bool FindIntWith(uint4 s_) {
     auto& s1 = collection[s_];
     auto& s2 = cur_seg;
     auto da = s2.a - s1.a;
@@ -193,7 +193,7 @@ public:
     return true;
   }
 
-  bool FindCurSegIntDownWith(int4 s_) {
+  bool FindCurSegIntDownWith(uint4 s_) {
     if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0)
       return UnderActiveEnd(s_) ? false : (registrator->register_pair(cur_seg_idx, s_), true);
     return FindIntWith<true>(s_);
@@ -248,7 +248,7 @@ public:
   }
 
   bool UnderCurPoint(uint4 s_) const { return collection[s_].a * cur_point.x + collection[s_].b < cur_point.y; }
-  bool UnderActiveEnd(int4 s_) const { return collection[s_].a * active_end.x + collection[s_].b < active_end.y; }
+  bool UnderActiveEnd(uint4 s_) const { return collection[s_].a * active_end.x + collection[s_].b < active_end.y; }
 
   // --- Endpoint sorting ---
 

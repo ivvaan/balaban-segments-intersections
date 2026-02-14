@@ -172,7 +172,7 @@ public:
     return IntPointsInStripe<false>(x1, x2, s);
   }
 
-  bool FindCurSegIntDownWith(int4 s_) {
+  bool FindCurSegIntDownWith(uint4 s_) {
     return IntPointsInStripe<false>(cur_seg.x1, cur_seg.x2, collection + s_);
   }
 

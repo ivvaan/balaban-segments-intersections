@@ -58,7 +58,7 @@ public:
  }
 
   template<class SegmentsColl>
-  void FindIntI(SegmentsColl& segments, int4 cur_seg, ProgramStackRec* stack_pos) const
+  void FindIntI(SegmentsColl& segments, uint4 cur_seg, ProgramStackRec* stack_pos) const
   {
     auto r_index = segments.GetSegR(cur_seg);
     while (stack_pos->right_bound <= r_index)stack_pos = stack_pos->prev;// go from bottom to top and find staircase to start
@@ -114,16 +114,16 @@ private:
                                                        // so inherited stair positions are: inherit_offset,inherit_offset+inherit_each,inherit_offset+2*inherit_each,...
   static constexpr int4 big_staircase_threshold = 64;// 1024;//used in optFindR
 
-  int4 *father_loc = nullptr;
+  int4* father_loc = nullptr;// must be int4 to keep negative values for original stairs and positive for inherited stairs;
 
 
   static bool is_original(int4 v) { return v < 1; };
 
   template<class SegmentsColl>
-  int4 FindInt(SegmentsColl& segments, int4 qb, int4 qe, int4 l) const
+  int4 FindInt(SegmentsColl& segments, uint4 qb, uint4 qe, uint4 l) const
   {
     
-    int4 c = l;
+    auto c = l;
     while (c>qb)
     {
       if (is_original(father_loc[c]))
@@ -170,13 +170,13 @@ private:
 
 
   template<class SegmentsColl>
-  void Merge(SegmentsColl &segments, uint4 LBoundIdx, int4 QB, int4 QE)
+  void Merge(SegmentsColl &segments, uint4 LBoundIdx, uint4 QB, uint4 QE)
   {
     auto Size = L_size;
     uint4 cur_R_pos = 0, new_size = 0;
-    int4 cur_stair = QB;
+    auto cur_stair = QB;
     auto _R = L, _L = R;
-    int4 cur_seg = _R[cur_R_pos];
+    auto cur_seg = _R[cur_R_pos];
     while ((cur_stair<QE) && (cur_R_pos<Size))
     {
       if (segments.RBelow(cur_seg, Q[cur_stair + 1]))
@@ -211,13 +211,13 @@ private:
   };
 
   template<class SegmentsColl>
-  void Split(SegmentsColl& segments, uint4 RBoundIdx, int4 cur_father_pos, int4& _step_index)
+  void Split(SegmentsColl& segments, uint4 RBoundIdx, uint4 cur_father_pos, uint4& _step_index)
   {
     auto Size = L_size;
     auto step_index = _step_index;
-    int4 father_last_step = step_index;
+    auto father_last_step = step_index;
     uint4 new_L_size = 0, cur_L_pos = 0;
-    int4 cur_seg;
+    uint4 cur_seg;
     auto location = R;
     while ((cur_L_pos<Size) && (cur_father_pos <= father_last_step))
     {
@@ -239,7 +239,7 @@ private:
           step_index++;
           // if segment is over this stair it is over previous inherited segment in father staircase
           // negative value of  father_loc[step_index] means it is original segment ( always cur_father_pos  >  inherit_each )              
-          father_loc[step_index] = inherit_each - cur_father_pos;
+          father_loc[step_index] = (int4)inherit_each - (int4)cur_father_pos;
           Q[step_index] = cur_seg;
         }
         cur_L_pos++; // move to next in L
@@ -270,7 +270,7 @@ private:
       {  // add it to Q
         step_index++;
         // negative value of father_loc[step_index] means it is original segment ( always cur_father_pos  >  inherit_each )              
-        father_loc[step_index] = inherit_each - cur_father_pos;
+        father_loc[step_index] = (int4)inherit_each - (int4)cur_father_pos;
         Q[step_index] = cur_seg;
       }
     };
@@ -294,7 +294,7 @@ private:
   };
 
   template<class SegmentsColl>
-  void FindR(SegmentsColl &segments, int4 father_first_step, int4 ladder_start_index, uint4 interval_left_rank, uint4 interval_right_rank, ProgramStackRec *stack_pos, uint4 call_numb,uint4 _max_call=max_call)
+  void FindR(SegmentsColl &segments, uint4 father_first_step, uint4 ladder_start_index, uint4 interval_left_rank, uint4 interval_right_rank, ProgramStackRec *stack_pos, uint4 call_numb,uint4 _max_call=max_call)
   {
     segments.SetCurStripe(interval_left_rank, interval_right_rank);
     if (interval_right_rank - interval_left_rank == 1) {
@@ -304,10 +304,9 @@ private:
  
      
     ProgramStackRec stack_rec(ladder_start_index);
-    bool use_opt =  (ladder_start_index - father_first_step > big_staircase_threshold);
+    bool use_opt =  (ladder_start_index > big_staircase_threshold + father_first_step);
     if (use_opt)
     {// use optimal variant if father staircase is big
-//      segments.SetCurVLine(ENDS[interval_left_rank]);
       Split(segments, interval_right_rank, father_first_step, stack_rec.Q_pos);
       stack_pos = stack_rec.Set(stack_pos, interval_right_rank);
       father_first_step = ladder_start_index + inherit_offset;
