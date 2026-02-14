@@ -533,4 +533,3 @@ struct PrepareResult {
   double avr_segm_on_vline = 0.0;
 };
 
-struct ProgramStackRec;
