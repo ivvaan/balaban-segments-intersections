@@ -59,6 +59,8 @@ public:
   using Base::PointAtRank;
   using Base::SetRegistrator;
   using Base::GetRegistrator;
+  using Base::GetEndsListFirst;
+  using Base::GetEndsListNext;
 
   // --- Endpoint encoding ---
 
@@ -90,8 +92,7 @@ public:
     cur_point = collection[s].BegPoint();
   }
 
-  void SetCurSegAndPoint(uint4 s) {
-    cur_point = collection[s].BegPoint();
+  void SetCurSeg4Bubble(uint4 s) {
     SetCurSeg(s);
     if constexpr ((IntersectionRegistrator::reg_type & _RegistrationType::point) == 0)
       active_end = cur_seg.EndPoint();

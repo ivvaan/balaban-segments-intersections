@@ -153,11 +153,21 @@ private:
     return l-c;
   };
 
-
   template<class SegmentsColl>
-  void InsDel(SegmentsColl& segments, uint4 end_rank, ProgramStackRec* stack_pos)  {
-    segments.InsDel(*this, L_size, L, end_rank, stack_pos);
+  void InsDel(SegmentsColl& segments, uint4 end_rank, ProgramStackRec* stack_pos) {
+    segments.InsDel(L_size, L, end_rank);
+    if (stack_pos->isnot_top()) {
+      // Find intersections for all inserted (first endpoints) and vertical segments
+      // in staircase levels above (in the stack).
+      for (auto p = segments.GetEndsListFirst(end_rank); p; p = segments.GetEndsListNext(p)) {
+        auto sn = SegmentsColl::get_segm(*p);
+        segments.SetCurSeg4Bubble(sn);
+        FindIntI(segments, sn, stack_pos); // get internal intersections
+      }
+    }
+
   }
+
 
   template<class SegmentsColl>
   void Merge(SegmentsColl &segments, uint4 LBoundIdx, int4 QB, int4 QE)

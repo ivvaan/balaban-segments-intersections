@@ -184,6 +184,9 @@ protected:
   {
   };
 
+
+
+
   template <class IntersectionFinder, class SegmentsColl>
   static void SISFindR(IntersectionFinder& i_f, SegmentsColl& segments, int4 ladder_start_index, uint4 interval_left_rank, uint4 interval_right_rank, ProgramStackRec* stack_pos)
   {

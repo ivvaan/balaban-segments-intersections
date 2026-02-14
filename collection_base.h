@@ -37,7 +37,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 //   static uint4  get_segm(uint4 pt);
 //   uint4  GetSegmNumb() const;
 //   bool   UnderCurPoint(int4 s) const;
-//   void   SetCurSegAndPoint(uint4 s);
+//   void   SetCurSeg4Bubble(uint4 s);
 //   void   SetCurPointAtBeg(uint4 s);
 //   void   SetCurStripeLeft(uint4 left_rank);
 //   bool   LBelow(int4 s1, int4 s2) const;
@@ -87,10 +87,20 @@ public:
     return { NN, max_segm_on_vline, avr };
   }
 
+  // --- Access to boundary points for bubbling up ---
+
+  uint4* GetEndsListFirst(uint4 end_rank) const {
+    if (!Derived::is_last(ENDS[end_rank]))
+      return ENDS + end_rank;
+    return nullptr;
+  }
+  uint4* GetEndsListNext(uint4*) const {
+    return nullptr;
+  }
+
   // --- Standard InsDel for non-degenerate (real-coordinate) collections ---
 
-  template<class IntersectionFinder, class ProgramStackRec>
-  void InsDel(IntersectionFinder& i_f, uint4& L_size, int4* L, uint4 end_rank, ProgramStackRec* stack_pos) {
+  void InsDel(uint4& L_size, int4* L, uint4 end_rank) {
     auto pt = PointAtRank(end_rank);
     auto sn = Derived::get_segm(pt);
     if (Derived::is_last(pt)) // if endpoint - remove
@@ -101,13 +111,7 @@ public:
     }
     else // if startpoint - insert
     {
-      if (stack_pos->isnot_top()) {
-        self().SetCurSegAndPoint(sn);
-        i_f.FindIntI(self(), sn, stack_pos); // get internal intersections
-      }
-      else {
-        self().SetCurPointAtBeg(sn);
-      }
+      self().SetCurPointAtBeg(sn);
       int4 i = L_size;
       for (auto _L = L - 1; (i != 0) && (!self().UnderCurPoint(_L[i])); --i)
         L[i] = _L[i];
@@ -213,16 +217,6 @@ protected:
 // =============================================================================
 
 // ---------------------------------------------------------------------------
-// Minimal stub used by concept checks to verify InsDel signature.
-// The real finders (CFastIntFinder, COptimalIntFinder) satisfy this interface;
-// the stub lets us test InsDel without depending on the full finder headers.
-// ---------------------------------------------------------------------------
-struct _InsDelFinderStub {
-  template<class SegColl>
-  void FindIntI(SegColl&, int4, ProgramStackRec*) const {}
-};
-
-// ---------------------------------------------------------------------------
 // Core: the absolute minimum every algorithm needs.
 // ---------------------------------------------------------------------------
 template<class C>
@@ -282,8 +276,7 @@ concept SweepSegColl = SegCollCore<C> && requires(C c, uint4 u, uint4 * p) {
 template<class C>
 concept BalabanSegCollBase = SegCollCore<C> && requires(
   C c, const C cc,
-  uint4 u, int4 i, int4 * p, int4 * q,
-  _InsDelFinderStub i_f, uint4 & u_ref, ProgramStackRec * ps
+  uint4 u, int4 i, int4 * p, int4 * q, uint4 & u_ref, uint4 * up
   ) {
     // Prepare sorted endpoints, ranks, statistics
     { c.Prepare() } -> std::same_as<PrepareResult>;
@@ -308,7 +301,10 @@ concept BalabanSegCollBase = SegCollCore<C> && requires(
     { c.SetCurSegCutEnd(u) };
 
     // Insert/Delete endpoint into/from active list
-    { c.InsDel(i_f, u_ref, p, u, ps) };
+    { c.InsDel(u_ref, p, u) };
+    // Access to boundary points for bubbling up
+    { c.GetEndsListFirst(u) } -> std::convertible_to<uint4*>;
+    { c.GetEndsListNext(up) } -> std::convertible_to<uint4*>;
 
 };
 

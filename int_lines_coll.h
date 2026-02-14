@@ -293,8 +293,7 @@ public:
     return is_collection_remapped;
   }
 
-  template<class IntersectionFinder, class ProgramStackRec>
-  void InsDelOrdinary(IntersectionFinder& i_f, uint4& L_size, int4* L, uint4 pt, ProgramStackRec* stack_pos)
+  void InsDelOrdinary(uint4& L_size, int4* L, uint4 pt)
   {
     // Ordinary event: a single endpoint at this X.
     // - If it's a last point: remove the segment from L.
@@ -310,14 +309,7 @@ public:
     else { // Start point: insert.
       ReorderStep(E, L_size, L);
       EndInresect(pt, L_size, L);
-      if (stack_pos->isnot_top()) {
-        SetCurSegAndPoint(sn);
-        i_f.FindIntI(*this, sn, stack_pos); // Find internal intersections in ancestor staircases.
-      }
-      else {
-        SetCurPointAtBeg(sn); // Sets current point to the begin of segment sn.
-      }
-
+      SetCurPointAtBeg(sn); // Sets current point to the begin of segment sn.
       int4 i = L_size;
       for (auto _L = L - 1; (i != 0) && (UpperCurPoint(_L[i])); --i)
         L[i] = _L[i];
@@ -326,8 +318,32 @@ public:
     }
   }
 
-  template<class IntersectionFinder, class ProgramStackRec>
-  void InsDel(IntersectionFinder& i_f, uint4& L_size, int4* L, uint4 end_rank, ProgramStackRec* stack_pos)
+  uint4* GetEndsListFirst(uint4 end_rank) const {
+    auto pt = PointAtRank(end_rank);
+    if (is_multiple(pt)) {
+      auto f = unmark_multiple(pt);
+      for (uint4* cur_pt = ENDS + f; *cur_pt != list_stop; ++cur_pt) {
+        if (is_first(*cur_pt))
+          return cur_pt;
+      }
+      return nullptr;
+    }
+    if (is_first(ENDS[end_rank]))
+      return ENDS + end_rank;
+    return nullptr;
+  }
+  uint4* GetEndsListNext(uint4* pt) const {
+    if (pt - ENDS < nTotX) // We are in the main ENDS array part, not in a secondary list. Only one endpoint per X in the main part, so no next.
+      return nullptr;
+    // We are in a secondary list for a multi-event. Find the next first endpoint in the same list.
+    for (uint4* cur_pt = pt + 1; *cur_pt != list_stop; ++cur_pt) {
+      if (is_first(*cur_pt))
+        return cur_pt;
+    }
+    return nullptr;
+  }
+
+  void InsDel(uint4& L_size, int4* L, uint4 end_rank)
   {
     // Degenerate handling: if ENDS[end_rank] is a "multi-event marker", process the whole same-X boundary
     // as a single combined event to avoid zero-width stripes.
@@ -342,19 +358,9 @@ public:
       AllIntCurLine(f, L_size, L);
       InsStep(f, L_size, L);
 
-      if (stack_pos->isnot_top())
-        // Find intersections for all inserted (first endpoints) and vertical segments
-        // in staircase levels above (in the stack).
-        for (uint4 i = f, cur_pt = ENDS[f]; cur_pt != list_stop; cur_pt = ENDS[++i]) {
-          if (is_first(cur_pt)) {
-            auto sn = get_segm(cur_pt);
-            SetCurSegAndPoint(sn);
-            i_f.FindIntI(*this, sn, stack_pos);
-          }
-        }
     }
     else {
-      InsDelOrdinary(i_f, L_size, L, pt, stack_pos);
+      InsDelOrdinary(L_size, L, pt);
     }
   }
 
@@ -629,9 +635,8 @@ public:
     cur_seg_pt_on_right_bound = false;
   };
 
-  void SetCurSegAndPoint(uint4 s) {
+  void SetCurSeg4Bubble(uint4 s) {
     SetCurPointAtBeg(s);
-
     SetCurSeg(s);
     stage = _Stages::stage_bubble;
     active_end = pts[last_point(s)];

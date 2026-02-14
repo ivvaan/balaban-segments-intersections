@@ -59,6 +59,8 @@ public:
   using Base::PointAtRank;
   using Base::SetRegistrator;
   using Base::GetRegistrator;
+  using Base::GetEndsListFirst;
+  using Base::GetEndsListNext;
 
   // --- Endpoint encoding ---
 
@@ -105,8 +107,7 @@ public:
     cur_point = vertices[cur_pt_idx];
   }
 
-  void SetCurSegAndPoint(uint4 s) {
-    SetCurPointAtBeg(s);
+  void SetCurSeg4Bubble(uint4 s) {
     SetCurSeg(s);
   }
 
