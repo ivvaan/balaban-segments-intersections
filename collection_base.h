@@ -100,7 +100,7 @@ public:
 
   // --- Standard InsDel for non-degenerate (real-coordinate) collections ---
 
-  void InsDel(uint4& L_size, int4* L, uint4 end_rank) {
+  void InsDel(uint4& L_size, uint4* L, uint4 end_rank) {
     auto pt = PointAtRank(end_rank);
     auto sn = Derived::get_segm(pt);
     if (Derived::is_last(pt)) // if endpoint - remove
@@ -112,7 +112,7 @@ public:
     else // if startpoint - insert
     {
       self().SetCurPointAtBeg(sn);
-      int4 i = L_size;
+      uint4 i = L_size;
       for (auto _L = L - 1; (i != 0) && (!self().UnderCurPoint(_L[i])); --i)
         L[i] = _L[i];
       L[i] = sn;
@@ -147,10 +147,10 @@ public:
 
   // --- SortAt ---
 
-  void SortAt(uint4 rank, uint4 n, int4* L)
+  void SortAt(uint4 rank, uint4 n, uint4* L)
   {
     self().SetCurStripeLeft(rank);
-    std::sort(L, L + n, [this](int4 s1, int4 s2) { return self().LBelow(s1, s2); });
+    std::sort(L, L + n, [this](uint4 s1, uint4 s2) { return self().LBelow(s1, s2); });
   }
 
   // --- Registrator access ---
@@ -240,7 +240,7 @@ concept SegCollCore = requires(C c, C & cref, uint4 u)
 // Used by: CTrivialIntFinder
 // ---------------------------------------------------------------------------
 template<class C>
-concept TrivialSegColl = SegCollCore<C> && requires(C c, int4 s) {
+concept TrivialSegColl = SegCollCore<C> && requires(C c, uint4 s) {
   // Check and register intersection of current segment with segment i
   { c.TrivCurSegIntWith(s) } -> std::convertible_to<bool>;
 };
@@ -250,14 +250,14 @@ concept TrivialSegColl = SegCollCore<C> && requires(C c, int4 s) {
 // Used by: CSimpleSweepIntFinder
 // ---------------------------------------------------------------------------
 template<class C>
-concept SweepSegColl = SegCollCore<C> && requires(C c, uint4 u,int4 s, uint4 * p) {
+concept SweepSegColl = SegCollCore<C> && requires(C c, uint4 u, uint4 * p) {
   // Endpoint encoding (static)
   { C::is_last(u) } -> std::convertible_to<bool>;
   { C::get_segm(u) } -> std::convertible_to<int4>;
   // Build sorted endpoint list (caller-allocated buffer)
   { c.PrepareEndpointsSortedList(p) } -> std::convertible_to<uint4>;
   // Sweep-style intersection check with current segment
-  { c.SSCurSegIntWith(s) } -> std::convertible_to<bool>;
+  { c.SSCurSegIntWith(u) } -> std::convertible_to<bool>;
 };
 
 // ---------------------------------------------------------------------------
@@ -276,12 +276,12 @@ concept SweepSegColl = SegCollCore<C> && requires(C c, uint4 u,int4 s, uint4 * p
 template<class C>
 concept BalabanSegCollBase = SegCollCore<C> && requires(
   C c, const C cc,
-  uint4 u, int4 i, int4 * p, int4 * q, uint4 & u_ref, uint4 * up
+  uint4 u,  uint4 * p, uint4 * q, uint4 & u_ref
   ) {
     // Compile-time flags
     { C::get_coll_flag(_Coll_flags::line_segments) } -> std::same_as<_Coll_flag_state>;
     // Endpoint encoding (static)
-    { C::get_segm(u) } -> std::convertible_to<int4>;
+    { C::get_segm(u) } -> std::convertible_to<uint4>;
 
     // Prepare sorted endpoints, ranks, statistics
     { c.Prepare() } -> std::same_as<PrepareResult>;
@@ -292,10 +292,10 @@ concept BalabanSegCollBase = SegCollCore<C> && requires(
     { c.SetCurStripeRight(u) };
 
     // Ordering at stripe boundaries
-    { cc.RBelow(i, i) } -> std::convertible_to<bool>;
+    { cc.RBelow(u, u) } -> std::convertible_to<bool>;
 
     // Current point operations (for InsDel and FindIntI)
-    { cc.UnderCurPoint(i) } -> std::convertible_to<bool>;
+    { cc.UnderCurPoint(u) } -> std::convertible_to<bool>;
 
     // Rank lookups
     { cc.GetSegR(u) } -> std::convertible_to<uint4>;
@@ -309,7 +309,7 @@ concept BalabanSegCollBase = SegCollCore<C> && requires(
     { c.InsDel(u_ref, p, u) };
     // Access to boundary points for bubbling up
     { c.GetEndsListFirst(u) } -> std::convertible_to<uint4*>;
-    { c.GetEndsListNext(up) } -> std::convertible_to<uint4*>;
+    { c.GetEndsListNext(p) } -> std::convertible_to<uint4*>;
 
 };
 
@@ -318,7 +318,7 @@ concept BalabanSegCollBase = SegCollCore<C> && requires(
 // Used by: CFastIntFinder::find_intersections(n_threads, segments)
 // ---------------------------------------------------------------------------
 template<class C>
-concept FastSegColl = BalabanSegCollBase<C> && requires(C c, int4 * p, int4 * q) {
+concept FastSegColl = BalabanSegCollBase<C> && requires(C c, uint4 * p, uint4 * q) {
   // Directional intersection finding (range overloads)
   { c.FindCurSegIntDownWith(p, q) };
   { c.FindCurSegIntUpWith(p, q) };
@@ -330,21 +330,21 @@ concept FastSegColl = BalabanSegCollBase<C> && requires(C c, int4 * p, int4 * q)
 // Used by: COptimalIntFinder::find_intersections(n_threads, segments)
 // ---------------------------------------------------------------------------
 template<class C>
-concept OptimalSegColl = BalabanSegCollBase<C> && requires(C c, const C cc, int4 i) {
-  { cc.LBelow(i, i) } -> std::convertible_to<bool>;
+concept OptimalSegColl = BalabanSegCollBase<C> && requires(C c, const C cc, uint4 u) {
+  { cc.LBelow(u, u) } -> std::convertible_to<bool>;
   // Directional intersection finding (single-segment overloads)
-  { c.FindCurSegIntDownWith(i) } -> std::convertible_to<bool>;
-  { c.FindCurSegIntUpWith(i) } -> std::convertible_to<bool>;
+  { c.FindCurSegIntDownWith(u) } -> std::convertible_to<bool>;
+  { c.FindCurSegIntUpWith(u) } -> std::convertible_to<bool>;
   // Intersection check without registration 
-  { c.IsIntersectsCurSegDown(i) } -> std::convertible_to<bool>;
-  { c.IsIntersectsCurSegUp(i) } -> std::convertible_to<bool>;
+  { c.IsIntersectsCurSegDown(u) } -> std::convertible_to<bool>;
+  { c.IsIntersectsCurSegUp(u) } -> std::convertible_to<bool>;
 };
 // ---------------------------------------------------------------------------
 // Parallel execution: Balaban + clone/registrator management.
 // Used by: CFastIntFinder::find_intersections(n_threads, segments)
 // ---------------------------------------------------------------------------
 template<class C>
-concept ParallelSegColl = FastSegColl<C> && requires(C c,  C & cref, int4 i, uint4 u, int4 * p) {
+concept ParallelSegColl = FastSegColl<C> && requires(C c,  C & cref, uint4 u, uint4 * p) {
   // Clone construction: C(C&, uint4 thread_index)
   { C(cref, u) };
   // Prepare clone registrators

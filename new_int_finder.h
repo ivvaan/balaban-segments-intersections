@@ -124,7 +124,7 @@ public:
       while (stack_pos->right_bound <= r_index)
         stack_pos = stack_pos->prev; // go from bottom to top and find staircase to start
       int4  m, len;
-      int4* Qb, * Ql, * Qe = Q + (stack_pos->Q_pos + 1);
+      uint4* Qb, * Ql, * Qe = Q + (stack_pos->Q_pos + 1);
       for (stack_pos = stack_pos->prev; stack_pos != nullptr; stack_pos = stack_pos->prev) {
         Qb = Ql = Q + stack_pos->Q_pos;
         len = Qe - Qb;
@@ -147,8 +147,10 @@ protected:
   constexpr static uint4 cut_margin = 24;
   constexpr static uint4 min_strip_width = 6;// at least 2
 
-  int4* Q = nullptr;
-  int4* L = nullptr;
+  uint4* Q = nullptr;
+  uint4* L = nullptr;
+  uint4* R = nullptr;
+
   double avr_segm_on_vline = 0;
   uint4 LR_len = 0;
   uint4 nTotSegm = 0;
@@ -159,12 +161,12 @@ protected:
 
   template<class SegmentsColl, bool HasSentinels = has_sentinels<SegmentsColl> >
   struct CSentinel {
-    CSentinel(SegmentsColl& coll, int4& ini, bool is_top = false) {};
+    CSentinel(SegmentsColl& coll, uint4& ini, bool is_top = false) {};
   };
 
   template<class SegmentsColl>
   struct CSentinel <SegmentsColl, true> {
-    CSentinel(SegmentsColl& coll, int4& ini, bool is_top = false) : to_restore(ini) {
+    CSentinel(SegmentsColl& coll, uint4& ini, bool is_top = false) : to_restore(ini) {
       prev_val = to_restore;
       to_restore = coll.get_sentinel(is_top);
     };
@@ -172,8 +174,8 @@ protected:
       to_restore = prev_val;
     };
   private:
-    int4& to_restore;
-    int4 prev_val;
+    uint4& to_restore;
+    uint4 prev_val;
   };
 
   auto GetQTail() {
@@ -194,7 +196,7 @@ protected:
 
   //functions for fast algorithm
   template <class SegmentsColl>
-  static void FindInt(SegmentsColl& segments, int4* const qb, int4* const qe, int4* l)
+  static void FindInt(SegmentsColl& segments, uint4* const qb, uint4* const qe, uint4* l)
   {
     // Use range overloads with sentinel instead of single-element overloads.
     // Bottom sentinel is placed via CSentinel RAII (restores *qb on scope exit).
@@ -213,11 +215,11 @@ protected:
   };
 
   template<class SegmentsColl>
-  void SearchInStripNonLineSeg(SegmentsColl& segments, int4* _L, int4* _Q)//simplified version for SearchInStrip
+  void SearchInStripNonLineSeg(SegmentsColl& segments, uint4* _L, uint4* _Q)//simplified version for SearchInStrip
   {
     auto last_L = _L + L_size;
     auto first_L = _L + 1;
-    int4 * _Q_pos = _Q + 1;
+    auto * _Q_pos = _Q + 1;
     auto T_pos = GetQTail();
     do
     {
@@ -261,7 +263,7 @@ protected:
   };
 
   template<class SegmentsColl>
-  void SearchInStripLineSeg(SegmentsColl& segments, int4* L_) {
+  void SearchInStripLineSeg(SegmentsColl& segments, uint4* L_) {
     auto last = L_ + L_size;
     if constexpr (has_sentinels<SegmentsColl>) 
       *last= segments.get_sentinel(true);

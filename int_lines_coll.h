@@ -116,7 +116,7 @@ private:
   //===========================================================================
 
 public:
-  int4* tmp = nullptr;
+  uint4* tmp = nullptr;
 
   std::pair<uint4, uint4> get_dublicate_stat(uint4 len, uint4* arr) const
   {
@@ -226,7 +226,7 @@ public:
 
     // tmp[] maps each endpoint (in sorted tmpENDS order) to its final rank in ENDS[].
     // This keeps seg_L_rank / seg_R_rank construction compatible with multi-events.
-    tmp = new int4[nEnds];
+    tmp = new uint4[nEnds];
 
     if (nV != 0) {
       // ENDS layout when multi-events exist:
@@ -293,7 +293,7 @@ public:
     return is_collection_remapped;
   }
 
-  void InsDelOrdinary(uint4& L_size, int4* L, uint4 pt)
+  void InsDelOrdinary(uint4& L_size, uint4* L, uint4 pt)
   {
     // Ordinary event: a single endpoint at this X.
     // - If it's a last point: remove the segment from L.
@@ -343,7 +343,7 @@ public:
     return nullptr;
   }
 
-  void InsDel(uint4& L_size, int4* L, uint4 end_rank)
+  void InsDel(uint4& L_size, uint4* L, uint4 end_rank)
   {
     // Degenerate handling: if ENDS[end_rank] is a "multi-event marker", process the whole same-X boundary
     // as a single combined event to avoid zero-width stripes.
@@ -364,7 +364,7 @@ public:
     }
   }
 
-  void ReorderStep(int4 x, uint4 L_size, int4* L)
+  void ReorderStep(int4 x, uint4 L_size, uint4* L)
   {
     // Optional experiment: for segments with equal YAtX at the boundary, reverse order.
     // This is related to the "node on boundary" phenomenon described in Degenerate-cases.md.
@@ -384,7 +384,7 @@ public:
     }
   }
 
-  void EndInresect(uint4 pt, uint4 L_size, int4* L)
+  void EndInresect(uint4 pt, uint4 L_size, uint4* L)
   {
     auto point = pts[pt];
     // Skip segments below the current point.
@@ -396,7 +396,7 @@ public:
       register_pair(this, *L, get_segm(pt));
   }
 
-  void AllIntCurLine(uint4 f, uint4& L_size, int4* L)
+  void AllIntCurLine(uint4 f, uint4& L_size, uint4* L)
   {
     // Registers intersections on a multi-event vertical boundary X = const.
     // The list ENDS[f..] contains endpoints with that same X, terminated by list_stop.
@@ -489,7 +489,7 @@ public:
 
   }
 
-  void LastFirstInt(uint4 len, int4* nv_pts)
+  void LastFirstInt(uint4 len, uint4* nv_pts)
   {
     // For endpoints on the same X: if multiple non-vertical endpoints share the same Y,
     // register all the pairs.
@@ -506,7 +506,7 @@ public:
   }
 
 
-  void DelStep(uint4 end_rank, uint4& L_size, int4* L)
+  void DelStep(uint4 end_rank, uint4& L_size, uint4* L)
   {
     uint4 new_size = 0;
     for (uint4 i = 0; i < L_size; ++i)
@@ -531,7 +531,7 @@ public:
     return out; 
   }
 
-  void InsStep(uint4 f, uint4& L_size, int4* L)
+  void InsStep(uint4 f, uint4& L_size, uint4* L)
   {
     auto first_to_insert = tmp;
     auto last_to_insert = first_to_insert;
@@ -644,7 +644,7 @@ public:
 
   };
 
-  bool TrivCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+  bool TrivCurSegIntWith(uint4 s_)//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
   {
     auto& s1 = cur_seg;
     auto& s2 = collection[s_];
@@ -655,7 +655,7 @@ public:
 
 
   template <bool reg = true>
-  bool SSCurSegIntWith(int4 s_)//finds all intersection points of cur_seg and s (both are on some vertical line) and register them
+  bool SSCurSegIntWith(uint4 s_)//finds all intersection points of cur_seg and s (both are on some vertical line) and register them
   {
     //precondition segments share some x coords
     auto& s1 = cur_seg;
@@ -713,11 +713,11 @@ public:
     return is_left == prod > 0;//intersections is on the right of X (prod>0 would be on the left)
   }
 
-  bool LBelow(int4 s_1, int4 s_2)const {  //retuns if s1 below s2 at current vertical line
+  bool LBelow(uint4 s_1, uint4 s_2)const {  //retuns if s1 below s2 at current vertical line
     return XBelow<left_bound>(s_1, s_2, B);
   };
 
-  bool RBelow(int4 s_1, int4 s_2)const {  //retuns if s1 below s2 at current vertical line
+  bool RBelow(uint4 s_1, uint4 s_2)const {  //retuns if s1 below s2 at current vertical line
     return XBelow<right_bound>(s_1, s_2, E);
   };
 
@@ -754,7 +754,7 @@ public:
   };
 
   template<bool is_way_up>
-  auto FindCurSegIntWith(int4 s_) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+  auto FindCurSegIntWith(uint4 s_) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
     auto cs = cur_seg_idx;
     if (is_rstump) {//can be in stage_split only
       if (RStumpIntersect<is_way_up>(s_)) {
@@ -779,7 +779,7 @@ public:
   };
 
   template<bool is_way_up>
-  auto FindCurSegIntWith(int4* s_, int4* last) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+  auto FindCurSegIntWith(uint4* s_, uint4* last) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
     auto cs = cur_seg_idx;
     int4 increment = is_way_up ? 1 : -1;
     if (is_rstump) {//can be in stage_split only
@@ -803,12 +803,12 @@ public:
     return s_;
   };
 
-  bool IsIntersectsCurSegDown(int4 s_) //check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
+  bool IsIntersectsCurSegDown(uint4 s_) //check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
   {
     return IsCurSegIntWith<way_down>(s_);
   };
 
-  bool IsIntersectsCurSegUp(int4 s_) //check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
+  bool IsIntersectsCurSegUp(uint4 s_) //check if cur_seg and s intersects (in the stripe b,e if cur_seg set in b,e) 
   {
     return IsCurSegIntWith<way_up>(s_);
   };
@@ -817,20 +817,20 @@ public:
     return FindCurSegIntWith<way_down>(s_);
   };
 
-  auto FindCurSegIntUpWith(int4 s_) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+  auto FindCurSegIntUpWith(uint4 s_) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
     return FindCurSegIntWith<way_up>(s_);
   };
 
-  auto FindCurSegIntDownWith(int4* s_, int4* last) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+  auto FindCurSegIntDownWith(uint4* s_, uint4* last) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
     return FindCurSegIntWith<way_down>(s_, last);
   };
 
-  auto FindCurSegIntUpWith(int4* s_, int4* last) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
+  auto FindCurSegIntUpWith(uint4* s_, uint4* last) {//finds all intersection points of cur_seg and s (in the stripe b,e if cur_seg set in b,e) and register them
     return FindCurSegIntWith<way_up>(s_, last);
   };
 
 
-  bool UnderCurPoint(int4 s_) const { //returns true if s_ is under current point 
+  bool UnderCurPoint(uint4 s_) const { //returns true if s_ is under current point 
     //write as ActiveEndIntersect for consistency
     auto& s = collection[s_]; 
     auto pp = s.point_pos(cur_point);
@@ -898,7 +898,7 @@ public:
       seg_R_rank = c.seg_R_rank;
       collection = c.collection;
       pts = c.pts;
-      tmp = new int4[nSegments << 1];
+      tmp = new uint4[nSegments << 1];
       remaper.clone_from(&c.remaper);
       register_pair = c.register_pair;
       SetRegistrator(r);
@@ -922,7 +922,7 @@ public:
 
   };
 
-  void SortAt(uint4 rank, uint4 n, int4 *L)
+  void SortAt(uint4 rank, uint4 n, uint4 *L)
   {
     SetCurStripeLeft(rank);
     std::sort(L, L + n, [this](int4 s1, int4 s2) {return LBelow(s1, s2); });

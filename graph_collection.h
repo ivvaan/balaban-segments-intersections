@@ -138,7 +138,7 @@ public:
 
   // --- Ordering predicates ---
 
-  bool LBelow(int4 s_1, int4 s_2) const {
+  bool LBelow(uint4 s_1, uint4 s_2) const {
     auto beg1 = get_first_idx(s_1);
     auto beg2 = get_first_idx(s_2);
     auto end1 = get_last_idx(s_1);
@@ -154,7 +154,7 @@ public:
     return y1 < y2;
   }
 
-  bool RBelow(int4 s_1, int4 s_2) const {
+  bool RBelow(uint4 s_1, uint4 s_2) const {
     auto beg1 = get_first_idx(s_1);
     auto beg2 = get_first_idx(s_2);
     auto end1 = get_last_idx(s_1);
@@ -199,24 +199,24 @@ public:
     return false;
   }
 
-  bool TrivCurSegIntWith(int4 s_) {
+  bool TrivCurSegIntWith(uint4 s_) {
     auto x1 = std::max(curB, vertices[get_first_idx(s_)].x);
     auto x2 = std::min(curE, vertices[get_last_idx(s_)].x);
     if (x1 >= x2) return false;
     return FindIntWith<true>(x1, x2, s_);
   }
 
-  bool SSCurSegIntWith(int4 s_) {
+  bool SSCurSegIntWith(uint4 s_) {
     return FindIntWith<true>(curB, curE, s_);
   }
 
-  auto FindCurSegIntDownWith(int4* s_, int4* last) {
+  auto FindCurSegIntDownWith(uint4* s_, uint4* last) {
     while ((THIS_HAS_SENTINELS || (s_ != last)) && FindIntWith<true>(curB, curE, *s_))
       --s_;
     return s_;
   }
 
-  auto FindCurSegIntUpWith(int4* s_, int4* last) {
+  auto FindCurSegIntUpWith(uint4* s_, uint4* last) {
     while ((THIS_HAS_SENTINELS || (s_ != last)) && FindIntWith<true>(curB, curE, *s_))
       ++s_;
     return s_;
@@ -226,19 +226,19 @@ public:
     return FindIntWith<true>(curB, curE, s_);
   }
 
-  bool FindCurSegIntUpWith(int4 s_) {
+  bool FindCurSegIntUpWith(uint4 s_) {
     return FindIntWith<true>(curB, curE, s_);
   }
 
-  bool IsIntersectsCurSegDown(int4 s_) {
+  bool IsIntersectsCurSegDown(uint4 s_) {
     return FindIntWith<false>(curB, curE, s_);
   }
 
-  bool IsIntersectsCurSegUp(int4 s_) {
+  bool IsIntersectsCurSegUp(uint4 s_) {
     return FindIntWith<false>(curB, curE, s_);
   }
 
-  bool UnderCurPoint(int4 s_) const {
+  bool UnderCurPoint(uint4 s_) const {
     auto beg = get_first_idx(s_);
     auto org = vertices[beg];
     if (beg != cur_pt_idx)

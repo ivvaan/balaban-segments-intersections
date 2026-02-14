@@ -119,11 +119,11 @@ public:
 
   // --- Ordering predicates ---
 
-  bool LBelow(int4 s_1, int4 s_2) const {
+  bool LBelow(uint4 s_1, uint4 s_2) const {
     return collection[s_1].under(collection[s_2].PointAtX(B));
   }
 
-  bool RBelow(int4 s_1, int4 s_2) const {
+  bool RBelow(uint4 s_1, uint4 s_2) const {
     return collection[s_1].under(collection[s_2].PointAtX(E));
   }
 
@@ -157,7 +157,7 @@ public:
     return ret;
   }
 
-  bool TrivCurSegIntWith(int4 s_) {
+  bool TrivCurSegIntWith(uint4 s_) {
     auto s = collection + s_;
     auto x1 = MAX(cur_seg.x1, s->x1);
     auto x2 = MIN(cur_seg.x2, s->x2);
@@ -165,7 +165,7 @@ public:
     return IntPointsInStripe<false>(x1, x2, s);
   }
 
-  bool SSCurSegIntWith(int4 s_) {
+  bool SSCurSegIntWith(uint4 s_) {
     auto s = collection + s_;
     auto x1 = MAX(cur_seg.x1, s->x1);
     auto x2 = MIN(cur_seg.x2, s->x2);
@@ -176,31 +176,31 @@ public:
     return IntPointsInStripe<false>(cur_seg.x1, cur_seg.x2, collection + s_);
   }
 
-  auto FindCurSegIntDownWith(int4* s_, int4* last) {
+  auto FindCurSegIntDownWith(uint4* s_, uint4* last) {
     while ((THIS_HAS_SENTINELS || (s_ != last)) && IntPointsInStripe<false>(cur_seg.x1, cur_seg.x2, collection + *s_))
       --s_;
     return s_;
   }
 
-  auto FindCurSegIntUpWith(int4* s_, int4* last) {
+  auto FindCurSegIntUpWith(uint4* s_, uint4* last) {
     while ((THIS_HAS_SENTINELS || (s_ != last)) && IntPointsInStripe<false>(cur_seg.x1, cur_seg.x2, collection + *s_))
       ++s_;
     return s_;
   }
 
-  bool FindCurSegIntUpWith(int4 s_) {
+  bool FindCurSegIntUpWith(uint4 s_) {
     return IntPointsInStripe<false>(cur_seg.x1, cur_seg.x2, collection + s_);
   }
 
-  bool IsIntersectsCurSegDown(int4 s_) {
+  bool IsIntersectsCurSegDown(uint4 s_) {
     return IntPointsInStripe<true>(cur_seg.x1, cur_seg.x2, collection + s_);
   }
 
-  bool IsIntersectsCurSegUp(int4 s_) {
+  bool IsIntersectsCurSegUp(uint4 s_) {
     return IntPointsInStripe<true>(cur_seg.x1, cur_seg.x2, collection + s_);
   }
 
-  bool UnderCurPoint(int4 s_) const { return collection[s_].under(cur_point); }
+  bool UnderCurPoint(uint4 s_) const { return collection[s_].under(cur_point); }
 
   // --- Endpoint sorting ---
 

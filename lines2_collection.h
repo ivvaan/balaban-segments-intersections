@@ -129,13 +129,13 @@ public:
 
   // --- Ordering predicates ---
 
-  bool LBelow(int4 s_1, int4 s_2) const {
+  bool LBelow(uint4 s_1, uint4 s_2) const {
     auto s1 = collection + s_1;
     auto s2 = collection + s_2;
     return ((B * (s2->a - s1->a) + s2->b - s1->b) > 0);
   }
 
-  bool RBelow(int4 s_1, int4 s_2) const {
+  bool RBelow(uint4 s_1, uint4 s_2) const {
     auto s1 = collection + s_1;
     auto s2 = collection + s_2;
     return ((E * (s2->a - s1->a) + s2->b - s1->b) > 0);
@@ -143,7 +143,7 @@ public:
 
   // --- Intersection detection & registration ---
 
-  bool TrivCurSegIntWith(int4 s_) {
+  bool TrivCurSegIntWith(uint4 s_) {
     auto& s1 = collection[s_];
     auto& s2 = cur_seg;
     auto x1 = MAX(s1.x1, s2.x1);
@@ -161,7 +161,7 @@ public:
     return true;
   }
 
-  bool SSCurSegIntWith(int4 s_) {
+  bool SSCurSegIntWith(uint4 s_) {
     auto& s1 = collection[s_];
     auto& s2 = cur_seg;
     auto da = s2.a - s1.a;
@@ -199,7 +199,7 @@ public:
     return FindIntWith<true>(s_);
   }
 
-  auto FindCurSegIntDownWith(int4* s_, int4* last) {
+  auto FindCurSegIntDownWith(uint4* s_, uint4* last) {
     if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0) {
       auto r = registrator;
       auto cs = cur_seg_idx;
@@ -214,7 +214,7 @@ public:
     return s_;
   }
 
-  auto FindCurSegIntUpWith(int4* s_, int4* last) {
+  auto FindCurSegIntUpWith(uint4* s_, uint4* last) {
     if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0) {
       auto r = registrator;
       auto cs = cur_seg_idx;
@@ -229,25 +229,25 @@ public:
     return s_;
   }
 
-  bool FindCurSegIntUpWith(int4 s_) {
+  bool FindCurSegIntUpWith(uint4 s_) {
     if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0)
       return UnderActiveEnd(s_) ? registrator->register_pair(cur_seg_idx, s_), true : false;
     return FindIntWith(s_);
   }
 
-  bool IsIntersectsCurSegDown(int4 s_) {
+  bool IsIntersectsCurSegDown(uint4 s_) {
     if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0)
       return !UnderActiveEnd(s_);
     return FindIntWith<false>(s_);
   }
 
-  bool IsIntersectsCurSegUp(int4 s_) {
+  bool IsIntersectsCurSegUp(uint4 s_) {
     if constexpr ((_RegistrationType::point & IntersectionRegistrator::reg_type) == 0)
       return UnderActiveEnd(s_);
     return FindIntWith<false>(s_);
   }
 
-  bool UnderCurPoint(int4 s_) const { return collection[s_].a * cur_point.x + collection[s_].b < cur_point.y; }
+  bool UnderCurPoint(uint4 s_) const { return collection[s_].a * cur_point.x + collection[s_].b < cur_point.y; }
   bool UnderActiveEnd(int4 s_) const { return collection[s_].a * active_end.x + collection[s_].b < active_end.y; }
 
   // --- Endpoint sorting ---

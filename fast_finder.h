@@ -223,8 +223,8 @@ public:
     const auto Size = L_size;
     uint4 cur_R_pos = 0, new_size = 0;
     auto cur_stair = Q + QB + 1;
-    int4 * const __restrict _R = L;
-    int4 * const __restrict _L = R;
+    uint4 * const __restrict _R = L;
+    uint4 * const __restrict _L = R;
     auto cur_seg = _R[cur_R_pos];
     auto const bot_Q = Q + QB;
     auto const top_Q = Q + QE + 1;
@@ -268,7 +268,7 @@ public:
   };
 
   template<class SegmentsColl>
-  int4 Split4LineSeg(SegmentsColl& segments, int4* _Q, uint4 RBoundIdx)
+  int4 Split4LineSeg(SegmentsColl& segments, uint4* _Q, uint4 RBoundIdx)
   {
     auto R_pos = R;
     auto new_L_pos = L;
@@ -342,7 +342,7 @@ public:
   };
 
   template<class SegmentsColl>
-  int4 Split4NonLineSeg(SegmentsColl& segments, int4* _Q, uint4 RBoundIdx)
+  uint4 Split4NonLineSeg(SegmentsColl& segments, uint4* _Q, uint4 RBoundIdx)
   {
     auto  _Q_pos = _Q;
     long long n_int = 0;
@@ -368,7 +368,7 @@ public:
       return 0;
     }
     L_size = new_L_pos - L;
-    int4 Q_size = _Q_pos - _Q;
+    uint4 Q_size = _Q_pos - _Q;
     *--Q_tail = Q_size;//place a guard for the loop below
 
     // important to start from stair above current segm, meanwhile _Q[*Q_tail] is stair below
@@ -390,7 +390,7 @@ public:
 
 
   template<class SegmentsColl>
-  int4 Split(SegmentsColl& segments, int4* _Q, uint4 RBoundIdx)
+  int4 Split(SegmentsColl& segments, uint4* _Q, uint4 RBoundIdx)
   {
     if constexpr (SegmentsColl::get_coll_flag(_Coll_flags::line_segments)==_Coll_flag_state::state_true)
       return Split4LineSeg(segments, _Q, RBoundIdx);
@@ -400,7 +400,6 @@ public:
   CFastIntFinder() {};
 
   protected:
-  int4 *R = nullptr;
   this_T* clone_of = nullptr;
  
   void clone(this_T* master)
@@ -436,8 +435,6 @@ public:
       segments.SortAt(end_rank, Size, L);
       return Size;
   };
-
-public:
 
 };
 
