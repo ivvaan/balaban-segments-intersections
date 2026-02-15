@@ -31,10 +31,11 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 class COptimalIntFinder : public CFastIntFinder
 {
 public:
-  using  imp_T = CommonImpl;
   using CFAST = CFastIntFinder;
  
   ~COptimalIntFinder() { FreeMem(); };
+  void FreeMem() {};
+
   template<OptimalSegColl SegmentsColl>
   void find_intersections(SegmentsColl &segments)
   {
@@ -51,9 +52,9 @@ public:
     constexpr uint4 bottom_index = inherit_each + 1;
     ProgramStackRec stack_rec(bottom_index, nTotX);  //need to be initialized this way
     segments.SetCurStripeRight(0);
-    InsDel(segments, 0, &stack_rec);
+    InsDel(*this,segments, 0, &stack_rec);
     FindR(segments, bottom_index + 1, bottom_index, 0, nTotX - 1, &stack_rec, 0);
-    InsDel(segments, nTotX - 1, &stack_rec);
+    InsDel(*this,segments, nTotX - 1, &stack_rec);
     segments.IntersectionsFindingDone();
  }
 
@@ -104,6 +105,7 @@ public:
   };
 
 
+
 private:
   static constexpr const int4 undef_loc = 0;
 
@@ -111,7 +113,7 @@ private:
 
   static constexpr const uint4 inherit_each = 15; // defines how often in optimal algorithm stairs are inherited,  one inherited per inherit_each
   static constexpr const uint4 inherit_offset = inherit_each / 2; // first stair to inherit; must be in [1..inherit_each-1]
-                                                       // so inherited stair positions are: inherit_offset,inherit_offset+inherit_each,inherit_offset+2*inherit_each,...
+  // so inherited stair positions are: inherit_offset,inherit_offset+inherit_each,inherit_offset+2*inherit_each,...
   static constexpr const uint4 big_staircase_threshold = 64;// 1024;//used in optFindR
 
   int4* father_loc = nullptr;// must be int4 to keep negative values for original stairs and positive for inherited stairs;
@@ -152,22 +154,6 @@ private:
     }
     return l-c;
   };
-
-  template<class SegmentsColl>
-  void InsDel(SegmentsColl& segments, uint4 end_rank, ProgramStackRec* stack_pos) {
-    segments.InsDel(L_size, L, end_rank);
-    if (stack_pos->isnot_top()) {
-      // Find intersections for all inserted (first endpoints) and vertical segments
-      // in staircase levels above (in the stack).
-      for (auto p = segments.GetEndsListFirst(end_rank); p; p = segments.GetEndsListNext(p)) {
-        auto sn = SegmentsColl::get_segm(*p);
-        segments.SetCurSeg4Bubble(sn);
-        FindIntI(segments, sn, stack_pos); // get internal intersections
-      }
-    }
-
-  }
-
 
   template<class SegmentsColl>
   void Merge(SegmentsColl &segments, uint4 LBoundIdx, uint4 QB, uint4 QE)
@@ -332,7 +318,7 @@ private:
         _max_call -=  (_max_call > 4) * 2;
         // if L contains a lot of segments then cut on two parts
         FindR(segments,father_first_step, stack_rec.Q_pos, interval_left_rank, m, stack_pos, 0, _max_call);
-        InsDel(segments,m, stack_pos);
+        InsDel(*this,segments,m, stack_pos);
         FindR(segments,father_first_step, stack_rec.Q_pos, m, interval_right_rank, stack_pos, 0, _max_call);
       }
       else
@@ -342,16 +328,16 @@ private:
         uint4 q = (interval_left_rank + m) >>1;
         if (interval_left_rank != q) {
           FindR(segments,father_first_step, stack_rec.Q_pos, interval_left_rank, q, stack_pos, 0, _max_call);
-          InsDel(segments, q, stack_pos);
+          InsDel(*this,segments, q, stack_pos);
         }
         if (q != m) {
           FindR(segments, father_first_step, stack_rec.Q_pos, q, m, stack_pos, 0, _max_call);
-          InsDel(segments, m, stack_pos);
+          InsDel(*this,segments, m, stack_pos);
         }
         q = (interval_right_rank + m) / 2;
         if (q != m) {
           FindR(segments, father_first_step, stack_rec.Q_pos, m, q, stack_pos, 0, _max_call);
-          InsDel(segments, q, stack_pos);
+          InsDel(*this,segments, q, stack_pos);
         }
         FindR(segments, father_first_step, stack_rec.Q_pos, q, interval_right_rank, stack_pos, 0, _max_call);
       }

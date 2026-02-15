@@ -21,20 +21,38 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 */
 // NEW IMPLEMENTATION
 
-#include "new_int_finder.h"
 #include <algorithm>
 #include <vector>
 #include <thread>
 #include <cassert>
 #include <type_traits>
 
-class CFastIntFinder : public CommonImpl
+class CFastIntFinder 
 {
+  template<class SegmentsColl, bool HasSentinels = has_sentinels<SegmentsColl> >
+  struct CSentinel {
+    CSentinel(SegmentsColl& coll, uint4& ini, bool is_top = false) {};
+  };
+
+  template<class SegmentsColl>
+  struct CSentinel <SegmentsColl, true> {
+    CSentinel(SegmentsColl& coll, uint4& ini, bool is_top = false) : to_restore(ini) {
+      prev_val = to_restore;
+      to_restore = coll.get_sentinel(is_top);
+    };
+    ~CSentinel() {
+      to_restore = prev_val;
+    };
+  private:
+    uint4& to_restore;
+    uint4 prev_val;
+  };
+
 public:
-  using this_T = CFastIntFinder;
-  using imp_T = CommonImpl;
  
+  CFastIntFinder() = default;
   ~CFastIntFinder() { unclone(); FreeMem(); };
+  void FreeMem(){};
 
   template<FastSegColl SegmentsColl>
   void find_intersections(SegmentsColl  &segments,uint4 from=0,uint4 to=0)
@@ -57,7 +75,7 @@ public:
     ProgramStackRec stack_rec(bottom_index, nTotX); //need to be initialized this way
     if (from == 0) {
       segments.SetCurStripeRight(0);
-      InsDel(segments,0,&stack_rec);
+      InsDel(*this,segments,0,&stack_rec);
     }
     else
       L_size = CalcLAt(segments, from);
@@ -69,7 +87,7 @@ public:
     }
     else //parallel call
       FindR(segments, bottom_index, from, to, &stack_rec);
-    InsDel(segments, to, &stack_rec);
+    InsDel(*this,segments, to, &stack_rec);
     if(not_parallel)
       segments.IntersectionsFindingDone();
   }
@@ -79,9 +97,9 @@ public:
   {
     using namespace std;
     vector<thread> wrk_threads;
-    auto thread_func = [](this_T* master, SegmentsColl* segments,uint4 thread_index, uint4 from, uint4 to) {
+    auto thread_func = [](CFastIntFinder* master, SegmentsColl* segments,uint4 thread_index, uint4 from, uint4 to) {
       SegmentsColl coll(*segments, thread_index);
-      this_T(master).find_intersections(coll, from, to);
+      CFastIntFinder(master).find_intersections(coll, from, to);
       };
     segments.InitClone(n_threads);
     auto n = segments.GetSegmNumb();
@@ -104,6 +122,190 @@ public:
 #endif
     segments.IntersectionsFindingDone();
   }
+
+
+  template <class SegmentsColl>
+  void prepare_ends(SegmentsColl& segments)
+  {
+    // moved to SegmentsColl::Prepare() - it computes ENDS, SegL, SegR and statistics.
+    auto pr = segments.Prepare();
+    // set internal common statistics derived from collection Prepare result
+    nTotSegm = segments.GetSegmNumb();
+    nTotX = pr.ends_len;
+    LR_len = pr.max_segm_on_vline + 3; // +3 for sentinels/guards
+    avr_segm_on_vline = pr.avr_segm_on_vline;
+  };
+
+
+protected:
+  CFastIntFinder(CFastIntFinder* master) {
+    clone(master);
+  };
+
+  struct ProgramStackRec //structure to use program stack to store list of starcases above current call
+  {
+    uint4 Q_pos; //starting position and 
+    uint4 right_bound;//right boind of current staircase
+    ProgramStackRec* prev = nullptr; //link to program stack record storing parent staircase information 
+    ProgramStackRec(uint4 qp) :Q_pos(qp) {};
+    ProgramStackRec(uint4 qp, uint4 rb) : Q_pos(qp), right_bound(rb) {};
+    ProgramStackRec(uint4 qp, uint4 rb, ProgramStackRec* pr) : Q_pos(qp), right_bound(rb), prev(pr) {};
+    ProgramStackRec* Set(ProgramStackRec* p, uint4 rb) { prev = p, right_bound = rb; return this; };
+    bool isnot_top() { return prev != nullptr; };
+  };
+
+  constexpr static const uint4 cut_margin = 24;
+  constexpr static const uint4 min_strip_width = 6;// at least 2
+
+  uint4* Q = nullptr;
+  uint4* L = nullptr;
+  uint4* R = nullptr;
+
+  CFastIntFinder* clone_of = nullptr;
+
+  double avr_segm_on_vline = 0;
+  uint4 LR_len = 0;
+  uint4 nTotSegm = 0;
+  uint4 len_of_Q = 0;
+  uint4 L_size = 0;
+  uint4 nTotX = 0;
+  bool dont_cut_stripe;
+
+
+
+  uint4* GetQTail() {
+    return Q + len_of_Q;
+  }
+
+  uint4 GetDivPow(uint4 l) {
+    if (l < 64) return 2;
+    uint4 res = 0;
+    for (uint4 target = 2.0 * l / MAX(avr_segm_on_vline, 8.0); target; target >>= 1)
+      ++res;
+    return MAX(res, 4);
+  };
+
+  template<class IntersectionFinder,class SegmentsColl>
+  static void InsDel(IntersectionFinder &self, SegmentsColl& segments, uint4 end_rank, ProgramStackRec* stack_pos) {
+    segments.InsDel(self.L_size, self.L, end_rank);
+    if (stack_pos->isnot_top()) {
+      // Find intersections for all inserted (first endpoints) and vertical segments
+      // in staircase levels above (in the stack).
+      for (auto p = segments.GetEndsListFirst(end_rank); p; p = segments.GetEndsListNext(p)) {
+        auto sn = SegmentsColl::get_segm(*p);
+        segments.SetCurSeg4Bubble(sn);
+        self.FindIntI(segments, sn, stack_pos); // get internal intersections
+      }
+    }
+
+  }
+
+
+
+  template <class SegmentsColl>
+  static void FindInt(SegmentsColl& segments, uint4* const qb, uint4* const qe, uint4* l)
+  {
+    // Use range overloads with sentinel instead of single-element overloads.
+    // Bottom and top sentinel is placed via CSentinel RAII 
+    CSentinel bsentinel(segments, *qb);
+    auto c = segments.FindCurSegIntDownWith(l, qb); //first get intersections below
+
+    constexpr const bool line_seg = (SegmentsColl::get_coll_flag(_Coll_flags::line_segments) == _Coll_flag_state::state_true);
+
+    if (line_seg && (c != l))
+      return; //if found and segment is line there can't be any more intersections above
+
+    CSentinel tsentinel(segments, *qe, true);
+    segments.FindCurSegIntUpWith(l + 1, qe); // get intersections above
+  };
+
+  template<class SegmentsColl>
+  void SearchInStripNonLineSeg(SegmentsColl& segments, uint4* _L, uint4* _Q)//simplified version for SearchInStrip
+  {
+    auto last_L = _L + L_size;
+    auto first_L = _L + 1;
+    auto* _Q_pos = _Q + 1;
+    auto T_pos = GetQTail();
+    do
+    {
+      auto new_L_pos = _L;
+      *_Q_pos = _L[0];
+      if constexpr (SegmentsColl::get_coll_flag(_Coll_flags::needs_SetCurSegCutBE_at_start) == _Coll_flag_state::state_true)
+        segments.SetCurSegCutBE(_L[0]);
+      auto Q_tail = T_pos;
+      auto cur_L = first_L;
+      for (CSentinel sentinel(segments, *_Q); cur_L < last_L; ++cur_L)
+      {
+        segments.SetCurSegCutBE(*cur_L);
+
+        if (_Q_pos == segments.FindCurSegIntDownWith(_Q_pos, _Q))
+          *++_Q_pos = *cur_L;
+        else
+        {
+          *new_L_pos++ = *cur_L;
+          *--Q_tail = _Q_pos - _Q;
+        }
+      }
+      if (new_L_pos == _L)// L is empty
+        return;
+      *--Q_tail = _Q_pos - _Q;//place a guard for the loop below
+      ++_Q; ++_Q_pos;
+      if constexpr (has_sentinels<SegmentsColl>)
+        *_Q_pos = segments.get_sentinel(true);//we don't need to restore _Q_pos just place sentinel
+
+      Q_tail = T_pos;
+      auto cur_Q = _Q + *--Q_tail;
+      for (cur_L = _L; cur_Q != _Q_pos; ++cur_L)
+      {
+        segments.SetCurSegCutBE(*cur_L);
+        segments.FindCurSegIntUpWith(cur_Q, _Q_pos);
+        cur_Q = _Q + *--Q_tail;
+      }
+      _Q = _Q_pos - 1;
+      last_L = new_L_pos;
+    } while (last_L > first_L);//L contains >1 segment
+    *++_Q = _L[0];
+  };
+
+  template<class SegmentsColl>
+  void SearchInStripLineSeg(SegmentsColl& segments, uint4* L_) {
+    auto last = L_ + L_size;
+    if constexpr (has_sentinels<SegmentsColl>)
+      *last = segments.get_sentinel(true);
+    decltype(last) cur = last - 1, next;
+    if constexpr (SegmentsColl::get_coll_flag(_Coll_flags::needs_SetCurSegCutBE_at_start) == _Coll_flag_state::state_true)
+      segments.SetCurSegCutBE(*cur);//we don't need SetCurSegCutBE in all cases, only for Y caching collections 
+    while (cur != L_) {// insertion sort from last to first
+      next = cur--;
+      segments.SetCurSegCutBE(*cur);
+      auto no_int = segments.FindCurSegIntUpWith(next, last);
+      std::rotate(cur, next, no_int);
+    }
+  }
+
+  template <class SegmentsColl>
+  void FindIntI(SegmentsColl& segments, uint4 sn, ProgramStackRec* stack_pos) const
+  {
+    auto r_index = segments.GetSegR(sn);
+    while (stack_pos->right_bound <= r_index)
+      stack_pos = stack_pos->prev; // go from bottom to top and find staircase to start
+    int4  m, len;
+    uint4* Qb, * Ql, * Qe = Q + (stack_pos->Q_pos + 1);
+    for (stack_pos = stack_pos->prev; stack_pos != nullptr; stack_pos = stack_pos->prev) {
+      Qb = Ql = Q + stack_pos->Q_pos;
+      len = Qe - Qb;
+      while (len > 1) // binary search
+      {
+        m = len / 2; //
+        if (segments.UnderCurPoint(Ql[m]))
+          Ql += m;
+        len -= m;
+      }
+      FindInt(segments, Qb, Qe, Ql);
+      Qe = Qb + 1; // move staircase bound to parent staircase
+    };
+  };
+
 
   template<class SegmentsColl>
   void SearchInStrip(SegmentsColl &segments, uint4 qp)
@@ -129,21 +331,6 @@ public:
     }
   };
 
-  template<class SegmentsColl>
-  void InsDel(SegmentsColl& segments, uint4 end_rank, ProgramStackRec* stack_pos) {
-    segments.InsDel(L_size, L, end_rank);
-    if (stack_pos->isnot_top()) {
-      // Find intersections for all inserted (first endpoints) and vertical segments
-      // in staircase levels above (in the stack).
-      for (auto p = segments.GetEndsListFirst(end_rank); p; p = segments.GetEndsListNext(p)) {
-        auto sn = SegmentsColl::get_segm(*p);
-        segments.SetCurSeg4Bubble(sn);
-        FindIntI(segments, sn, stack_pos); // get internal intersections
-      }
-    }
-
-  }
-
   template <class SegmentsColl>
   void SISFindR(SegmentsColl& segments, uint4 ladder_start_index, uint4 interval_left_rank, uint4 interval_right_rank, ProgramStackRec* stack_pos)
   {
@@ -154,7 +341,7 @@ public:
       }
       else
         segments.SetCurStripeRight(i);
-      InsDel(segments, i, stack_pos);
+      InsDel(*this,segments, i, stack_pos);
     }
     //the stripe right bound needs to be installed correctly even if L_size <= 1
     segments.SetCurStripe(interval_right_rank - 1, interval_right_rank);
@@ -177,7 +364,7 @@ public:
     }else{// cut at the middle into two substrips 
       uint4 middle = (interval_left_rank + interval_right_rank) / 2;
       FindR(segments, Q_pos, interval_left_rank, middle, &stack_rec);
-      InsDel(segments, middle, &stack_rec);
+      InsDel(*this,segments, middle, &stack_rec);
       FindR(segments, Q_pos, middle, interval_right_rank, &stack_rec);
       //actually works without SetCurStripeLeft, but it simplifies segment collection class protocol
       //segments.SetCurStripeLeft(interval_left_rank);
@@ -211,7 +398,7 @@ public:
     do {
       left_bound = right_bound;
       right_bound = (rb += step) >> divide_pow;
-      InsDel(segments, left_bound, stack_pos);
+      InsDel(*this,segments, left_bound, stack_pos);
       segments.SetCurStripe(left_bound, right_bound);
       FindRNoChecks(segments, ladder_start_index, left_bound, right_bound, stack_pos);
     } while (right_bound != interval_right_rank);
@@ -397,12 +584,9 @@ public:
     return Split4NonLineSeg(segments, _Q, RBoundIdx);
   };
 
-  CFastIntFinder() {};
 
-  protected:
-  this_T* clone_of = nullptr;
  
-  void clone(this_T* master)
+  void clone(CFastIntFinder* master)
   {
       nTotSegm = master->nTotSegm;
       LR_len = master->LR_len;
@@ -420,9 +604,7 @@ public:
   };
 
 
-  CFastIntFinder(this_T* master) {
-    clone(master);
-  };
+
  
 
   template<class SegmentsColl>
