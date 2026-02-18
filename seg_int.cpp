@@ -1,6 +1,6 @@
 /*
 *
-*      Copyright (c)  2011-2026  Ivan Balaban 
+*      Copyright (c)  2011-2026  Ivan Balaban
 *      ivvaan@gmail.com
 *
 This file is part of Seg_int library.
@@ -32,6 +32,9 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <fstream>
 #include <sstream>
 
+#if defined(_WIN32)
+#include <limits>
+#endif
 const char* STYLE_temlate = R"WYX(
 <!DOCTYPE html>
 <html>
@@ -128,40 +131,70 @@ example: seg_int -a14 -sa -dp -n20000 -p5.5
   150000 intersections are drawn.
 -m: print truncated information in one row (to make a table)
 -w: stop and wait for an input befor exit
+-An: bind current thread to logical CPU n (0-based). -aff-1 (default) disables affinity.
+-Pp: thread priority preset:
+ p=0: don't change priorities (default)
+ p=1: ABOVE_NORMAL process + THREAD_PRIORITY_ABOVE_NORMAL
+ p=2: HIGH process + THREAD_PRIORITY_HIGHEST
+ p=3: REALTIME process + THREAD_PRIORITY_TIME_CRITICAL
 )WYX";
-
-
 
 #if defined(_WIN32) && !defined(_DEBUG)
 #include <windows.h>
 
-#define ON_BENCH_BEG \
-auto hThread=GetCurrentThread();\
-auto hProcess=GetCurrentProcess();\
-auto dwProcessPriSave = GetPriorityClass(hProcess);\
-SetPriorityClass(hProcess, REALTIME_PRIORITY_CLASS);\
-auto dwThreadPriSave = GetThreadPriority(GetCurrentThread()); \
-if(thread_affinity_mask){SetThreadPriority(hThread, THREAD_PRIORITY_TIME_CRITICAL);\
-SetThreadAffinityMask(hThread, thread_affinity_mask);}
+static void apply_bench_settings(long long affinity_cpu, int pri_preset,
+  DWORD& process_pri_save, int& thread_pri_save, DWORD_PTR& system_affinity_mask)
+{
+  process_pri_save = GetPriorityClass(GetCurrentProcess());
+  thread_pri_save = GetThreadPriority(GetCurrentThread());
 
-#define ON_BENCH_END \
-SetThreadPriority(hThread, dwThreadPriSave);\
-SetPriorityClass(hProcess, dwProcessPriSave);
-#undef small
+  DWORD process_pri = process_pri_save;
+  int thread_pri = thread_pri_save;
+
+  switch (pri_preset) {
+  case 1: process_pri = ABOVE_NORMAL_PRIORITY_CLASS; thread_pri = THREAD_PRIORITY_ABOVE_NORMAL; break;
+  case 2: process_pri = HIGH_PRIORITY_CLASS; thread_pri = THREAD_PRIORITY_HIGHEST; break;
+  case 3: process_pri = REALTIME_PRIORITY_CLASS; thread_pri = THREAD_PRIORITY_TIME_CRITICAL; break;
+  case 0:
+  default: break;
+  }
+
+  if (pri_preset)
+    SetPriorityClass(GetCurrentProcess(), process_pri);
+
+  if (pri_preset)
+    SetThreadPriority(GetCurrentThread(), thread_pri);
+
+  system_affinity_mask = 0;
+
+  if (affinity_cpu >= 0) {
+    DWORD_PTR proc_mask = 0, sys_mask = 0;
+    if (GetProcessAffinityMask(GetCurrentProcess(), &proc_mask, &sys_mask) != 0) {
+      system_affinity_mask = sys_mask;
+      if (affinity_cpu < (long long)(sizeof(DWORD_PTR) * 8)) {
+        DWORD_PTR mask = (DWORD_PTR)1 << affinity_cpu;
+        if (mask & proc_mask)
+          SetThreadAffinityMask(GetCurrentThread(), mask);
+      }
+    }
+  }
+}
+
+static void restore_bench_settings(DWORD process_pri_save, int thread_pri_save, DWORD_PTR system_affinity_mask)
+{
+  SetThreadPriority(GetCurrentThread(), thread_pri_save);
+  SetPriorityClass(GetCurrentProcess(), process_pri_save);
+  (void)system_affinity_mask;
+}
+
 #else
-#define ON_BENCH_BEG
-#define ON_BENCH_END
+static void apply_bench_settings(long long, int, unsigned long&, int&, unsigned long&) {}
+static void restore_bench_settings(unsigned long, int, unsigned long) {}
 #endif
-
-//#include <tchar.h>
-
-#ifdef _DEBUG
-#include <crtdbg.h>
-#endif
+#undef small
 
 struct Options : public SegmentsAndRegOptions
 {
-
   uint4 alg = 31;
 
   BOOL print_less = FALSE;
@@ -174,8 +207,9 @@ struct Options : public SegmentsAndRegOptions
   double ICT = -1;
   unsigned random_seed = 317;
 
+  long long affinity_cpu = -1;
+  int pri_preset = 0;
 };
-
 
 double _benchmark_new(const Options& opt, PSeg seg_coll, int4 alg, double& res)
 {
@@ -183,9 +217,14 @@ double _benchmark_new(const Options& opt, PSeg seg_coll, int4 alg, double& res)
   uint4 n_call = 0;
   using namespace std::chrono;
   double mint = 1.0e10;
-  unsigned long thread_affinity_mask = alg & fast_parallel ? 0 : 8;
 
-  ON_BENCH_BEG
+#if defined(_WIN32) && !defined(_DEBUG)
+  DWORD process_pri_save = 0;
+  int thread_pri_save = THREAD_PRIORITY_NORMAL;
+  DWORD_PTR system_affinity_mask = 0;
+  apply_bench_settings(opt.affinity_cpu, opt.pri_preset, process_pri_save, thread_pri_save, system_affinity_mask);
+#endif
+
   do
   {
     auto find_intersections = get_find_intersections_func(opt.reg_stat);
@@ -202,9 +241,12 @@ double _benchmark_new(const Options& opt, PSeg seg_coll, int4 alg, double& res)
 #else
   while (false);
 #endif
-  ON_BENCH_END
 
-  return mint; //tottime / n_call;
+#if defined(_WIN32) && !defined(_DEBUG)
+  restore_bench_settings(process_pri_save, thread_pri_save, system_affinity_mask);
+#endif
+
+  return mint;
 }
 
 void perform_tests(const Options& opt, PSeg seg_coll)
@@ -216,8 +258,8 @@ void perform_tests(const Options& opt, PSeg seg_coll)
 
   if (!opt.print_less)printf("\nnew implementation testing... ************************************************\n");
 
-  for (int4 a = sizeof(alg_list) / sizeof(alg_list[0]) - 1; a > -1; a--){
-    if (opt.alg & alg_list[a])  {
+  for (int4 a = sizeof(alg_list) / sizeof(alg_list[0]) - 1; a > -1; a--) {
+    if (opt.alg & alg_list[a]) {
       exec_time[a] = -1;
       exec_time[a] = _benchmark_new(opt, seg_coll, alg_list[a], nInt[a]);
 
@@ -229,7 +271,7 @@ void perform_tests(const Options& opt, PSeg seg_coll)
   };
 
   if (opt.rtime_printout && (!opt.print_less) && (opt.reg_stat != _Registrator::per_segm_reg_max_per_segm_stat)) {
-    double check_time=-1;
+    double check_time = -1;
     if ((opt.alg & triv)) {
       double n_checks = ((double)opt.n) * 0.5 * (opt.n - 1);
       check_time = exec_time[0] / n_checks;
@@ -240,17 +282,15 @@ void perform_tests(const Options& opt, PSeg seg_coll)
       printf("\none intersection check presumably takes %6.3f ns, let's use this value as a time unit (ICT) \n\n", opt.ICT);
       check_time = 1E-09 * opt.ICT;
     };
-    if(check_time>0)
-      for (int4 a = 0; a < sizeof(alg_list) / sizeof(alg_list[0]); a++){
+    if (check_time > 0)
+      for (int4 a = 0; a < sizeof(alg_list) / sizeof(alg_list[0]); a++) {
         if (opt.alg & alg_list[a]) {
           if (exec_time[a] > 0)
             printf("%s finds one intersection in %6.3f ICT \n", alg_names[a], exec_time[a] / check_time / nInt[a]);
         }
       };
-
   }
 };
-
 
 void WriteSvgHtml(const Options& opt, PSeg seg_coll)
 {
@@ -274,16 +314,15 @@ void WriteSvgHtml(const Options& opt, PSeg seg_coll)
 int main(int argc, char* argv[])
 {
   Options opt;
-  const char* ss = "Llagi", * sd = "rlmspc", * sr = "pPcrC";
+  const char* ss = "Lligi", * sd = "rlmspc", * sr = "pPcrC";
 
 #ifdef _DEBUG
   _CrtSetDbgFlag(_CRTDBG_CHECK_ALWAYS_DF);
 #endif
 
-
   if (argc == 1)
   {
-    printf("usage: seg_int -aA -sS -SR -dD -nN -pP -rR -m -eE -w -SN -fhtmfile\n");
+    printf("usage: seg_int -aA -sS -SR -dD -nN -pP -rR -m -eE -w -SN -fhtmfile -affN -priP\n");
     printf(help_msg);
     return 0;
   }
@@ -405,6 +444,18 @@ int main(int argc, char* argv[])
           opt.fname = argv[i] + 2;
         }
         break;
+        case 'A':
+        {
+          opt.affinity_cpu = _strtoi64(argv[i] + 2, nullptr, 10);
+        }
+        break;
+        case 'P':
+        {
+          opt.pri_preset = atoi(argv[i] + 2);
+          if (opt.pri_preset < 0) opt.pri_preset = 0;
+          if (opt.pri_preset > 3) opt.pri_preset = 3;
+        }
+        break;
         }
       }
   }
@@ -417,10 +468,11 @@ int main(int argc, char* argv[])
 
   if (!opt.print_less) {
     if (opt.seg_type != _Segment::intline)
-      printf("params are: -a%i -s%c -d%c -r%c -n%i -S%i -p%f\n", opt.alg, ss[opt.seg_type], sd[opt.distr_type], sr[opt.reg_stat], opt.n, opt.random_seed, opt.distr_param);
+      printf("params are: -a%i -s%c -d%c -r%c -n%i -S%i -p%f -aff%lld -pri%i\n", opt.alg, ss[opt.seg_type], sd[opt.distr_type], sr[opt.reg_stat], opt.n, opt.random_seed, opt.distr_param, opt.affinity_cpu, opt.pri_preset);
     else
-      printf("actual params is: -a%i -si%i -d%c -r%c -n%i -S%i -p%f -e%f\n", opt.alg, opt.range_for_int_seg, sd[opt.distr_type], sr[opt.reg_stat], opt.n, opt.random_seed, opt.distr_param, opt.ICT);
+      printf("actual params is: -a%i -si%i -d%c -r%c -n%i -S%i -p%f -e%f -aff%lld -pri%i\n", opt.alg, opt.range_for_int_seg, sd[opt.distr_type], sr[opt.reg_stat], opt.n, opt.random_seed, opt.distr_param, opt.ICT, opt.affinity_cpu, opt.pri_preset);
   }
+
   CRandomValueGen rv(opt.random_seed);
   auto seg_coll = create_test_collection(opt, rv);
 
@@ -436,6 +488,8 @@ int main(int argc, char* argv[])
   if (opt.wait) { printf("\npress 'Enter' to continue"); getchar(); }
   return 0;
 }
+
+
 
 
 
