@@ -893,6 +893,8 @@ public:
   {
       clone_of = &c;
       nSegments = c.nSegments;
+      nTotX = c.nTotX;
+      nCollideX = c.nCollideX;
       ENDS = c.ENDS;
       seg_L_rank = c.seg_L_rank;
       seg_R_rank = c.seg_R_rank;
