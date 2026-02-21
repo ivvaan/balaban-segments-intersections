@@ -27,6 +27,8 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <cstddef>
 #include <ostream>
 
+constexpr uint4 n_threads_default = 8;
+
 struct SegmentsAndRegOptions:CollectionOptions
 {
 
@@ -34,6 +36,7 @@ struct SegmentsAndRegOptions:CollectionOptions
   uint4 distr_type = 0;
   REAL distr_param = 1.0;
   uint4 reg_stat = 2;
+  uint4 n_threads = n_threads_default;
 };
 
 class SegCollection

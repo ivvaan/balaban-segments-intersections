@@ -34,9 +34,6 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include "optimal_finder.h"
 
 
-constexpr uint4 n_threads_default = 8;
-
-
 // creating and deleting collections
 PSeg first_segment_ptr = NULL;
 
@@ -156,7 +153,7 @@ SegCollection create_test_collection(const SegmentsAndRegOptions& opt, CRandomVa
 
 
 template<class SegColl>
-auto find_int(uint4 n, SegColl& coll, int4 alg)
+auto find_int(const SegmentsAndRegOptions& opt, SegColl& coll, int4 alg)
 {
   switch (alg) {
   case triv: {
@@ -180,7 +177,7 @@ auto find_int(uint4 n, SegColl& coll, int4 alg)
   case fast_parallel: {
     CFastIntFinder fi;
     fi.prepare_ends(coll);
-    fi.find_intersections(n_threads_default,coll);
+    fi.find_intersections(opt.n_threads, coll);
   } break;
   };
   return;
@@ -191,23 +188,23 @@ void RegisterAllIntersection(const SegmentsAndRegOptions& opt, PSeg segs, uint4 
   switch (opt.seg_type) {
   case _Segment::line1: {
     CLine1SegmentCollection<Counter> coll(opt, segs, &reg);
-    find_int(opt.n, coll, alg);
+    find_int(opt, coll, alg);
   }; break;
   case _Segment::intline: {
     CIntegerSegmentCollection<Counter> coll(opt, (TLineSegment1*)segs, &reg);
-    find_int(opt.n, coll, alg);
+    find_int(opt, coll, alg);
   }; break;
   case _Segment::line2: {
     CLine2SegmentCollection<Counter> coll(opt, segs, &reg);
-    find_int(opt.n, coll, alg);
+    find_int(opt, coll, alg);
   }; break;
   case _Segment::arc: {
     CArcSegmentCollection<Counter>  coll(opt, segs, &reg);
-    find_int(opt.n, coll, alg);
+    find_int(opt, coll, alg);
   }; break;
   case _Segment::graph: {
     CGraphSegmentCollection<Counter> coll(opt, segs, &reg);
-    find_int(opt.n, coll, alg);
+    find_int(opt, coll, alg);
   }; break;
   };
 
