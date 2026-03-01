@@ -102,10 +102,10 @@ namespace SegmentTreeAndList {
       } while (l < r_prev);
     }
 
-
     bool is_filled(int4 pos) const {
       return tree_list[pos];
     }
+
     static int4 get_sibling(int4 pos) {
       return pos ^ 1;
     }
@@ -160,7 +160,6 @@ namespace SegmentTreeAndList {
         }
       }
       pos = sz + rank;
-
       if constexpr (is_insert) {
         tree_list[pos] = tree_list[prev_elem];
         tree_list[prev_elem] = pos;
@@ -205,7 +204,6 @@ namespace SegmentTreeAndList {
       std::fill_n(tree_list, SZ, 0);
       tree_list[0] = 1;//fake last list element is stored in 0 position - the header of list
       //ordered_list[i]==1 where i>=sz means that i is filled, but next filled element is not exists (i.e.last element in list is i)
-
     }
 
     ~STree() {
@@ -215,39 +213,24 @@ namespace SegmentTreeAndList {
       }
     }
 
-
   };
 
 }
 
-struct count_info {
-  int4 ins = 0;
-  int4 del = 0;
-  int4 max = 0;
-  void insert() {
-    ++ins;
-    if (ins > max)
-      max = ins;
-  }
-  void erase() {
-    ++del;
-  }
-  void locate() {
-    ins -= del;
-    assert(ins >= 0);
-    del = 0;
-  }
-};
-
-
-
-struct arr_info {
-  int4 beg = 0;
-  int4 end = 0;
-};
-
 template<typename SegmCollection>
 void rect_find_intersections(SegmCollection &coll) {
+
+  struct count_info {
+    int4 ins = 0, del = 0, max = 0;
+    void insert() {if (++ins > max) max = ins;}
+    void erase() {++del;}
+    void locate() {ins -= del;del = 0;}
+  };
+
+  struct arr_info {
+    int4 beg = 0, end = 0;
+  };
+
   using namespace SegmentTreeAndList;
   int4 n = coll.GetSegmNumb();
 
@@ -261,7 +244,6 @@ void rect_find_intersections(SegmCollection &coll) {
   for (int i = 0; i < n * 2; ++i) {
     points2ranksY[ranks2pointsY[i]] = i;
   }
-
 
   STree st(n * 2);
   //first we need to calculate how many rectangles can be in each node of segment tree at the same time, to allocate arrays for nodes
