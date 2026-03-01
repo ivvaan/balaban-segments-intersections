@@ -97,6 +97,14 @@ public:
   TPlaneVect EndPoint() const {
     return org + shift;
   };
+
+  auto get_min(bool is_Y) const {
+    return is_Y ? std::min(by(), ey()) : bx();
+  };
+  auto get_max(bool is_Y) const {
+    return is_Y ? std::max(by(), ey()) : ex();
+  };
+
   bool under(const TPlaneVect &v) const { //segment placed under point v
     return (v - org) % shift <= 0;
   };
@@ -152,6 +160,12 @@ public:
   };
   TPlaneVect EndPoint() const {
     return TPlaneVect(x2, a*x2 + b);
+  };
+  auto get_min(bool is_Y) const {
+    return is_Y ? std::min(a*x1 + b, a*x2 + b) : x1;
+  };
+  auto get_max(bool is_Y) const {
+    return is_Y ? std::max(a*x1 + b, a*x2 + b) : x2;
   };
   void BegPoint(REAL &x, REAL &y) const {
     x = x1; y = a*x1 + b;
@@ -227,6 +241,24 @@ public:
       return org.y + sqrt(r2 - sq(X - org.x));
     else
       return org.y - sqrt(r2 - sq(X - org.x));
+  };
+  auto get_min(bool is_Y) const {
+    if (is_Y) {
+      if(!is_upper&&(x1<=org.x) && (x2>=org.x))
+        return org.y - sqrt(r2);
+      return std::min(YAtX(x1), YAtX(x2));
+    }
+    else
+      return x1;
+  };
+  auto get_max(bool is_Y) const {
+    if (is_Y) {
+      if (is_upper && (x1 <= org.x) && (x2 >= org.x))
+        return org.y + sqrt(r2);
+      return std::max(YAtX(x1), YAtX(x2));
+    }
+    else
+      return x2;
   };
   bool under(const TPlaneVect &v) const//arc placed under point v
   {
@@ -347,6 +379,13 @@ public:
     auto sy() const {
       return shift.y;
     }
+    auto get_min(bool is_Y) const {
+      return is_Y ? std::min(by(), ey()) : bx();
+    };
+    auto get_max(bool is_Y) const {
+      return is_Y ? std::max(by(), ey()) : ex();
+    };
+
 
     bool is_vertical() const {
       return sx() == 0;

@@ -51,6 +51,7 @@ public:
 
   // --- Prepare, InsDel, Reset, SortAt, etc. come from Base ---
   // Bring them into public scope:
+  using Base::get_sorted_bounds;
   using Base::Prepare;
   using Base::InsDel;
   using Base::Reset;
@@ -139,7 +140,16 @@ public:
       active_end = cur_seg.BegPoint();
   }
 
+  // --- Segment bounding sizes ---
+  auto get_seg_min(uint4 s, bool is_Y) const {
+    return collection[s].get_min(is_Y);
+  }
+  auto get_seg_max(uint4 s, bool is_Y) const {
+    return collection[s].get_max(is_Y);
+  }
+
   // --- Ordering predicates ---
+
 
   bool LBelow(uint4 s_1, uint4 s_2) const {
     auto& s1 = collection[s_1];

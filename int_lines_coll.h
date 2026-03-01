@@ -112,9 +112,6 @@ private:
     uint4 end = 0;
   };
 
-  //===========================================================================
-  //===========================================================================
-
 public:
   uint4* tmp = nullptr;
 
@@ -135,6 +132,34 @@ public:
     }
     return { unique_count, duplicated_elements_count };
   }
+
+  // --- Segment bounding sizes ---
+  auto get_seg_min(uint4 s, bool is_Y) const {
+    return collection[s].get_min(is_Y);
+  }
+  auto get_seg_max(uint4 s, bool is_Y) const {
+    return collection[s].get_max(is_Y);
+  }
+
+  int4* get_sorted_bounds(int4* buf, bool is_Y) const {
+    using Real = std::remove_cvref_t<decltype(get_seg_min(0, true))>;
+    auto n = GetSegmNumb();
+    auto N = 2 * n;
+    std::iota(buf, buf + N, 0);
+    auto vals_keeper = std::make_unique<Real[]>(N);
+    auto vals = vals_keeper.get();
+    for (int4 i = 0; i < n; ++i) {
+      vals[i << 1] = get_seg_min(i, is_Y);
+      vals[(i << 1) + 1] = get_seg_max(i, is_Y);
+    };
+    std::sort(buf, buf + N, [vals](int4 i1, int4 i2) {
+      return (vals[i1] < vals[i2]) || ((vals[i1] == vals[i2]) && (i1 < i2));
+      });
+    return buf;
+  }
+
+
+
   template<bool for_simple_sweep = true>
   uint4 PrepareEndpointsSortedList(uint4* epoints)
   {

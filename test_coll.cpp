@@ -32,6 +32,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include "new_int_finder.h"
 #include "fast_finder.h"
 #include "optimal_finder.h"
+#include "rectangles_isect.h"
 
 
 // creating and deleting collections
@@ -178,6 +179,9 @@ auto find_int(const SegmentsAndRegOptions& opt, SegColl& coll, int4 alg)
     CFastIntFinder fi;
     fi.prepare_ends(coll);
     fi.find_intersections(opt.n_threads, coll);
+  } break;
+  case rectangles: {
+    rect_find_intersections(coll);
   } break;
   };
   return;

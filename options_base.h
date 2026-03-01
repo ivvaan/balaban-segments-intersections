@@ -30,8 +30,9 @@ example: seg_int -a14 -sa -dp -n20000 -p5.5
  A=4: balaban fast
  A=8: balaban optimal
  A=16: balaban fast parallel (threads via -T, default 8)
+ A=32: bounding rectangles intersection based algorithm
  if you want several algorithms to test just sum up their values
- i.e. A=31 (=1+2+4+8+16) all algorithms
+ i.e. A=63 (=1+2+4+8+16+32) all algorithms
 -sS: type of segments
  S=l: line segments representation y=a*x+b,x1<=x<=x2; a,b,x1,x2 - reals
  S=L: line segments representation r=b+a*t,0<=t<=1; b,a - vectors
@@ -110,7 +111,7 @@ struct Options : public SegmentsAndRegOptions
         case 'a':
         {
           alg = atoi(argv[i] + 2);
-          if ((alg < 1) || (alg > 31)){
+          if ((alg < 1) || (alg > 63)){
             alg = 4; printf("some error in -a param. 4 used instead.\n");
           }
         }
@@ -266,7 +267,7 @@ struct Options : public SegmentsAndRegOptions
 
   void PrintActual() const
   {
-    const char* ss = "Lligi", * sd = "rlmspc", * sr = "pPcrC";
+    const char* ss = "Llagi", * sd = "rlmspc", * sr = "pPcrC";
     if (!print_less) {
       if (seg_type != _Segment::intline)
         printf("actual params are: -a%i -s%c -d%c -r%c -n%i -S%i -T%u -p%f -A%lld -P%i\n", alg, ss[seg_type], sd[distr_type], sr[reg_stat], n, random_seed, n_threads, distr_param, affinity_cpu, pri_preset);

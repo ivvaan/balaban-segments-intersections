@@ -45,7 +45,7 @@ public:
       return _Coll_flag_state::state_false;
     return _Coll_flag_state::state_unimplemented;
   }
-
+  using Base::get_sorted_bounds;
   using Base::Prepare;
   using Base::InsDel;
   using Base::Reset;
@@ -115,6 +115,14 @@ public:
   void SetCurSegCutEnd(uint4 s) {
     SetCurSeg(s);
     cur_seg.x2 = MIN(cur_seg.x2, E);
+  }
+
+  // --- Segment bounding sizes ---
+  auto get_seg_min(uint4 s, bool is_Y) const {
+    return collection[s].get_min(is_Y);
+  }
+  auto get_seg_max(uint4 s, bool is_Y) const {
+    return collection[s].get_max(is_Y);
   }
 
   // --- Ordering predicates ---

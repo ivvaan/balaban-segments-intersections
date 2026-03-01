@@ -25,6 +25,8 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <cassert>
 #include <concepts>
+#include <numeric>
+#include <type_traits>
 
 
 // CRTP base class for segment collections.
@@ -56,6 +58,23 @@ public:
   uint4 GetSegR(uint4 sn) const { return seg_R_rank[sn]; }
   uint4 GetSegL(uint4 sn) const { return seg_L_rank[sn]; }
   uint4 PointAtRank(uint4 rank) const { return ENDS[rank]; }
+  // --- for rectangles algorithm ---
+  int4* get_sorted_bounds(int4* buf, bool is_Y) const {
+    using Real = std::remove_cvref_t<decltype(Derived().get_seg_min(0, true))>;
+    auto n = self().GetSegmNumb();
+    auto N = 2 * n;
+    std::iota(buf, buf + N, 0);
+    auto vals_keeper = std::make_unique<Real[]>(N);
+    auto vals = vals_keeper.get();
+    for (int4 i = 0; i < n; ++i) {
+      vals[i << 1] = self().get_seg_min(i, is_Y);
+      vals[(i << 1) + 1] = self().get_seg_max(i, is_Y);
+    };
+    std::sort(buf, buf + N, [vals](int4 i1, int4 i2) {
+      return (vals[i1] < vals[i2]) || ((vals[i1] == vals[i2]) && (i1 < i2));
+      });
+    return buf; 
+  }
 
   // --- Prepare: build ENDS, seg_L_rank, seg_R_rank and compute statistics ---
 

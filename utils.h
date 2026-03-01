@@ -81,7 +81,8 @@ enum _Algorithm{
   simple_sweep = 2,
   fast = 4,
   optimal = 8,
-  fast_parallel = 16
+  fast_parallel = 16,
+  rectangles = 32
 };
 
 enum _IntType {
@@ -93,8 +94,8 @@ enum _IntType {
 };
 
 
-constexpr uint4 alg_list[] = { triv, simple_sweep, fast, optimal, fast_parallel };
-constexpr const char* alg_names[] = { "trivial","simple_sweep","fast","optimal","fast_parallel" };
+constexpr uint4 alg_list[] = { triv, simple_sweep, fast, optimal, fast_parallel, rectangles };
+constexpr const char* alg_names[] = { "trivial","simple_sweep","fast","optimal","fast_parallel", "rectangles" };
 
 enum _Segment
 {

@@ -46,6 +46,7 @@ public:
     return _Coll_flag_state::state_unimplemented;
   }
 
+  using Base::get_sorted_bounds;
   using Base::Prepare;
   using Base::InsDel;
   using Base::Reset;
@@ -136,8 +137,20 @@ public:
     curE = MIN(curE, E);
   }
 
-  // --- Ordering predicates ---
+  // --- Segment bounding sizes ---
 
+  auto get_seg_min(uint4 s, bool is_Y) const {
+    auto idx1 = get_first_idx(s);
+    auto idx2 = get_last_idx(s);
+    return is_Y ? std::min(vertices[idx1].y, vertices[idx2].y) : std::min(vertices[idx1].x, vertices[idx2].x);
+  }
+  auto get_seg_max(uint4 s, bool is_Y) const {
+    auto idx1 = get_first_idx(s);
+    auto idx2 = get_last_idx(s);
+    return is_Y ? std::max(vertices[idx1].y, vertices[idx2].y) : std::max(vertices[idx1].x, vertices[idx2].x);
+  }
+
+  // --- Ordering predicates ---
   bool LBelow(uint4 s_1, uint4 s_2) const {
     auto beg1 = get_first_idx(s_1);
     auto beg2 = get_first_idx(s_2);
