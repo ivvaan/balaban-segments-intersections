@@ -161,7 +161,7 @@ public:
 
 
   template<bool for_simple_sweep = true>
-  uint4 PrepareEndpointsSortedList(uint4* epoints)
+  uint4 PrepareEndpointsSortedList(uint4* epoints, bool is_parallel = false)
   {
     // Fills `epoints` with all endpoint indices `[0..2*nSegments)` and sorts them by:
     // X, then Y, then (first before last), then angular tie-break for stable ordering.
@@ -218,8 +218,10 @@ public:
 
       return (pt1 < pt2);
       };
-
-    std::sort(epoints, epoints + nPoints, is_below);
+    if(is_parallel)
+      std::sort(std::execution::par_unseq, epoints, epoints + nPoints, is_below);
+    else
+      std::sort(epoints, epoints + nPoints, is_below);
     return nPoints;
   }
 
@@ -232,6 +234,7 @@ public:
 
   constexpr const static uint4 list_stop = std::numeric_limits<uint4>::max();
 
+  template<bool is_parallel = false>
   PrepareResult Prepare()
   {
     // Preparation does two degenerate-case steps:
@@ -244,7 +247,7 @@ public:
     if (nSeg == 0) return {};
     auto __tmpENDS__ = std::make_unique<uint4[]>(nSeg*2);
     uint4* tmpENDS = __tmpENDS__.get();
-    uint4 nEnds = PrepareEndpointsSortedList<false>(tmpENDS);
+    uint4 nEnds = PrepareEndpointsSortedList<false>(tmpENDS,is_parallel);
 
     auto [nX, nV] = get_dublicate_stat(nEnds, tmpENDS);
     auto nAll = nEnds + nV;

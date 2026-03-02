@@ -23,6 +23,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "segments.h"
 #include "collection_base.h"
+#include <execution>
 
 template<class IntersectionRegistrator>
 class CLine2SegmentCollection
@@ -260,15 +261,22 @@ public:
   bool UnderActiveEnd(uint4 s_) const { return collection[s_].a * active_end.x + collection[s_].b < active_end.y; }
 
   // --- Endpoint sorting ---
-
+  template<bool is_parallel = false>
   uint4 PrepareEndpointsSortedList(uint4* epoints) {
     auto NN = N << 1;
     for (uint4 i = 0; i < NN; ++i) epoints[i] = i << 1;
-    std::sort(epoints, epoints + NN,
-      [x = ends](uint4 pt1, uint4 pt2) {
-        return ((x[pt1] < x[pt2]) || ((x[pt1] == x[pt2]) && (pt1 < pt2)));
-      }
-    );
+    if constexpr (is_parallel)
+      std::sort(std::execution::par_unseq, epoints, epoints + NN,
+        [x = ends](uint4 pt1, uint4 pt2) {
+          return ((x[pt1] < x[pt2]) || ((x[pt1] == x[pt2]) && (pt1 < pt2)));
+        }
+      );
+    else
+      std::sort(epoints, epoints + NN,
+        [x = ends](uint4 pt1, uint4 pt2) {
+          return ((x[pt1] < x[pt2]) || ((x[pt1] == x[pt2]) && (pt1 < pt2)));
+        }
+      );
     return NN;
   }
 

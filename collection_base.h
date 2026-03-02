@@ -77,7 +77,7 @@ public:
   }
 
   // --- Prepare: build ENDS, seg_L_rank, seg_R_rank and compute statistics ---
-
+  template<bool is_parallel = false>
   PrepareResult Prepare()
   {
     Reset();
@@ -85,7 +85,7 @@ public:
     if (Nn == 0) return {};
     uint4 NN = Nn << 1;
     ENDS = new uint4[NN];
-    self().PrepareEndpointsSortedList(ENDS);
+    self().PrepareEndpointsSortedList<is_parallel>(ENDS);
     seg_L_rank = new uint4[Nn];
     seg_R_rank = new uint4[Nn];
     uint4 max_segm_on_vline = 0, nsegm_on_vline = 0;

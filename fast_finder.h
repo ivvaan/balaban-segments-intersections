@@ -186,10 +186,10 @@ public:
   // - `nTotSegm`, `nTotX`, `LR_len`, `avr_segm_on_vline` are initialized.
   // - Must be called before `find_intersections(... )`.
   template <class SegmentsColl>
-  void prepare_ends(SegmentsColl& segments)
+  void prepare_ends(SegmentsColl& segments, bool is_parallel=false)
   {
     // Moved to `SegmentsColl::Prepare()` - it computes ENDS, SegL, SegR and statistics.
-    auto pr = segments.Prepare();
+    auto pr=is_parallel? segments.Prepare<true>() : segments.Prepare<false>();
     // Set internal common statistics derived from collection `Prepare()` result.
     nTotSegm = segments.GetSegmNumb();
     nTotX = pr.ends_len;

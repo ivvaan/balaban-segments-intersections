@@ -23,6 +23,8 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "segments.h"
 #include "collection_base.h"
+#include <execution>
+
 
 template<class IntersectionRegistrator>
 class CGraphSegmentCollection
@@ -260,23 +262,24 @@ public:
   }
 
   // --- Endpoint sorting ---
-
+  template<bool is_parallel = false>
   uint4 PrepareEndpointsSortedList(uint4* epoints) {
     auto NN = nEdges * 2;
     for (uint4 i = 0; i < NN; ++i) epoints[i] = i;
-    std::sort(epoints, epoints + NN,
-      [this](uint4 pt1, uint4 pt2) {
-        auto idx1 = vertex_idx[pt1];
-        auto idx2 = vertex_idx[pt2];
-        if (idx1 != idx2)
-          return vertices[idx1] < vertices[idx2];
-        bool l1 = is_last(pt1);
-        bool l2 = is_last(pt2);
-        if (l1 < l2) return false;
-        if (l1 > l2) return true;
-        return (vertices[get_other_idx(pt1)] - vertices[idx1]) % (vertices[get_other_idx(pt2)] - vertices[idx2]) > 0;
-      }
-    );
+    auto cmp = [this](uint4 pt1, uint4 pt2) {
+      auto idx1 = vertex_idx[pt1];
+      auto idx2 = vertex_idx[pt2];
+      if (idx1 != idx2)
+        return vertices[idx1] < vertices[idx2];
+      bool l1 = is_last(pt1);
+      bool l2 = is_last(pt2);
+      if (l1 != l2) return l1;
+      return (vertices[get_other_idx(pt1)] - vertices[idx1]) % (vertices[get_other_idx(pt2)] - vertices[idx2]) > 0;
+      };
+    if constexpr(is_parallel)
+      std::sort(std::execution::par_unseq, epoints, epoints + NN, cmp);
+    else
+      std::sort(epoints, epoints + NN, cmp);
     return NN;
   }
 

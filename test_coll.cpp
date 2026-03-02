@@ -177,7 +177,7 @@ auto find_int(const SegmentsAndRegOptions& opt, SegColl& coll, int4 alg)
   } break;
   case fast_parallel: {
     CFastIntFinder fi;
-    fi.prepare_ends(coll);
+    fi.prepare_ends(coll, true);
     fi.find_intersections(opt.n_threads, coll);
   } break;
   case rectangles: {
