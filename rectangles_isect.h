@@ -244,6 +244,11 @@ void rect_find_intersections(SegmCollection &coll) {
   for (int i = 0; i < n * 2; ++i) {
     points2ranksY[ranks2pointsY[i]] = i;
   }
+  auto ranks2rectanglesY = ranks2pointsY;//we dont need ranks2pointsY, but we need ranks2rectanglesY, so we can reuse allocated array
+  for (int i = 0; i < n * 2; ++i) {
+    ranks2rectanglesY[i] >>= 1;//rectangle id is any endpoint id divided by 2, because each rectangle has 2 endpoints
+  }
+
 
   STree st(n * 2);
   //first we need to calculate how many rectangles can be in each node of segment tree at the same time, to allocate arrays for nodes
@@ -329,7 +334,7 @@ void rect_find_intersections(SegmCollection &coll) {
       st.list_insert(beginY);
       auto next = st.get_next(beginY);
       while (next != endY) {
-        auto other_id = ranks2pointsY[next] >> 1;
+        auto other_id = ranks2rectanglesY[next];
         next = st.get_next(next);
         if (dublicate_checker[other_id] == rect_id)
           continue;
