@@ -153,8 +153,14 @@ public:
       vals[(i << 1) + 1] = get_seg_max(i, is_Y);
     };
     std::sort(buf, buf + N, [vals](int4 i1, int4 i2) {
-      return (vals[i1] < vals[i2]) || ((vals[i1] == vals[i2]) && (i1 < i2));
-      });
+      if (vals[i1] < vals[i2]) return true;
+      if (vals[i1] > vals[i2]) return false;
+      bool is_last1 = i1 & 1, is_last2 = i2 & 1;
+      if (((i1 >> 1) != (i2 >> 1)) && (is_last1 != is_last2))
+        return is_last2;
+      return i1 < i2;
+      }
+    );
     return buf;
   }
 
@@ -241,7 +247,7 @@ public:
     // 1) TurnRemapOn(): optional normalization that splits collinear overlaps via CRemaper.
     // 2) Collapse equal-X endpoints into "multi-events" to avoid zero-width stripes.
     Reset();
-    TurnRemapOn();
+    TurnRemapOn(is_parallel);
 
     uint4 nSeg = GetSegmNumb();
     if (nSeg == 0) return {};
@@ -1084,8 +1090,8 @@ public:
   }
 
 
-  bool TurnRemapOn() {
-    is_collection_remapped = remaper.TurnRemapOn(*this);
+  bool TurnRemapOn(bool is_parallel=false) {
+    is_collection_remapped = remaper.TurnRemapOn(*this, is_parallel);
 
 #ifdef DEBUG_INTERSECTION_SET
     register_pair = reg_pair;

@@ -26,6 +26,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <vector>
 #include <numeric> 
+#include <execution>
 // CRemaper is a degenerate-case preprocessor for integer segments.
 //
 // It normalizes a set of potentially overlapping / collinear segments by splitting
@@ -221,7 +222,7 @@ class CRemaper {
 public:
 
   template<typename Collection>
-  auto TurnRemapOn(Collection& collection) {
+  auto TurnRemapOn(Collection& collection,bool is_parallel=false) {
     auto n = initial_SN;
 
     auto points = std::move(collection.get_points());
@@ -287,7 +288,10 @@ public:
         // |---------------------------------|
       };
 
-    std::sort(indexes.begin(), indexes.end(), comparator);
+    if(is_parallel)
+      std::sort(std::execution::par_unseq, indexes.begin(), indexes.end(), comparator);
+    else
+      std::sort(indexes.begin(), indexes.end(), comparator);
 
 
     bool not_remapped = prepare_remap(indexes, points.data(), collection);
