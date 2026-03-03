@@ -30,12 +30,160 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <chrono>
 
 namespace SegmentTreeAndList {
-
-  struct STree {
+  // 3 or 4 is the best value for P, 
+  // 3 is better for small n, because it has smaller constant factors, but 4 is better for large n, 
+  // because it has smaller memory usage and more cache friendly
+  // so we use 4 by default, but you can change it to 3 if you want.
+  template<int4 P = 4> //2^P -ary tree is used to store filling info and search for previous filled element in list, P must be at least 1
+  struct TreeList {
+    constexpr static const int4 S = (1 << P) - 1;
+    constexpr static const int4 Q = S - 1;
+    constexpr static const int4 M = ~S;
     int4* tree_list = nullptr;//[0..sz-1] - used by binary tree to store filling subtree info, 
     //[sz..SZ-1] - list of filled elements, tree_list[i] is the next filled element in list after i, 
     // tree_list[0] is the head of list (the first filled element in list or 1 if list is empty)
     // if list is not empty, tree_list[i] is always >= 1 
+    int4 n = 0;
+    int4 sz = 0;//first power of 2 greater or equal to n
+    int4 SZ = 0;//sz+n
+
+    bool is_filled(int4 pos) const {
+      return tree_list[pos];
+    }
+
+    static int4 get_rightmost_son(int4 father) {
+      return 1 + (father << P);
+    }
+
+    static int4 get_leftmost_sibling(int4 pos) {
+      return ((pos + Q) & M) - Q;
+    }
+
+    int4 get_left_filled_sibling(int4 pos) const {
+      auto ls = get_leftmost_sibling(pos);
+      --pos;
+      while (ls <= pos) {
+        if (is_filled(pos))
+          return pos;
+        --pos;
+      }
+      return 0;
+    };
+
+    int4 get_rightmost_filled_son(int4 father) const {
+      int4 i = get_rightmost_son(father);
+      while (!is_filled(i))
+        --i;
+      return i;
+    };
+
+    static int4 get_father(int4 pos) {
+      return (pos + Q) >> P;
+    }
+
+    static constexpr const bool lst_del = false;
+    static constexpr const bool lst_ins = true;
+
+    template<bool is_insert>
+    void list_change(int4 rank) {
+      auto pos = sz + rank;
+      int4 prev_elem = 0;
+      while (pos != 1) {
+        if (prev_elem = get_left_filled_sibling(pos)) {
+          pos = get_father(pos);
+          break;
+        }
+        if constexpr (is_insert) {
+          ++tree_list[pos = get_father(pos)];
+        }
+        else {
+          --tree_list[pos = get_father(pos)];
+          assert(tree_list[pos] >= 0);
+        }
+      };
+
+      if (prev_elem) {
+        while (pos) {
+          if constexpr (is_insert) {
+            ++tree_list[pos];
+          }
+          else {
+            --tree_list[pos];
+            assert(tree_list[pos] >= 0);
+          }
+          pos = get_father(pos);
+        }
+        while (prev_elem < sz)
+          prev_elem = get_rightmost_filled_son(prev_elem);
+      }
+      pos = sz + rank;
+
+      if constexpr (is_insert) {
+        tree_list[pos] = tree_list[prev_elem];
+        tree_list[prev_elem] = pos;
+      }
+      else {
+        assert(tree_list[prev_elem] == pos);
+        tree_list[prev_elem] = tree_list[pos];
+        tree_list[pos] = 0;
+      }
+    }
+
+    void list_insert(int4 rank) {
+      list_change<lst_ins>(rank);
+    }
+
+    void list_delete(int4 rank) {
+      list_change<lst_del>(rank);
+    }
+
+    int4 get_next(int4 rank) const {
+      return tree_list[sz + rank] - sz;
+    }
+
+    int4 get_sz() {
+      int4 v = 1;
+      int4 r = 1;
+      while (v < n) {
+        r += v;
+        v <<= P;
+      }
+      return r;
+    }
+
+    TreeList(int4 _n) : n(_n) {
+      sz = get_sz();
+      SZ = sz + n;
+      tree_list = new int4[SZ];
+      std::fill_n(tree_list, SZ, 0);
+      tree_list[0] = 1;//fake last list element is stored in 0 position - the header of list
+      //ordered_list[i]==1 where i>=sz means that i is filled, but next filled element is not exists (i.e.last element in list is i)
+    }
+
+    ~TreeList() {
+      if (tree_list) {
+        delete[] tree_list;
+        tree_list = nullptr;
+      }
+    }
+
+  };
+
+  template<>
+  int4 TreeList<1>::get_left_filled_sibling(int4 pos) const {
+    if ((pos & 1) == 0) return 0;
+    auto sibling = pos ^ 1;
+    return is_filled(sibling) ? sibling : 0;
+  }
+
+  template<>
+  int4 TreeList<1>::get_rightmost_filled_son(int4 pos) const {
+    auto rs = get_rightmost_son(pos);
+    return is_filled(rs) ? rs : rs - 1;
+  }
+
+
+  struct STree {
     int4 n = 0;
     int4 sz = 0;//first power of 2 greater or equal to n
     int4 SZ = 0;//sz+n
@@ -78,13 +226,20 @@ namespace SegmentTreeAndList {
       insert_right(pow - 1, to << pow, r, id, do_insert);
     }
 
+    static int4 get_highest_pow_leq(int4 v) {
+      assert(v > 0);
+      unsigned long idx = 0;
+      _BitScanReverse(&idx, static_cast<unsigned long>(v));
+      return static_cast<int4>(idx);
+    }
     template<typename action_func>
     void insert_left(int4 pow, int4 l, int4 r, int4 id, action_func do_insert) {
       if (l + 2 > r)
         return;
       auto l_next = l + 1;
       do {
-        for (auto d = r - l; (d >> pow) == 0; --pow);//find the highest power of 2 that divides r-l and it must be at least 1, because r-l>=2
+        pow = get_highest_pow_leq(r - l);
+        //for (auto d = r - l; (d >> pow) == 0; --pow);//find the highest power of 2 that divides r-l and it must be at least 1, because r-l>=2
         r -= (1 << pow);
         do_insert((sz + r) >> pow, id);
       } while (l_next < r);
@@ -96,91 +251,11 @@ namespace SegmentTreeAndList {
         return;
       auto r_prev = r - 1;
       do {
-        for (auto d = r - l; (d >> pow) == 0; --pow);//find the highest power of 2 that divides r-l and it must be at least 1, because r-l>=2
+        pow = get_highest_pow_leq(r - l);
+        //for (auto d = r - l; (d >> pow) == 0; --pow);//find the highest power of 2 that divides r-l and it must be at least 1, because r-l>=2
         do_insert((sz + l) >> pow, id);
         l += (1 << pow);
       } while (l < r_prev);
-    }
-
-    bool is_filled(int4 pos) const {
-      return tree_list[pos];
-    }
-
-    static int4 get_sibling(int4 pos) {
-      return pos ^ 1;
-    }
-    static bool is_right_son(int4 pos) {
-      return pos & 1;
-    }
-
-    static int4 get_left_son(int4 father) {
-      return father << 1;
-    }
-    static int4 get_right_son(int4 father) {
-      return (father << 1) + 1;
-    }
-
-    static constexpr const bool lst_del = false;
-    static constexpr const bool lst_ins = true;
-
-    template<bool is_insert>
-    void list_change(int4 rank) {
-      auto pos = sz + rank;
-      int4 prev_elem = 0;
-      while (pos != 1) {
-        if (is_right_son(pos) //comes from right
-          && is_filled(get_sibling(pos))//left brother is filled
-          ) {
-          prev_elem = get_sibling(pos);
-          pos >>= 1;
-          break;
-        }
-        if constexpr (is_insert) {
-          ++tree_list[pos >>= 1];
-        }
-        else {
-          --tree_list[pos >>= 1];
-          assert(tree_list[pos] >= 0);
-        }
-      };
-      if (prev_elem) {
-        while (pos) {
-          if constexpr (is_insert) {
-            ++tree_list[pos];
-          }
-          else {
-            --tree_list[pos];
-            assert(tree_list[pos] >= 0);
-          }
-          pos >>= 1;
-        }
-        while (prev_elem < sz) {
-          auto rs = get_right_son(prev_elem);
-          prev_elem = is_filled(rs) ? rs : rs - 1;
-        }
-      }
-      pos = sz + rank;
-      if constexpr (is_insert) {
-        tree_list[pos] = tree_list[prev_elem];
-        tree_list[prev_elem] = pos;
-      }
-      else {
-        assert(tree_list[prev_elem] == pos);
-        tree_list[prev_elem] = tree_list[pos];
-        tree_list[pos] = 0;
-      }
-    }
-
-    void list_insert(int4 rank) {
-      list_change<lst_ins>(rank);
-    }
-
-    void list_delete(int4 rank) {
-      list_change<lst_del>(rank);
-    }
-
-    int4 get_next(int4 rank) const {
-      return tree_list[sz + rank] - sz;
     }
 
     int4 get_sz() {
@@ -200,18 +275,9 @@ namespace SegmentTreeAndList {
       sz = get_sz();
       SZ = sz + n;
       depth = get_depth();
-      tree_list = new int4[SZ];
-      std::fill_n(tree_list, SZ, 0);
-      tree_list[0] = 1;//fake last list element is stored in 0 position - the header of list
-      //ordered_list[i]==1 where i>=sz means that i is filled, but next filled element is not exists (i.e.last element in list is i)
     }
 
-    ~STree() {
-      if (tree_list) {
-        delete[] tree_list;
-        tree_list = nullptr;
-      }
-    }
+    ~STree() {}
 
   };
 
@@ -249,7 +315,7 @@ void rect_find_intersections(SegmCollection &coll) {
     ranks2rectanglesY[i] >>= 1;//rectangle id is any endpoint id divided by 2, because each rectangle has 2 endpoints
   }
 
-
+  TreeList<> tl(n * 2);
   STree st(n * 2);
   //first we need to calculate how many rectangles can be in each node of segment tree at the same time, to allocate arrays for nodes
   auto tree_size = st.get_tree_size();
@@ -330,12 +396,12 @@ void rect_find_intersections(SegmCollection &coll) {
         node_rects[node_arrays[pos].end++] = id;
         };
       st.insert_range(beginY, endY, rect_id, do_insert);
-      st.list_insert(endY);
-      st.list_insert(beginY);
-      auto next = st.get_next(beginY);
+      tl.list_insert(endY);
+      tl.list_insert(beginY);
+      auto next = tl.get_next(beginY);
       while (next != endY) {
         auto other_id = ranks2rectanglesY[next];
-        next = st.get_next(next);
+        next = tl.get_next(next);
         if (dublicate_checker[other_id] == rect_id)
           continue;
         dublicate_checker[other_id] = rect_id;
@@ -343,8 +409,8 @@ void rect_find_intersections(SegmCollection &coll) {
       }
     }
     else {
-      st.list_delete(beginY);
-      st.list_delete(endY);
+      tl.list_delete(beginY);
+      tl.list_delete(endY);
       //we do not remove rectangle from arrays, but mark it as removed, so it will be removed later when we need to locate new rectangle
       is_removed[rect_id] = 1;
     }
