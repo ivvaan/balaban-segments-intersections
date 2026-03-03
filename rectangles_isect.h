@@ -28,6 +28,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #include <numeric>
 #include <algorithm>
 #include <chrono>
+#include <bit>
 
 namespace SegmentTreeAndList {
   // 3 or 4 is the best value for P, 
@@ -222,37 +223,29 @@ namespace SegmentTreeAndList {
       if (from + 1 < to)
         do_insert(idx + 1, id);
       if (pow < 2) return;
-      insert_left(pow - 1, l, from << pow, id, do_insert);
-      insert_right(pow - 1, to << pow, r, id, do_insert);
+      insert_left(l, from << pow, id, do_insert);
+      insert_right(to << pow, r, id, do_insert);
     }
 
-    static int4 get_highest_pow_leq(int4 v) {
-      assert(v > 0);
-      unsigned long idx = 0;
-      _BitScanReverse(&idx, static_cast<unsigned long>(v));
-      return static_cast<int4>(idx);
-    }
     template<typename action_func>
-    void insert_left(int4 pow, int4 l, int4 r, int4 id, action_func do_insert) {
+    void insert_left(int4 l, int4 r, int4 id, action_func do_insert) {
       if (l + 2 > r)
         return;
       auto l_next = l + 1;
       do {
-        pow = get_highest_pow_leq(r - l);
-        //for (auto d = r - l; (d >> pow) == 0; --pow);//find the highest power of 2 that divides r-l and it must be at least 1, because r-l>=2
+        auto pow = std::bit_width((unsigned)(r - l));
         r -= (1 << pow);
         do_insert((sz + r) >> pow, id);
       } while (l_next < r);
     }
 
     template<typename action_func>
-    void insert_right(int4 pow, int4 l, int4 r, int4 id, action_func do_insert) {
+    void insert_right(int4 l, int4 r, int4 id, action_func do_insert) {
       if (l + 2 > r)
         return;
       auto r_prev = r - 1;
       do {
-        pow = get_highest_pow_leq(r - l);
-        //for (auto d = r - l; (d >> pow) == 0; --pow);//find the highest power of 2 that divides r-l and it must be at least 1, because r-l>=2
+        auto pow = std::bit_width((unsigned)(r - l));
         do_insert((sz + l) >> pow, id);
         l += (1 << pow);
       } while (l < r_prev);
