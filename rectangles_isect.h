@@ -233,7 +233,7 @@ namespace SegmentTreeAndList {
         return;
       auto l_next = l + 1;
       do {
-        auto pow = std::bit_width((unsigned)(r - l));
+        auto pow = std::bit_width((unsigned)(r - l)) - 1;
         r -= (1 << pow);
         do_insert((sz + r) >> pow, id);
       } while (l_next < r);
@@ -245,7 +245,7 @@ namespace SegmentTreeAndList {
         return;
       auto r_prev = r - 1;
       do {
-        auto pow = std::bit_width((unsigned)(r - l));
+        auto pow = std::bit_width((unsigned)(r - l)) - 1;
         do_insert((sz + l) >> pow, id);
         l += (1 << pow);
       } while (l < r_prev);
