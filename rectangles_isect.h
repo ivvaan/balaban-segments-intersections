@@ -223,10 +223,44 @@ namespace SegmentTreeAndList {
       if (from + 1 < to)
         do_insert(idx + 1, id);
       if (pow < 2) return;
-      insert_left(l, from << pow, id, do_insert);
-      insert_right(to << pow, r, id, do_insert);
+    
+      insert_left_fast(l, from << pow, id, do_insert);
+      insert_right_fast(to << pow, r, id, do_insert);
     }
 
+
+    // Faster versions of insert_left and insert_right.
+    // Extra bounding-rectangle intersections can be reported, but never miss any.
+    // We still verify actual segment intersections afterward, so global correctness is preserved.
+    // The extra afterward checks are outweighed by the speedup of these functions.
+    template<typename action_func>
+    void insert_left_fast(int4 l, int4 r, int4 id, action_func do_insert) {
+      if (l + 2 > r)
+        return;
+      auto pow = std::bit_width((unsigned)(r - l)) - 1;
+      do_insert(((sz + r) >> pow) - 1, id);
+      r -= (1 << pow);
+      if (l + 1 < r) {
+          pow = std::bit_width((unsigned)(r - l));
+          do_insert(((sz + r) >> pow) - 1, id);
+      }
+    }
+
+    template<typename action_func>
+    void insert_right_fast(int4 l, int4 r, int4 id, action_func do_insert) {
+      if (l + 2 > r)
+        return;
+      auto pow = std::bit_width((unsigned)(r - l)) - 1;
+      do_insert((sz + l) >> pow, id);
+      l += (1 << pow);
+      if (l + 1 < r) {
+         pow = std::bit_width((unsigned)(r - l));
+         do_insert(((sz + l) >> pow), id);
+      }
+    }
+
+
+    // correct for bounding rectangles intersection but slower for segments intersecion version of insert_left and insert_right
     template<typename action_func>
     void insert_left(int4 l, int4 r, int4 id, action_func do_insert) {
       if (l + 2 > r)
@@ -270,7 +304,8 @@ namespace SegmentTreeAndList {
       depth = get_depth();
     }
 
-    ~STree() {}
+    ~STree() {
+    }
 
   };
 
