@@ -188,7 +188,6 @@ namespace SegmentTreeAndList {
     int4 n = 0;
     int4 sz = 0;//first power of 2 greater or equal to n
     int4 SZ = 0;//sz+n
-    int4 depth = 0;
 
     int4 get_tree_size() const {
       return SZ >> 1;
@@ -209,7 +208,7 @@ namespace SegmentTreeAndList {
         do_insert(1, id);
         return;
       }
-      int4 pow = depth;
+      int4 pow = std::bit_width((unsigned)(r - l));
       int4 from, to;
       do {
         --pow;
@@ -291,17 +290,9 @@ namespace SegmentTreeAndList {
       return v;
     }
 
-    int4 get_depth() {
-      int4 d = 0;
-      for (int4 v = n; v > 0; v >>= 1)
-        ++d;
-      return d;
-    }
-
     STree(int4 _n) : n(_n) {
       sz = get_sz();
       SZ = sz + n;
-      depth = get_depth();
     }
 
     ~STree() {
@@ -323,6 +314,7 @@ void rect_find_intersections(SegmCollection &coll) {
 
   struct arr_info {
     int4 beg = 0, end = 0;
+    bool is_empty() const { return beg == end; }
   };
 
   using namespace SegmentTreeAndList;
