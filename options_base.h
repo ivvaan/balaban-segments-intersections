@@ -78,11 +78,13 @@ example: seg_int -a14 -sa -dp -n20000 -p5.5
  p=1: ABOVE_NORMAL process + THREAD_PRIORITY_ABOVE_NORMAL
  p=2: HIGH process + THREAD_PRIORITY_HIGHEST
  p=3: REALTIME process + THREAD_PRIORITY_TIME_CRITICAL
+-Rn: minimal number of benchmark repeats in release build. Default 3.
 )WYX";
 
 struct Options : public SegmentsAndRegOptions
 {
   uint4 alg = 31;
+  uint4 n_repeat = 3;
 
   BOOL print_less = FALSE;
   BOOL wait = FALSE;
@@ -239,6 +241,15 @@ struct Options : public SegmentsAndRegOptions
           if (pri_preset > 3) pri_preset = 3;
         }
         break;
+        case 'R':
+        {
+          n_repeat = atoi(argv[i] + 2);
+          if (n_repeat < 1) {
+            n_repeat = 3;
+            printf("some error in -R param. 3 used instead.\n");
+          }
+        }
+        break;
         }
       }
       return true;
@@ -270,9 +281,9 @@ struct Options : public SegmentsAndRegOptions
     const char* ss = "Llagi", * sd = "rlmspc", * sr = "pPcrC";
     if (!print_less) {
       if (seg_type != _Segment::intline)
-        printf("actual params are: -a%i -s%c -d%c -r%c -n%i -S%i -T%u -p%f -A%lld -P%i\n", alg, ss[seg_type], sd[distr_type], sr[reg_stat], n, random_seed, n_threads, distr_param, affinity_cpu, pri_preset);
+        printf("actual params are: -a%i -s%c -d%c -r%c -n%i -S%i -T%u -p%f -A%lld -P%i -R%u\n", alg, ss[seg_type], sd[distr_type], sr[reg_stat], n, random_seed, n_threads, distr_param, affinity_cpu, pri_preset, n_repeat);
       else
-        printf("actual params are: -a%i -si%i -d%c -r%c -n%i -S%i -T%u -p%f -e%f -A%lld -P%i\n", alg, range_for_int_seg, sd[distr_type], sr[reg_stat], n, random_seed, n_threads, distr_param, ICT, affinity_cpu, pri_preset);
+        printf("actual params are: -a%i -si%i -d%c -r%c -n%i -S%i -T%u -p%f -e%f -A%lld -P%i -R%u\n", alg, range_for_int_seg, sd[distr_type], sr[reg_stat], n, random_seed, n_threads, distr_param, ICT, affinity_cpu, pri_preset, n_repeat);
     }
   }
 };

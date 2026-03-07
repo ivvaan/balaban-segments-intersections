@@ -165,7 +165,7 @@ double benchmark(const Options& opt, PSeg seg_coll, int4 alg, double& res)
     n_call++;
   }
 #ifdef NDEBUG
-  while ((tottime < 3) || (n_call < 3));
+  while ((tottime < 3) || (n_call < opt.n_repeat));
 #else
   while (false);
 #endif

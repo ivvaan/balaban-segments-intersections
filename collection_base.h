@@ -71,7 +71,12 @@ public:
       vals[(i << 1) + 1] = self().get_seg_max(i, is_Y);
     };
     std::sort(buf, buf + N, [vals](int4 i1, int4 i2) {
-      return (vals[i1] < vals[i2]) || ((vals[i1] == vals[i2]) && (i1 < i2));
+      if (vals[i1] < vals[i2]) return true;
+      if (vals[i1] > vals[i2]) return false;
+      bool is_last1 = i1 & 1, is_last2 = i2 & 1;
+      if (((i1 >> 1) != (i2 >> 1)) && (is_last1 != is_last2))
+        return is_last2;
+      return i1 < i2;
       });
     return buf; 
   }
