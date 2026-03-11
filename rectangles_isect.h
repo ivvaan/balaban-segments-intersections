@@ -195,11 +195,9 @@ namespace SegmentTreeAndList {
 
     template<typename action_func>
     void locate(int4 rank, int4 id, action_func do_locate) {
-      auto pos = (sz + rank) >> 1;
-      do {
-        do_locate(pos, id);
-        pos >>= 1;
-      } while (pos > 0);
+      auto pos = sz + rank;
+      for (auto pow = std::bit_width((unsigned)(pos)) - 1; pow; --pow) 
+        do_locate(pos >> pow, id);
     }
 
     template<typename action_func>
