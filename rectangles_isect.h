@@ -196,8 +196,15 @@ namespace SegmentTreeAndList {
     template<typename action_func>
     void locate(int4 rank, int4 id, action_func do_locate) {
       auto pos = sz + rank;
-      for (auto pow = std::bit_width((unsigned)(pos)) - 1; pow; --pow) 
+      for (auto pow = std::bit_width((unsigned)(pos)) - 1; pow; --pow)
         do_locate(pos >> pow, id);
+    }
+
+    template<typename action_func>
+    void locate(int4 rank, action_func do_locate) {
+      auto pos = sz + rank;
+      for (auto pow = std::bit_width((unsigned)(pos)) - 1; pow; --pow)
+        do_locate(pos >> pow);
     }
 
     template<typename action_func>
@@ -318,13 +325,12 @@ void rect_find_intersections(SegmCollection &coll) {
   using namespace SegmentTreeAndList;
   int4 n = coll.GetSegmNumb();
 
-  auto ranks2pointsX_keeper = std::make_unique<int[]>(n * 2);
-  auto ranks2pointsX = coll.get_sorted_bounds(ranks2pointsX_keeper.get(), false);
-  auto ranks2pointsY_keeper = std::make_unique<int[]>(n * 2);
-  auto ranks2pointsY = coll.get_sorted_bounds(ranks2pointsY_keeper.get(), true);
+  RAII_ARR(int4, ranks2pointsX, n * 2);
+  coll.get_sorted_bounds(ranks2pointsX, false);
+  RAII_ARR(int4, ranks2pointsY, n * 2);
+  coll.get_sorted_bounds(ranks2pointsY, true);
 
-  auto points2ranksY_keeper = std::make_unique<int[]>(n * 2);
-  auto points2ranksY = points2ranksY_keeper.get();
+  RAII_ARR(int4, points2ranksY, n * 2);
   for (int i = 0; i < n * 2; ++i) {
     points2ranksY[ranks2pointsY[i]] = i;
   }
@@ -337,52 +343,47 @@ void rect_find_intersections(SegmCollection &coll) {
   STree st(n * 2);
   //first we need to calculate how many rectangles can be in each node of segment tree at the same time, to allocate arrays for nodes
   auto tree_size = st.get_tree_size();
-  auto counts_keeper = std::make_unique<count_info[]>(tree_size);
-  auto counts = counts_keeper.get();
+  RAII_ARR(count_info, counts, tree_size);
   std::fill_n(counts, tree_size, count_info{});
 
   for (int i = 0; i < n * 2; ++i) {
     auto point = ranks2pointsX[i];
-    auto rect_id = point >> 1;
+    auto point_rankY = points2ranksY[point];
     if ((point & 1) == 0) {
-      st.locate(points2ranksY[rect_id << 1], rect_id, [=](int pos, int id) {
+      st.locate(point_rankY , [=](int4 pos) {
         assert(pos < tree_size);
         counts[pos].locate();
         });
-      st.insert_range(points2ranksY[rect_id << 1], points2ranksY[(rect_id << 1) + 1], rect_id, [=](int pos, int id) {
+      st.insert_range(point_rankY, points2ranksY[point | 1], 0, [=](int pos, int id) {
         assert(pos < tree_size);
         counts[pos].insert();
         });
     }
     else {
-      st.insert_range(points2ranksY[rect_id << 1], points2ranksY[(rect_id << 1) + 1], rect_id, [=](int pos, int id) {
+      st.insert_range(points2ranksY[point & ~1u], point_rankY, 0, [=](int pos, int id) {
         assert(pos < tree_size);
         counts[pos].erase();
         });
     }
   }
   //now we know the maximum count of rectangles in each node, we can allocate arrays for nodes
-  auto node_arrays_keeper = std::make_unique<arr_info[]>(tree_size);
-  auto node_arrays = node_arrays_keeper.get();
+  RAII_ARR(arr_info, node_arrays, tree_size);
   int acc = 0;
   for (int i = 0; i < tree_size; ++i) {
     node_arrays[i].beg = node_arrays[i].end = acc;
     acc += counts[i].max;
   }
-  counts_keeper.reset();
+  FREE_RAII(counts);
   // With per-node arrays allocated, run the main algorithm: sweep along the X axis.
   // For each rectangle, locate its lower Y endpoint in the segment tree to find
   // all rectangles that overlap it in Y. Then insert the rectangle for future checks
   // and scan the corner list between its Y endpoints, since those also intersect.
   // Duplicates can appear both in tree nodes and the corner list, so use
   // `dublicate_checker` to avoid reporting the same pair more than once.
-  auto node_rects_keeper = std::make_unique<int4[]>(acc);
-  auto node_rects = node_rects_keeper.get();
-  auto is_removed_keeper = std::make_unique<char[]>(n);
-  auto is_removed = is_removed_keeper.get();
+  RAII_ARR(int4, node_rects, acc);
+  RAII_ARR(char, is_removed, n);
   std::fill_n(is_removed, n, 0);
-  auto dublicate_checker_keeper = std::make_unique<int4[]>(n);
-  auto dublicate_checker = dublicate_checker_keeper.get();
+  RAII_ARR(int4, dublicate_checker,  n);
   std::fill_n(dublicate_checker, n, -1);
   for (int4 i = 0; i < n * 2; ++i) {
     auto point = ranks2pointsX[i];
@@ -394,8 +395,8 @@ void rect_find_intersections(SegmCollection &coll) {
     if ((point & 1) == 0) {
       auto do_locate = [=,&coll](int4 pos, int4 rect) {
         auto& arr_info = node_arrays[pos];
-        int4 new_end = arr_info.beg;
-        for (int4 i = arr_info.beg; i < arr_info.end; ++i) {
+        auto new_end = arr_info.beg;
+        for (auto i = arr_info.beg; i < arr_info.end; ++i) {
           auto other = node_rects[i];
           //lazy deletion - we mark rectangles as removed, but do not remove them from arrays, 
           // until we need to locate new rectangle, then we do remove all removed rectangles 
@@ -410,12 +411,14 @@ void rect_find_intersections(SegmCollection &coll) {
         };
       st.locate(beginY, rect_id, do_locate);
 
-      auto do_insert = [=](int4 pos, int4 id) {
-        node_rects[node_arrays[pos].end++] = id;
-        };
-      st.insert_range(beginY, endY, rect_id, do_insert);
-      tl.list_insert(endY);
       tl.list_insert(beginY);
+
+      st.insert_range(beginY, endY, rect_id, [=](int4 pos, int4 id) {
+          node_rects[node_arrays[pos].end++] = id;
+        });
+      
+      tl.list_insert(endY);
+
       auto next = tl.get_next(beginY);
       while (next != endY) {
         auto other_id = ranks2rectanglesY[next];

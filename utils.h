@@ -62,6 +62,7 @@ L = __##L##__.get();
 #define RAII_ARR(type,arr,len)\
 auto __##arr##__ = std::make_unique<type[]>(len);\
 type *arr = __##arr##__.get();
+#define FREE_RAII(arr) __##arr##__.reset();
 
 #define MY_FREE_ARR_MACRO(a) if (a!=nullptr) {delete[] a; a = nullptr;}
 
