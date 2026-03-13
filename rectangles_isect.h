@@ -192,6 +192,9 @@ namespace SegmentTreeAndList {
     int4 get_tree_size() const {
       return SZ >> 1;
     }
+    auto get_pos(int4 rank) const {
+      return sz + rank;
+    }
 
     template<typename action_func>
     void locate(int4 rank, int4 id, action_func do_locate) {
@@ -350,10 +353,9 @@ void rect_find_intersections(SegmCollection &coll) {
     auto point = ranks2pointsX[i];
     auto point_rankY = points2ranksY[point];
     if ((point & 1) == 0) {
-      st.locate(point_rankY , [=](int4 pos) {
-        assert(pos < tree_size);
-        counts[pos].locate();
-        });
+      auto pos = st.get_pos(point_rankY);
+      for (auto pow = std::bit_width((unsigned)(pos)) - 1; pow; --pow)
+         counts[pos >> pow].locate();
       st.insert_range(point_rankY, points2ranksY[point | 1], 0, [=](int pos, int id) {
         assert(pos < tree_size);
         counts[pos].insert();
@@ -393,23 +395,23 @@ void rect_find_intersections(SegmCollection &coll) {
     auto endY = points2ranksY[point | 1];
 
     if ((point & 1) == 0) {
-      auto do_locate = [=,&coll](int4 pos, int4 rect) {
-        auto& arr_info = node_arrays[pos];
+      auto pos = st.get_pos(beginY);// actually it is manually inlined st.locate call
+      for (auto pow = std::bit_width((unsigned)(pos)) - 1; pow; --pow){
+        auto& arr_info = node_arrays[pos >> pow];
         auto new_end = arr_info.beg;
         for (auto i = arr_info.beg; i < arr_info.end; ++i) {
-          auto other = node_rects[i];
+          auto other_id = node_rects[i];
           //lazy deletion - we mark rectangles as removed, but do not remove them from arrays, 
           // until we need to locate new rectangle, then we do remove all removed rectangles 
           // from array and update end index.
-          if (is_removed[other])
+          if (is_removed[other_id])
             continue;
-          node_rects[new_end++] = other;
-          dublicate_checker[other] = rect;
-          coll.SSCurSegIntWith(other);
-        }
-        arr_info.end = new_end;
+          node_rects[new_end++] = other_id;
+          dublicate_checker[other_id] = rect_id;
+          coll.SSCurSegIntWith(other_id);
         };
-      st.locate(beginY, rect_id, do_locate);
+        arr_info.end = new_end;
+      };
 
       tl.list_insert(beginY);
 
