@@ -191,13 +191,13 @@ struct Options : public SegmentsAndRegOptions
         break;
         case 'T':
         {
-          n_threads = atoi(argv[i] + 2);
-          if (n_threads < 1) {
+          auto t = atoi(argv[i] + 2);
+          if (t < 1) {
             n_threads = n_threads_default;
             printf("some error in -T param. %u used instead.\n", n_threads_default);
           }
           else
-            n_threads = static_cast<uint4>(n_threads);
+            n_threads = static_cast<uint4>(t);
         }
         break;
         case 'p':

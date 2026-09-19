@@ -285,14 +285,12 @@ concept SweepSegColl = SegCollCore<C> && requires(C c, uint4 u, uint4 * p) {
 };
 
 // ---------------------------------------------------------------------------
-// Balaban-family algorithms (fast, optimal).
+// Balaban-family algorithms (fast, optimal): everything both of them need.
 // Used by: CFastIntFinder, COptimalIntFinder
 //
 // This is the largest interface because these algorithms use stripes,
 // staircases, Split/Merge, InsDel, and directional intersection queries.
 // ---------------------------------------------------------------------------
-
-
 template<class C>
 concept BalabanSegCollBase = SegCollCore<C> && requires(
   C c, const C cc,
@@ -334,8 +332,9 @@ concept BalabanSegCollBase = SegCollCore<C> && requires(
 };
 
 // ---------------------------------------------------------------------------
-// Fast algorithm: Balaban + range directional intersection finding 
-// Used by: CFastIntFinder::find_intersections(n_threads, segments)
+// Fast algorithm: BalabanSegCollBase + the range overloads of the directional
+// intersection queries, which let the collection own the loop over stairs.
+// Used by: CFastIntFinder::find_intersections(segments [, from, to])
 // ---------------------------------------------------------------------------
 template<class C>
 concept FastSegColl = BalabanSegCollBase<C> && requires(C c, uint4 * p, uint4 * q) {
@@ -346,8 +345,12 @@ concept FastSegColl = BalabanSegCollBase<C> && requires(C c, uint4 * p, uint4 * 
 
 
 // ---------------------------------------------------------------------------
-// Optimal algorithm: Balaban +  non range directional intersection finding 
-// Used by: COptimalIntFinder::find_intersections(n_threads, segments)
+// Optimal algorithm: BalabanSegCollBase + LBelow + the single-stair overloads,
+// plus the non-registering Is...  variants. An inherited stair must be tested
+// WITHOUT registering, because the ancestor staircase that owns it already
+// reported that intersection.
+// NOTE: COptimalIntFinder has no parallel overload.
+// Used by: COptimalIntFinder::find_intersections(segments)
 // ---------------------------------------------------------------------------
 template<class C>
 concept OptimalSegColl = BalabanSegCollBase<C> && requires(C c, const C cc, uint4 u) {
