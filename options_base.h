@@ -72,7 +72,7 @@ example: seg_int -a14 -sa -dp -n20000 -p5.5
   150000 intersections are drawn.
 -m: print truncated information in one row (to make a table)
 -w: stop and wait for an input befor exit
--An: bind current thread to logical CPU n (0-based). -aff-1 (default) disables affinity.
+-An: bind current thread to logical CPU n (0-based). -A-1 (default) disables affinity.
 -Pp: thread priority preset:
  p=0: don't change priorities (default)
  p=1: ABOVE_NORMAL process + THREAD_PRIORITY_ABOVE_NORMAL
@@ -191,7 +191,7 @@ struct Options : public SegmentsAndRegOptions
         break;
         case 'T':
         {
-          auto n_threads = atoi(argv[i] + 2);
+          n_threads = atoi(argv[i] + 2);
           if (n_threads < 1) {
             n_threads = n_threads_default;
             printf("some error in -T param. %u used instead.\n", n_threads_default);

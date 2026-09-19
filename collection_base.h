@@ -292,10 +292,6 @@ concept SweepSegColl = SegCollCore<C> && requires(C c, uint4 u, uint4 * p) {
 // staircases, Split/Merge, InsDel, and directional intersection queries.
 // ---------------------------------------------------------------------------
 
-// ---------------------------------------------------------------------------
-// Fast algorithm: Balaban + stripe-based intersection finding + InsDel + Split/Merge.
-// Used by: CFastIntFinder::find_intersections(n_threads, segments)
-// ---------------------------------------------------------------------------
 
 template<class C>
 concept BalabanSegCollBase = SegCollCore<C> && requires(
@@ -338,7 +334,7 @@ concept BalabanSegCollBase = SegCollCore<C> && requires(
 };
 
 // ---------------------------------------------------------------------------
-// Fast algorithm: Balaban + optimal intersection finding (no InsDel, no Split/Merge).
+// Fast algorithm: Balaban + range directional intersection finding 
 // Used by: CFastIntFinder::find_intersections(n_threads, segments)
 // ---------------------------------------------------------------------------
 template<class C>
@@ -350,7 +346,7 @@ concept FastSegColl = BalabanSegCollBase<C> && requires(C c, uint4 * p, uint4 * 
 
 
 // ---------------------------------------------------------------------------
-// Optimal algorithm: Balaban + optimal intersection finding (no InsDel, no Split/Merge).
+// Optimal algorithm: Balaban +  non range directional intersection finding 
 // Used by: COptimalIntFinder::find_intersections(n_threads, segments)
 // ---------------------------------------------------------------------------
 template<class C>
