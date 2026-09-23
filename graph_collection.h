@@ -222,6 +222,15 @@ public:
   }
 
   bool SSCurSegIntWith(uint4 s_) {
+    // FindIntWith skips adjacent edges only when they share their first or their last vertex.
+    // The other kind of adjacency - the end of one edge is the beginning of the other - is
+    // excluded elsewhere by the x-intervals: TrivCurSegIntWith clips to both edges' ranges,
+    // which then touch at a single x, and the sweeps remove the ending edge before inserting
+    // the starting one at a shared vertex. This entry point does neither ([curB,curE] is not
+    // clipped to s_), and the rectangles algorithm calls it for any pair whose bounding boxes
+    // meet, so the check has to be made here - otherwise a shared vertex is reported as an
+    // intersection.
+    if ((cur_seg_beg_idx == get_last_idx(s_)) || (cur_seg_end_idx == get_first_idx(s_))) return false;
     return FindIntWith<true>(curB, curE, s_);
   }
 
