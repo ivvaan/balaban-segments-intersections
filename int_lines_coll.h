@@ -646,7 +646,7 @@ public:
     stage = _Stages::stage_split;
     is_rstump = E < cur_seg.ex();
     active_end = cur_seg.EndPoint();
-    cur_seg_pt_on_right_bound = is_right_pt_on_bound(s);
+    active_end_on_right_bound = is_right_pt_on_bound(s);
 
   };
 
@@ -654,7 +654,7 @@ public:
     SetCurSeg(s);
     stage = _Stages::stage_split;
     active_end = cur_seg.EndPoint();
-    cur_seg_pt_on_right_bound = is_right_pt_on_bound(s);
+    active_end_on_right_bound = is_right_pt_on_bound(s);
 
   };
 
@@ -663,7 +663,7 @@ public:
     SetCurSeg(s);
     stage = _Stages::stage_merge;
     active_end = cur_seg.BegPoint();
-    cur_seg_pt_on_right_bound = false;
+    active_end_on_right_bound = false;
   };
 
   void SetCurSeg4Bubble(uint4 s) {
@@ -671,7 +671,7 @@ public:
     SetCurSeg(s);
     stage = _Stages::stage_bubble;
     active_end = pts[last_point(s)];
-    cur_seg_pt_on_right_bound = false;
+    active_end_on_right_bound = false;
 
   };
 
@@ -767,7 +767,7 @@ public:
   bool ActiveEndIntersect(uint4 s_) const { //
     auto pp = collection[s_].point_pos(active_end);
     if(pp==0)
-      return !cur_seg_pt_on_right_bound;//for active_end on right bound we get intersection during InsDel call
+      return !active_end_on_right_bound;//for active_end on right bound we get intersection during InsDel call
   
     if constexpr (is_way_up)
       return (pp < 0);//s_ placed under active_end
@@ -1230,7 +1230,7 @@ private:
   //uint4 coincide_zero_segm_flags = _CoincideZeroSegmFlags::coincide_zero_filter_for_all;
   bool is_rstump = false;
   bool is_collection_remapped = false;
-  bool cur_seg_pt_on_right_bound = false;
+  bool active_end_on_right_bound = false;
   //bool exclude_zero_segs = false;
 };
 
