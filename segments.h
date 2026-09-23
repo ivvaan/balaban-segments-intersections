@@ -331,7 +331,7 @@ public:
       //assert((shift.x > 0)||((shift.x==0)&&(shift.y>0)));
 #ifdef PRINT_SEG_AND_INT
       if (print_at_lineseg1_init)
-        printf("s%i[%i,%i,%i,%i],\n", org.x, org.y, org.x + shift.x, org.y + shift.y);
+        printf("s[%i,%i,%i,%i],\n", org.x, org.y, org.x + shift.x, org.y + shift.y);
 #endif
     };
 

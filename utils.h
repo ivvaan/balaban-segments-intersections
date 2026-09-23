@@ -377,7 +377,7 @@ struct intmmrect {
     return rt.x - ld.x;
   }
   auto get_height() const {
-    return rt.x - ld.x;
+    return rt.y - ld.y;
   }
 };
 

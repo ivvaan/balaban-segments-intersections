@@ -74,7 +74,7 @@ class CIntegerSegmentCollection
     REAL* arr;
     DECL_RAII_ARR(arr, n + 2);
     arr[0] = -M_PI / 2.;
-    std::transform(sc, sc + n, arr,
+    std::transform(sc, sc + n, arr + 1,
       [](const TLineSegment1& s) { return std::atan2(s.shift.y, s.shift.x); });
     arr[n + 1] = M_PI / 2.;
     auto max_gap_mid = get_max_gap_middle(n + 2, arr);
@@ -929,6 +929,7 @@ public:
   {
       clone_of = &c;
       nSegments = c.nSegments;
+      is_collection_remapped = c.is_collection_remapped;
       nTotX = c.nTotX;
       nCollideX = c.nCollideX;
       ENDS = c.ENDS;

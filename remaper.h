@@ -95,7 +95,8 @@ class CRemaper {
     //   `beg==end`, because that piece represents an actual input segment.
     //   This is handled by `allow_zero_len_piece` below.
     bool not_remapped = true;// initial_SN == nonzero_N;
-    for (uint4 i = 0, size = 0; i < N; ++i) {
+    int4 size = 0; // current active set size on the current supporting line
+    for (uint4 i = 0; i < N; ++i) {
       auto pt = indexes[i];
       size += Collection::is_last(pt) ? -1 : 1;
       assert(size >= 0);
@@ -215,7 +216,7 @@ class CRemaper {
 
     // Consistency checks.
     assert(remapped_SN == new_seg_num);
-    remap_size = remaper_pos;
+    this->remap_size = remaper_pos;
 
     // If we got here, remap definitely happened.
     return not_remapped;
