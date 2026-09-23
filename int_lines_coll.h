@@ -397,9 +397,14 @@ public:
 
   void ReorderStep(int4 x, uint4 L_size, uint4* L)
   {
-    // Optional experiment: for segments with equal YAtX at the boundary, reverse order.
-    // This is related to the "node on boundary" phenomenon described in Degenerate-cases.md.
-    // Left disabled by default because normal split/merge tends to reestablish correct order anyway.
+    // Handles a "node on the boundary": a group of segments of L passing through one common
+    // point that lies exactly on the current multi-event vertical line X = x.
+    //
+    // Two things happen per equal-Y group:
+    //  - every pair in the group is registered directly (they all meet at that point);
+    //  - the group is reversed, because segments crossing at a common point exchange their
+    //    vertical order as the sweep passes through it. That reversal is what leaves L correct
+    //    just right of the boundary, which is the precondition the next stripe relies on.
     for (uint4 i = 0, j; i < L_size; i = j) {
       j = i + 1;
       while (j < L_size && 0 == (collection[L[i]].YAtX_frac(x) <=> collection[L[j]].YAtX_frac(x)))

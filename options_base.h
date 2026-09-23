@@ -49,7 +49,7 @@ example: seg_int -a14 -sa -dp -n20000 -p5.5
   (33%%) and 'small' segments(67%%), the bigger distr_param/N
   the less parallel 'long' and longer 'short' segments
  D=s: short segments: random segment with  length multiplied by distr_param/N
- D=distr_param: random segment with  length multiplied by distr_param
+ D=p: random segment with  length multiplied by distr_param
  D=c: segments ends are on the opposite sides of unit circle, each
   segment intesect each
 -rR: type of registrar used in new implementation and type of result statistic
@@ -67,7 +67,7 @@ example: seg_int -a14 -sa -dp -n20000 -p5.5
   case trivial algorithm must be selected for testing and for the large N it can take quite a time.
 -SR: capital S for random seed; R - random seed value; if R=0 - non pseudo random generator used
 -Tn: number of threads for the parallel algorithm (A=16). Default 8.
--fhtmfile: if presented, program writes SVG picture to htmfile. For examle -fC:/tmp/res.htm
+-fhtmfile: if specified, program writes SVG picture to htmfile. For example -fC:/tmp/res.htm
   To limit resulting file size option works only for 5000 segments and less, also only first 
   150000 intersections are drawn.
 -m: print truncated information in one row (to make a table)

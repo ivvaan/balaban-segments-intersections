@@ -148,6 +148,13 @@ public:
   template<ParallelSegColl SegmentsColl>
   void find_intersections(uint4 n_threads,SegmentsColl& segments)
   {
+    // Every thread needs a non-empty stripe [from,to] with to > from, and the master thread
+    // needs start_from >= 1 (start_from == 0 would make the call below look like a whole-range
+    // call). Both hold when nTotX >= 2 * n_threads; otherwise run single-threaded.
+    if ((n_threads < 2) || (nTotX < 2 * n_threads)) {
+      find_intersections(segments);
+      return;
+    }
     using namespace std;
     vector<thread> wrk_threads;
     auto thread_func = [](CFastIntFinder* master, SegmentsColl* segments,uint4 thread_index, uint4 from, uint4 to) {
@@ -248,7 +255,7 @@ protected:
 
   // Set by `Split*()` when a stripe appears to be "dense" (too many intersections with ladder stairs),
   // in which case `FindRNoChecks()` repeats splitting without further cutting.
-  bool dont_cut_stripe;
+  bool dont_cut_stripe = false;
 
 
 
@@ -692,6 +699,7 @@ protected:
             // one addition per loop by incrementing _Q later.
     }
     if (new_L_pos == last_L){
+      dont_cut_stripe = false;
       return 0;
     }
 
@@ -775,6 +783,7 @@ protected:
       }
     }
     if (_Q_pos == _Q) {
+      dont_cut_stripe = false;
       return 0;
     }
     L_size = new_L_pos - L;

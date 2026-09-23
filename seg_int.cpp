@@ -180,7 +180,7 @@ double benchmark(const Options& opt, PSeg seg_coll, int4 alg, double& res)
 void perform_tests(const Options& opt, PSeg seg_coll)
 {
   double exec_time[33], nInt[33];
-  const char* ss = "Llag";
+  const char* ss = "Llagi";
   const char* sd = "rlmspc";
   const char* stat_names[] = { "inters. numb","max inters. per segm","inters. numb","inters. numb" ,"inters. numb" };
 

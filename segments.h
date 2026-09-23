@@ -285,7 +285,7 @@ public:
       *SVG_text << "A " << r << " " << r << " 0 0 ";
       *SVG_text << (is_upper?"0 ":"1 ");
       *SVG_text << ep.x << " " << ep.y << "'";
-      *SVG_text << "' class='arc'/>\n";
+      *SVG_text << " class='arc'/>\n";
     }
 
   }
