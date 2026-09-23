@@ -24,7 +24,7 @@ void TLineSegment1::InitRandom(CRandomValueGen &rv, uint4 seg_n, uint4 type, REA
 {
   if (_Distribution::circle == type)
   {
-    //Segments ends are on the opposite sides of unit circle, each segment intesect each
+    //Segments ends are on the opposite sides of unit circle, each segment intersects each
     double angle = 1.0 / 16.0 + 3.*M_PI*rv.GetRandomDouble() / 8.0;
     org.x = 1. - cos(angle);
     org.y = 1. - sin(angle);
@@ -297,7 +297,8 @@ void TArcSegment::InitRandom(CRandomValueGen &rv, uint4 seg_n, uint4 type, REAL 
 {
   if (_Distribution::circle == type)
   {
-    //Segments ends are on the opposite sides of unit circle, each segment intesect each
+    //Arcs of radius 1/2 (lower halves of circles) with centres on the circle of radius 1/2 about (0.5,0.5):
+    //every arc passes through (0.5,0.5), so each arc intersects each
     double angle = 1.0 / 16.0 + 3. * M_PI * rv.GetRandomDouble() / 8.0;
     org.x = 0.5*(cos(angle)+1);
     org.y = 0.5 * (sin(angle)+1);

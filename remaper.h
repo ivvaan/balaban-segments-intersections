@@ -104,8 +104,10 @@ class CRemaper {
         assert(i + 1 < N);
         auto next_pt = indexes[i + 1];
 
-        // If pt and next_pt belong to the same original segment, allow zero-length piece.
-        // For non-zero segments this is redundant (their endpoints differ anyway); for zero segments it's required.
+        // If pt and next_pt belong to the same original segment, the piece is that whole segment:
+        // a zero segment, or a non-zero segment that is not split. Here the flag matters only for zero
+        // segments (a non-zero piece has different endpoints anyway); in the second pass it also
+        // enables the is_mapped_entirely fast path.
         auto allow_zero_len_piece = (Collection::get_segm(pt) == Collection::get_segm(next_pt));
 
         // If there is a real-length interval OR we explicitly allow a zero-length one,
@@ -193,8 +195,9 @@ class CRemaper {
           // If a normalized segment maps to exactly one original segment AND corresponds to
           // that original segment entirely, we can skip list expansion later.
           //
-          // For an allowed zero-length piece (which is always "entirely" that segment),
-          // this is true whenever only one segment is active.
+          // A piece that goes from the first to the last endpoint of one segment (allow_zero_len_piece:
+          // a zero segment or any non-zero segment that is not split) is "entirely" that segment,
+          // so this is true whenever only one segment is active.
           uint4 is_mapped_entirely = allow_zero_len_piece && (size == 1);
 
           rrec[new_seg_num] = { remaper_pos, remaper_pos + size, is_mapped_entirely };

@@ -34,20 +34,21 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 // Extracts boilerplate shared by CLine1SegmentCollection, CLine2SegmentCollection,
 // CArcSegmentCollection and CGraphSegmentCollection.
 //
-// `Derived` must provide:
+// `Derived` must provide (what this base calls):
 //   static bool   is_last(uint4 pt);
 //   static uint4  get_segm(uint4 pt);
 //   uint4  GetSegmNumb() const;
-//   bool   UnderCurPoint(int4 s) const;
-//   void   SetCurSeg4Bubble(uint4 s);
-//   void   SetCurPointAtBeg(uint4 s);
-//   void   SetCurStripeLeft(uint4 left_rank);
-//   bool   LBelow(int4 s1, int4 s2) const;
-//   uint4  PrepareEndpointsSortedList(uint4* epoints);
-//   void   InitDerived(uint4 n, void* c, IntersectionRegistrator* r);   -- set collection pointer, N, etc.
+//   template<bool is_parallel> uint4 PrepareEndpointsSortedList(uint4* epoints);   -- Prepare
+//   void   SetCurPointAtBeg(uint4 s);                                    -- InsDel
+//   bool   UnderCurPoint(uint4 s) const;                                 -- InsDel
+//   void   SetCurStripeLeft(uint4 left_rank);                            -- SortAt
+//   bool   LBelow(uint4 s1, uint4 s2) const;                             -- SortAt
 //   void   ResetDerived();                                               -- free derived-only resources
 //   void   CloneDerived(Derived& src);                                   -- copy derived shared pointers
 //   void   UncloneDerived();                                             -- null derived shared pointers
+// and, for the rectangles algorithm only (get_sorted_bounds), default construction and
+//   auto   get_seg_min(uint4 s, bool is_Y) const;
+//   auto   get_seg_max(uint4 s, bool is_Y) const;
 
 template<class Derived, class IntersectionRegistrator>
 class CollectionBase {
@@ -227,15 +228,19 @@ protected:
 // =============================================================================
 // Segment collection concept hierarchy.
 //
-// The concepts are layered so that each algorithm requires only what it actually
-// uses. A collection author can check exactly which subset of the interface is
-// needed for the algorithms they care about.
+// The concepts are layered by algorithm, so a collection author can see which part
+// of the interface each algorithm checks. They are not a complete specification:
+// COptimalIntFinder reuses CFAST::Split / Merge / SearchInStrip, which need the range
+// overloads from FastSegColl; bubbling up calls SetCurSeg4Bubble, which no concept
+// lists; CalcLAt (from > 0) calls SortAt, which needs LBelow, not listed in FastSegColl.
+// Such gaps show up as compile errors inside the algorithm, not at the concept check.
+// All current collections satisfy every concept.
 //
 //   SegCollCore                -- shared by ALL algorithms
 //     ├─ TrivialSegColl        -- + TrivCurSegIntWith              (CTrivialIntFinder)
 //     ├─ SweepSegColl          -- + endpoint sorting, SSCurSegIntWith  (CSimpleSweepIntFinder)
 //     └─ BalabanSegCollBase    -- + stripe/ordering/InsDel 
-//          ├─  OptimalSegColl  -- + [Is,Find]CurSegInt[Up,Down]With(i)   (COptimalIntFinder)
+//          ├─  OptimalSegColl  -- + FindCurSegInt[Up,Down]With(i), IsIntersectsCurSeg[Up,Down](i), LBelow   (COptimalIntFinder)
 //          └─  FastSegColl     -- + FindCurSegInt[Up,Down]With(p,q)   (CFastIntFinder)
 //               └─ ParallelSegColl -- + clone/registrator management   (parallel find_intersections)
 // =============================================================================

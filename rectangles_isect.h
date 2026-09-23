@@ -40,12 +40,12 @@ namespace SegmentTreeAndList {
     constexpr static const int4 S = (1 << P) - 1;
     constexpr static const int4 Q = S - 1;
     constexpr static const int4 M = ~S;
-    int4* tree_list = nullptr;//[0..sz-1] - used by binary tree to store filling subtree info, 
+    int4* tree_list = nullptr;//[0..sz-1] - used by the 2^P-ary tree to store filling subtree info, 
     //[sz..SZ-1] - list of filled elements, tree_list[i] is the next filled element in list after i, 
     // tree_list[0] is the head of list (the first filled element in list or 1 if list is empty)
     // if list is not empty, tree_list[i] is always >= 1 
     int4 n = 0;
-    int4 sz = 0;//first power of 2 greater or equal to n
+    int4 sz = 0;//start of the list part: 1 + (1 + 2^P + 2^2P + ... + 2^(k-1)P), where 2^kP >= n (see get_sz)
     int4 SZ = 0;//sz+n
 
     bool is_filled(int4 pos) const {
@@ -158,7 +158,7 @@ namespace SegmentTreeAndList {
       tree_list = new int4[SZ];
       std::fill_n(tree_list, SZ, 0);
       tree_list[0] = 1;//fake last list element is stored in 0 position - the header of list
-      //ordered_list[i]==1 where i>=sz means that i is filled, but next filled element is not exists (i.e.last element in list is i)
+      //tree_list[i]==1 where i>=sz means that i is filled, but next filled element is not exists (i.e.last element in list is i)
     }
 
     ~TreeList() {

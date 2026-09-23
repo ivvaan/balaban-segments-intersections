@@ -412,7 +412,7 @@ public:
     bool exact_under(TIntegerVect v) const { //segment placed under point v
       return point_pos(v) < 0;
     };
-    bool exact_on(TIntegerVect v) const { //segment placed under point v
+    bool exact_on(TIntegerVect v) const { //point v lies on the segment's line
       return point_pos(v) == 0;
     };
     bool exact_upper(TIntegerVect v) const {

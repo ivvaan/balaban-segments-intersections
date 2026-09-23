@@ -46,32 +46,33 @@ example: seg_int -a14 -sa -dp -n20000 -p5.5
  D=l: random length almost x parallel segments, the bigger
   distr_param/N the less parallel segments
  D=m: mixed random length almost x parallel 'long' segments
-  (33%%) and 'small' segments(67%%), the bigger distr_param/N
+  (33%) and 'small' segments(67%), the bigger distr_param/N
   the less parallel 'long' and longer 'short' segments
- D=s: short segments: random segment with  length multiplied by distr_param/N
+ D=s: short segments: random segment with  length multiplied by 33*distr_param/N
  D=p: random segment with  length multiplied by distr_param
  D=c: segments ends are on the opposite sides of unit circle, each
-  segment intesect each
+  segment intersects every other one
 -rR: type of registrar used in new implementation and type of result statistic
  R=c: total intersection counting registrator; total count statistic
- R=C: total intersection counting registrator; total count statistic, but it pretend it register intersection points
+ R=C: total intersection counting registrator; total count statistic, but it pretends to register intersection points
  R=p: total intersection counting and per segment intersection counting registrator; 
   total count statistic
  R=P: total intersection counting and per segment intersection counting registrator; 
-  max intersections pre segment statistic
- R=r: really storing pairs and intersections registrator (be carefull with memory!!!); 
+  max intersections per segment statistic
+ R=r: really storing pairs and intersections registrator (be careful with memory!!!); 
   total count statistic. As we can have O(N^2) int. the option is limited to N=20000 max
--eE: prints intersection find time compare to trivial intersection check time (ICT) for all tested algorithms 
+-eE: prints intersection find time compared to trivial intersection check time (ICT) for all tested algorithms 
   E - ICT estimation in nanoseconds (you can take it from small segment sets)
-  if E not presented (just -e), program calculates ICT from trivial algorithm run. In the later 
+  if E is omitted (just -e), program calculates ICT from trivial algorithm run. In the latter 
   case trivial algorithm must be selected for testing and for the large N it can take quite a time.
+  If trivial algorithm is selected, ICT is always taken from its run. Ignored with -m and -rP.
 -SR: capital S for random seed; R - random seed value; if R=0 - non pseudo random generator used
 -Tn: number of threads for the parallel algorithm (A=16). Default 8.
 -fhtmfile: if specified, program writes SVG picture to htmfile. For example -fC:/tmp/res.htm
   To limit resulting file size option works only for 5000 segments and less, also only first 
   150000 intersections are drawn.
 -m: print truncated information in one row (to make a table)
--w: stop and wait for an input befor exit
+-w: stop and wait for an input before exit
 -An: bind current thread to logical CPU n (0-based). -A-1 (default) disables affinity.
 -Pp: thread priority preset:
  p=0: don't change priorities (default)
@@ -102,7 +103,7 @@ struct Options : public SegmentsAndRegOptions
   bool ParseArgs(int argc, char* argv[])
   {
     if (argc == 1) {
-      printf("usage: seg_int -aA -sS -SR -dD -nN -pP -rR -m -eE -w -SN -Tn -fhtmfile -An -Pp\n");
+      printf("usage: seg_int -aA -sS -SR -dD -nN -pP -rR -m -eE -w -Tn -fhtmfile -An -Pp -Rn\n");
       PrintHelp();
       return false;
     }
@@ -156,7 +157,7 @@ struct Options : public SegmentsAndRegOptions
             case 'c':distr_type = _Distribution::circle; break;
             default:
             {
-              printf("some error in -distr_type param. r used instead.\n");
+              printf("some error in -d param. r used instead.\n");
               distr_type = _Distribution::random;
             }
           };
@@ -204,7 +205,7 @@ struct Options : public SegmentsAndRegOptions
         {
           distr_param = fabs(atof(argv[i] + 2));
           if (distr_param <= 0) {
-            distr_param = 1.0; printf("some error in -distr_param param. 1.0 used instead.\n");
+            distr_param = 1.0; printf("some error in -p param. 1.0 used instead.\n");
           }
         }
         break;
@@ -258,7 +259,7 @@ struct Options : public SegmentsAndRegOptions
   void CheckOptions()
   {
     if ((seg_type == _Segment::graph) && (distr_type != _Distribution::random)) {
-      printf("-sg  is compartible only with -dr!\n");
+      printf("-sg  is compatible only with -dr!\n");
       distr_type = _Distribution::random;
     }
     if ((reg_stat == _Registrator::store_pairs_and_ints_just_count_stat) && (n > max_truereg_items)) {
@@ -279,11 +280,18 @@ struct Options : public SegmentsAndRegOptions
   void PrintActual() const
   {
     const char* ss = "Llagi", * sd = "rlmspc", * sr = "pPcrC";
-    if (!print_less) {
-      if (seg_type != _Segment::intline)
-        printf("actual params are: -a%i -s%c -d%c -r%c -n%i -S%i -T%u -p%f -A%lld -P%i -R%u\n", alg, ss[seg_type], sd[distr_type], sr[reg_stat], n, random_seed, n_threads, distr_param, affinity_cpu, pri_preset, n_repeat);
-      else
-        printf("actual params are: -a%i -si%i -d%c -r%c -n%i -S%i -T%u -p%f -e%f -A%lld -P%i -R%u\n", alg, range_for_int_seg, sd[distr_type], sr[reg_stat], n, random_seed, n_threads, distr_param, ICT, affinity_cpu, pri_preset, n_repeat);
+    if (print_less) return;
+    printf("actual params are: -a%i", alg);
+    if (seg_type != _Segment::intline)
+      printf(" -s%c", ss[seg_type]);
+    else
+      printf(" -si%i", range_for_int_seg);
+    printf(" -d%c -r%c -n%i -S%i -T%u -p%f", sd[distr_type], sr[reg_stat], n, random_seed, n_threads, distr_param);
+    // -e is printed only when it was given: ICT == -1 printed as -e-1 would turn into -e1 when pasted back
+    if (rtime_printout) {
+      if (ICT > 0) printf(" -e%f", ICT);
+      else printf(" -e");
     }
+    printf(" -A%lld -P%i -R%u\n", affinity_cpu, pri_preset, n_repeat);
   }
 };

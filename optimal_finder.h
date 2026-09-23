@@ -446,7 +446,7 @@ private:
       father_first_step = ladder_start_index + inherit_offset;
     }
     else
-    {// Use fast variant if new staircase is small.
+    {// Use fast variant if father staircase is small.
       stack_rec.Q_pos+=CFAST::Split(segments,Q+ stack_rec.Q_pos,interval_right_rank);
       if ((ladder_start_index < stack_rec.Q_pos))
       {

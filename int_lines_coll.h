@@ -29,7 +29,7 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 //
 // Zero-length segments (begin == end) are supported (they are treated as degenerate vertical segments).
 // NOTE: The implementation assumes there are no two distinct zero segments that coincide as points
-// (asserted in `CRemaper::TurnRemapOn()` in debug builds).
+// (asserted in `TIntegerSegment::get_int_type_beg()` in debug builds, when the remaper expands such a pair).
 
 #include "remaper.h"
 #include "segments.h"
@@ -882,7 +882,7 @@ public:
     auto& s = collection[s_];
     auto pp = s.point_pos(cur_point);
     if (pp != 0)
-      return pp > 0;//s_ placed under current point
+      return pp > 0;//s_ placed over current point
     auto prod = collection[cur_point_seg].shift % s.shift;
     //check me: so far it works, but it can be that for zero cur_point_seg we need more accurate implementation !!!
     //assert((prod != 0));
@@ -955,9 +955,6 @@ public:
     seg_L_rank = nullptr;
     seg_R_rank = nullptr;
     MY_FREE_ARR_MACRO(tmp);
-
-    //unclone remaper !!!!!!!!
-
   };
 
   void SortAt(uint4 rank, uint4 n, uint4 *L)

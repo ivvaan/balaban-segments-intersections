@@ -210,7 +210,7 @@ public:
   // to return some statistics about registered intersections;
   auto get_stat(uint4 stat_type = 0)
   {
-    // if stat_type nonzero return maximal number of intersections per segment;
+    // if stat_type == per_segm_reg_max_per_segm_stat return maximal number of intersections per segment, otherwise total count;
     if (stat_type == _Registrator::per_segm_reg_max_per_segm_stat)
       return (uint8)*std::max_element(segm_counters, segm_counters + N);
     return counter;
