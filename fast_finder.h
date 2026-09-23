@@ -211,6 +211,7 @@ public:
             // one addition per loop by incrementing _Q later.
     }
     if (new_L_pos == last_L){
+      dont_cut_stripe = false;
       return 0;
     }
 
@@ -291,6 +292,7 @@ public:
       }
     }
     if (_Q_pos == _Q) {
+      dont_cut_stripe = false;
       return 0;
     }
     L_size = new_L_pos - L;

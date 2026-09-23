@@ -30,7 +30,7 @@ The project implements the following algorithms:
 3. [Balaban suboptimal](https://github.com/ivvaan/balaban-segments-intersections/wiki/Suboptimal-algorithm) — Old and New implementations (CHECK OUT THIS FIRST!)
 4. [Balaban optimal](https://github.com/ivvaan/balaban-segments-intersections/wiki/Optimal-algorithm) — Old and New implementations  
 5. [Balaban suboptimal parallel](https://github.com/ivvaan/balaban-segments-intersections/wiki/Suboptimal-parallel) — Old and New implementations
-6. [Bentley & Ottmann sweep line](https://github.com/ivvaan/balaban-segments-intersections/wiki/Bentley-&-Ottmann) — Old implementation only (no corresponding SHF in the New implementation)
+6. [Bentley & Ottmann sweep line](https://github.com/ivvaan/balaban-segments-intersections/wiki/Bentley-Ottmann) — Old implementation only (no corresponding SHF in the New implementation)
 7. [Special faster version of Balaban suboptimal for line segments (intersecting pairs only)](https://github.com/ivvaan/balaban-segments-intersections/wiki/Intersecting-pairs-only-algorithm)
 8. [Balaban suboptimal with smaller memory usage](https://github.com/ivvaan/balaban-segments-intersections/wiki/Suboptimal-with-smaller-memory-usage) — Old and New implementations
 

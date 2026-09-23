@@ -39,7 +39,8 @@ public:
   {
  // AllocMem
     len_of_Q = LR_len;
-    DECL_RAII_ARR(L, LR_len);
+    DECL_RAII_ARR(L, LR_len+2);
+    ++L;//one cell before L and one after L[LR_len-1]: room for sentinels and look-ahead reads at both ends
     DECL_RAII_ARR(Q, len_of_Q);
 
     L[0]=SegmentsColl::get_segm(ENDS[0]);

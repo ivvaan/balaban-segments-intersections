@@ -107,7 +107,7 @@ public:
 class CommonImpl 
 {
 public:
-    bool dont_cut_stripe;
+    bool dont_cut_stripe = false;
 
     template <class SegmentsColl>
     void prepare_ends(SegmentsColl& segments)

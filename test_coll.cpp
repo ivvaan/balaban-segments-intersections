@@ -130,6 +130,7 @@ void  delete_test_collection(int4 seg_type, PSeg seg_coll, PSeg* seg_ptr_coll)
   case _Segment::line1:delete[](TLineSegment1*)seg_coll; break;
   case _Segment::line2:delete[](TLineSegment2*)seg_coll; break;
   case _Segment::arc:delete[](TArcSegment*)seg_coll; break;
+  case _Segment::graph:delete[](TPlaneVect*)seg_coll; break;
   }
   if (seg_ptr_coll)delete[]  seg_ptr_coll;
 };

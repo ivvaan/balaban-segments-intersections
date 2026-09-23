@@ -207,7 +207,7 @@ void perform_tests(bool use_counters,int4 impl,int4 alg,int4 seg_type,int4 distr
   double exec_time[33], nInt[33];
   const char *ss = "Llag", *sd = "rlmspc";
   char counters_string[256],*counters_mute;
-  const char *stat_names_new[] = { "inters. numb","max inters. per segm","inters. numb","inters. numb" };
+  const char *stat_names_new[] = { "inters. numb","max inters. per segm","inters. numb","inters. numb","inters. numb" };
   const char *stat_names_old[] = { "inters. numb","inters. numb","inters. numb","inters. numb", "inters. numb" };
   const char **stat_names= stat_names_new;
 
@@ -338,7 +338,7 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
   (33%%) and 'small' segments(67%%), the bigger distr_param/N
   the less parallel 'long' and longer 'short' segments
  D=s: short segments: random segment with  length multiplied by distr_param/N
- D=distr_param: random segment with  length multiplied by distr_param
+ D=p: random segment with  length multiplied by distr_param
  D=c: segments ends are on the opposite sides of unit circle, each
   segment intesect each
 -rR: type of registrator used in new implementation and type of result statistic
@@ -351,7 +351,7 @@ R"WYX(example: seg_int -a14 -sa -dp -n20000 -p5.5
  R=r: really storing pairs and intersections registrator (be carefull with memory!!!); 
   total count statistic. As we can have O(N^2) int. the option is limited to N=20000 max
 -SR: capital S for random seed; R - random seed value; if R=0 - non pseudo random generator used
--fhtmfile: if presented, program writes SVG picture to htmfile. For examle -fC:/tmp/res.htm
+-fhtmfile: if specified, program writes SVG picture to htmfile. For example -fC:/tmp/res.htm
   To limit resulting file size option works only for 5000 segments and less, also only first 
   150000 intersections are drawn.
 -m: print truncated information in one row (to make a table)

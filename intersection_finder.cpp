@@ -1752,7 +1752,7 @@ void CIntersectionFinder<is_line_seg>::bentley_ottmann(uint4 n, PSeg _Scoll[])
 		if ((s1 != -1) && (s2 != -1))
 			_RegIntersection(_reg_obj, Scoll[s1], Scoll[s2], 1, &(Events->pt));// register found intersection
 		EventsDelMin();
-		while ((s1 == Events->s1) && (s2 == Events->s2))
+		while ((events_n > 0) && (s1 == Events->s1) && (s2 == Events->s2))
 		{
 			s1 = Events->s1;
 			s2 = Events->s2;
