@@ -344,13 +344,13 @@ private:
       if (call_numb > 1)
       {
         _max_call -=  (_max_call > 4) * 2;
-        // if L contains a lot of segments then cut on two parts
+        // if FindR was repeated on this stripe (call_numb > 1) then cut on two parts
         FindR(segments,father_first_step, stack_rec.Q_pos, interval_left_index, m, stack_pos, 0, _max_call);
         InsDel(segments,m, stack_pos);
         FindR(segments,father_first_step, stack_rec.Q_pos, m, interval_right_index, stack_pos, 0, _max_call);
       }
       else
-      {// if L contains not so many segments than cut on four parts (works faster for some segment distributions)
+      {// otherwise cut on four parts (works faster for some segment distributions)
         _max_call -=  (_max_call > 8) * 4;
 
         uint4 q = (interval_left_index + m) >>1;

@@ -72,6 +72,13 @@ public:
  template<template <class> class SegmentsColl, class CIntRegistrator >
   void find_intersections(SegmentsColl<CIntRegistrator>& segments, uint4 n_threads, CIntRegistrator* regs[])
   {
+    // Every thread needs a non-empty stripe [from,to] with to > from, and the master thread
+    // needs start_from >= 1 (start_from == 0 would make the call below look like a whole-range
+    // call). Both hold when 2*n >= 2*n_threads; otherwise run single-threaded.
+    if ((n_threads < 2) || (2 * segments.GetSegmNumb() < 2 * n_threads)) {
+      find_intersections(segments);
+      return;
+    }
     using namespace std;
     vector<thread> wrk_threads;
     auto thread_func = [](this_T *master, SegmentsColl<CIntRegistrator> *segments, uint4 from, uint4 to, CIntRegistrator* add_reg) {

@@ -208,7 +208,7 @@ void CIntersectionFinder<is_line_seg>::optFindIntI(uint4 r_index, ProgramStackRe
 
 
 // FindIntI - finds and reports intersections of the segment seg with ancestor staircases (listed in program stack)
-// from top of the hierarchy to bottom stopping on last staircase for which seg is internal
+// from bottom of the hierarchy to top starting from first staircase for which seg is internal
 template<bool is_line_seg>
 void CIntersectionFinder<is_line_seg>::FindIntI(uint4 r_index, ProgramStackRec * stack_pos, PSeg seg)
 {
@@ -420,8 +420,8 @@ int4 CIntersectionFinder<is_line_seg>::optInsDel(uint4 end_index, ProgramStackRe
   return Size;
 }
 
-// Merge merges R and current staircase QB<stair_index<=QE on right bound of the stripe and place it in L, 
-// than exchange it back to R and returns new R size.  While merging finds locations of R segments
+// Merge exchanges L and R, then merges R and current staircase QB<stair_index<=QE on right bound of the stripe
+// into L and returns new L size.  While merging finds locations of R segments
 // in current staircase and appropriate intersections.
 
 template<bool is_line_seg>
@@ -461,14 +461,16 @@ template<bool is_line_seg>
 int4 CIntersectionFinder<is_line_seg>::msMerge(uint4 LBoundIdx, int4 QB, int4 QE, int4 Size)
 {
 	int4 cur_R_pos = 0, new_size = 0;
-	int4 cur_seg;
+	// cur_seg is read one step ahead; the reads are guarded so that they never go past R
+	// (that would be L[-1] or L[nTotSegm])
+	int4 cur_seg = -1;
 	PSeg s;
 	if (from_begin)
 	{
 		auto _R = L + Size - 1;
 		auto _L = L + (nTotSegm - 1);
         auto cur_stair = QE, _Size = -Size;
-        cur_seg = _R[cur_R_pos];
+        if (Size > 0) cur_seg = _R[cur_R_pos];
 		while ((cur_stair>QB) && (cur_R_pos>_Size))
 		{
 			s = Scoll[cur_seg];
@@ -477,7 +479,7 @@ int4 CIntersectionFinder<is_line_seg>::msMerge(uint4 LBoundIdx, int4 QB, int4 QE
 				if (SegmentBE[cur_seg].B>LBoundIdx)
 					FindInt(QB, QE, cur_stair, s);
 				_L[new_size--] = cur_seg;
-                cur_seg = _R[--cur_R_pos];
+                if (--cur_R_pos > _Size) cur_seg = _R[cur_R_pos];
 			}
 			else
 				_L[new_size--] = Q[cur_stair--];
@@ -486,7 +488,7 @@ int4 CIntersectionFinder<is_line_seg>::msMerge(uint4 LBoundIdx, int4 QB, int4 QE
 		{
 			if (SegmentBE[cur_seg].B>LBoundIdx) FindInt(QB, QE, QB, Scoll[cur_seg]);
 			_L[new_size--] = cur_seg;
-       cur_seg = _R[--cur_R_pos];
+       if (--cur_R_pos > _Size) cur_seg = _R[cur_R_pos];
 		}
 		while (cur_stair>QB)
 			_L[new_size--] = Q[cur_stair--];
@@ -497,7 +499,7 @@ int4 CIntersectionFinder<is_line_seg>::msMerge(uint4 LBoundIdx, int4 QB, int4 QE
 
 	auto _R = L + (nTotSegm - Size);
 	int4 cur_stair = QB;
-    cur_seg = _R[cur_R_pos];
+    if (Size > 0) cur_seg = _R[cur_R_pos];
 	while ((cur_stair<QE) && (cur_R_pos<Size))
 	{
 		s = Scoll[cur_seg];
@@ -506,7 +508,7 @@ int4 CIntersectionFinder<is_line_seg>::msMerge(uint4 LBoundIdx, int4 QB, int4 QE
 			if (SegmentBE[cur_seg].B>LBoundIdx)
 				FindInt(QB, QE, cur_stair, s);
 			L[new_size++] = cur_seg;
-            cur_seg = _R[++cur_R_pos];
+            if (++cur_R_pos < Size) cur_seg = _R[cur_R_pos];
 		}
 		else
 			L[new_size++] = Q[++cur_stair];
@@ -515,7 +517,7 @@ int4 CIntersectionFinder<is_line_seg>::msMerge(uint4 LBoundIdx, int4 QB, int4 QE
 	{
 		if (SegmentBE[cur_seg].B>LBoundIdx) FindInt(QB, QE, QE, Scoll[cur_seg]);
 		L[new_size++] = cur_seg;
-        cur_seg = _R[++cur_R_pos];
+        if (++cur_R_pos < Size) cur_seg = _R[cur_R_pos];
 	}
 	while (cur_stair<QE)
 		L[new_size++] = Q[++cur_stair];
@@ -597,9 +599,10 @@ int4 CIntersectionFinder<is_line_seg>::optMerge(uint4 LBoundIdx, int4 QB, int4 Q
 	return new_size;
 };
 
-// Split - splits L into new staircase and new L, new L temporary placed to R, at the end L and R exchanged.
-// While executing finds location of new L segments in new staicase and finds intersection of the new L segments
-// covering current strip with the staircase stairs below.   
+// Split - splits L into new staircase and new L; new L is written in place, at the beginning of L.
+// While executing finds location of new L segments in new staircase and their intersections with the stairs.
+// The second loop checks the stairs above the found locations; the locations are kept in the tail of Q,
+// the segments in R (line segments, only those not checked in the first loop) or taken from new L (other segments).
 
 
 template<bool is_line_seg>
@@ -909,14 +912,14 @@ int4 CIntersectionFinder<is_line_seg>::FindR(int4 ladder_start_index, uint4 inte
 
       uint4 m = (interval_left_index + interval_right_index) / 2;
       if(call_numb > 1)
-      {// if L contains a lot of segments then cut on two parts
+      {// if FindR was repeated on this stripe (call_numb > 1) then cut on two parts
            _max_call-=2;
 		       Size = FindR(stack_rec.Q_pos, interval_left_index, m, stack_pos, Size, 0, _max_call);
 		       Size = InsDel(m, stack_pos, Size);
 		       Size = FindR(stack_rec.Q_pos, m, interval_right_index, stack_pos, Size, 0, _max_call);
       }
       else
-      {// if L contains not so many segments than cut on four parts (works faster for some segment distributions)
+      {// otherwise cut on four parts (works faster for some segment distributions)
           _max_call -= 4;
           uint4 q = (interval_left_index + m) / 2;
           if (interval_left_index != q) {
@@ -960,13 +963,13 @@ int4 CIntersectionFinder<is_line_seg>::msFindR(int4 ladder_start_index, uint4 in
         _max_call-=2;
         uint4 m = (interval_left_index + interval_right_index) / 2;
         if (call_numb > 1) 
-        { // if L contains a lot of segments then cut on two parts
+        { // if FindR was repeated on this stripe (call_numb > 1) then cut on two parts
             Size = msFindR(stack_rec.Q_pos, interval_left_index, m, stack_pos, Size, 0, _max_call);
             Size = msInsDel(m, stack_pos, Size);
             Size = msFindR(stack_rec.Q_pos, m, interval_right_index, stack_pos, Size, 0, _max_call);
         } 
         else 
-        { // if L contains not so many segments than cut on four parts (works faster for some segment distributions)
+        { // otherwise cut on four parts (works faster for some segment distributions)
             _max_call -= 2;
             uint4 q = (interval_left_index + m) / 2;
             if (interval_left_index != q) {
@@ -1027,13 +1030,13 @@ int4 CIntersectionFinder<is_line_seg>::optFindR(int4 father_first_step, int4 lad
 	{
       uint4 m = (interval_left_index + interval_right_index) / 2;
       if (call_numb > 1) 
-      {// if L contains a lot of segments then cut on two parts
+      {// if FindR was repeated on this stripe (call_numb > 1) then cut on two parts
           Size = optFindR(father_first_step, stack_rec.Q_pos, interval_left_index, m, stack_pos, Size, 0);
           Size = optInsDel(m, stack_pos, Size);
           Size = optFindR(father_first_step, stack_rec.Q_pos, m, interval_right_index, stack_pos, Size, 0);
       }
       else 
-      {// if L contains not so many segments than cut on four parts (works faster for some segment distributions)
+      {// otherwise cut on four parts (works faster for some segment distributions)
           uint4 q = (interval_left_index + m) / 2;
           if (interval_left_index != q) {
               Size = optFindR(father_first_step, stack_rec.Q_pos, interval_left_index, q, stack_pos, Size, 0);
@@ -1435,6 +1438,18 @@ void CIntersectionFinder<is_line_seg>::fast_parallel(uint4 n, PSeg _Scoll[], int
 	nTotSegm = n;
 	AllocMem(FALSE);
 	prepare_ends(n);
+  // Every thread needs a non-empty stripe [from,to] with to > from, and the master thread
+  // needs start_from >= 1. Both hold when 2*n >= 2*n_threads; otherwise run single-threaded
+  // (with n_threads == 1 the code below would call FindR up to 2*n and read ENDS[2*n]).
+  if ((n_threads < 2) || (2 * n < 2 * (uint4)n_threads))
+  {
+    from_begin = true;
+    ProgramStackRec stack_rec(-1, 2 * n);
+    L[0] = ENDS[0].s();
+    FindR(-1, 0, 2 * n - 1, &stack_rec, 1, 0, get_maxcall(2 * n));
+    FreeMem();
+    return;
+  }
   using  namespace std;
   
   vector<thread> wrk_threads;

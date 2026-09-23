@@ -29,9 +29,9 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 
 typedef bool (*FBelow)(REAL x,PSeg s1,PSeg s2);//retuns if s1 below s2 at x
 typedef int4 (*FFindAndRegIPoints)(PSeg s1,PSeg s2,PRegObj intersection_registrator);/*finds all intersections of s1 and s2 and 
-  register them. If no_ip is true function doesn't find and register intersection pointints but only pairs. */
+  register them. Whether points or only pairs are registered is chosen by the instantiation (__FindAndRegIPoints<false/true>). */
 typedef int4 (*FFindAndRegIPointsInStripe)(REAL b,REAL e, PSeg s1,PSeg s2,PRegObj intersection_registrator);/*finds all intersection points of s1 and s2 in the stripe b,e and 
-  register them. If no_ip is true function doesn't find and register intersection pointints but only pairs.*/
+  register them. Whether points or only pairs are registered is chosen by the instantiation (__FindAndRegIPointsInStripe<false/true>).*/
 typedef int4 (*FIsIntersectInStripe)(REAL b,REAL e, PSeg s1,PSeg s2);//finds if s1 and s2 in the stripe b,e have an intersection point (no registration)
 typedef void (*FGetPoint)(PSeg s,REAL &x,REAL &y);//puts a segment s end point coordinates into x and y
 typedef int4 (*FUnder)(PSeg s1,PSeg s2);//returns TRUE if s2 begin point is above s1
@@ -79,7 +79,7 @@ struct CSegmCompare
 template<bool is_line_seg>
 class CIntersectionFinder
   {
-  static const int4 max_call = 16; //max number of sequential recursive call (opt)FindR before dividing current strip
+  static const int4 max_call = 16; //max number of sequential recursive calls of optFindR (and repeats in balaban_no_recursion) before dividing current strip; FindR uses get_maxcall()
 
   static const int4 undef_loc = 0;
 
@@ -294,7 +294,7 @@ class CIntersectionFinder
  void SweepLineInsert(int4 s);
  void SweepLineDelete(int4 s);
  void SweepLineExchange(int4 s1,int4 s2);
- void IntOnRightOfSWL(int4 s1,int4 s2);// find intersection s1 and s1 right to sweep line
+ void IntOnRightOfSWL(int4 s1,int4 s2);// find intersection s1 and s2 right to sweep line
  void PrepareEvents();
  void EventsDelMin();
  void EventsAddNew();
