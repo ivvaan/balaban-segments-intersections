@@ -461,6 +461,7 @@ public:
     }
 
     auto get_int_type_beg(const TIntegerSegment& s) const {
+      //all coinciding point segments are merged in the remapper, so we can assume that at least one of the segments is non-zero-length.
       assert(shift.is_non_zero() || s.shift.is_non_zero());
 
       auto d = s.BegPoint() - BegPoint();

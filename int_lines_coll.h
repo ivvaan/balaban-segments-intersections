@@ -28,8 +28,6 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 // - multiple endpoints with identical X ("multi-events", i.e., collapsed same-X boundaries)
 //
 // Zero-length segments (begin == end) are supported (they are treated as degenerate vertical segments).
-// NOTE: The implementation assumes there are no two distinct zero segments that coincide as points
-// (asserted in `TIntegerSegment::get_int_type_beg()` in debug builds, when the remaper expands such a pair).
 
 #include "remaper.h"
 #include "segments.h"
