@@ -422,28 +422,25 @@ public:
     return counter;
   };
 
+  // Writes the intersection points in the order they were registered, as data for svg_player.html:
+  // <script>SI_add(alg,'name',[x,y,s1,s2, x,y,s1,s2, ...]);</script>
+  // (for the parallel algorithm the order is stripe by stripe, see combine_reg_data)
   void write_SVG(uint4 alg, chostream* SVG_text) {
-    if (SVG_text) {
-      for (uint4 i = 0; i < MIN(intersections.size(), max_SVG_points); ++i) {
-        uint4 s1 = std::get<0>(intersections[i]);
-        uint4 s2 = std::get<1>(intersections[i]);
-        auto& p = std::get<2>(intersections[i]);
-        *SVG_text << "<circle cx='" << p.getX();
-        *SVG_text << "' cy='" << p.getY();
-        
-        switch (alg)
-        {
-        case _Algorithm::triv:*SVG_text << "' class='triv' id='t" << s1<<"_"<<s2<<"' />\n"; break;
-        case _Algorithm::simple_sweep:*SVG_text << "' class='ssw' id='s" << s1<<"_"<<s2<<"' />\n"; break;
-        case _Algorithm::fast:*SVG_text << "' class='fast' id='f" << s1<<"_"<<s2<<"' />\n"; break;
-        case _Algorithm::optimal:*SVG_text << "' class='optimal' id='o" << s1<<"_"<<s2<<"' />\n"; break;
-        case _Algorithm::fast_parallel:*SVG_text << "' class='parallel' id='p" << s1<<"_"<<s2<<"' />\n"; break;
-        default:
-          *SVG_text << "' class='algorithm' id='a" << s1<<"_"<<s2<<"' />\n";
-          break;
-        }
-      }
-    };
+    if (!SVG_text)
+      return;
+    const char* name = "algorithm";
+    for (uint4 a = 0; a < sizeof(alg_list) / sizeof(alg_list[0]); ++a)
+      if (alg_list[a] == alg)
+        name = alg_names[a];
+    *SVG_text << "<script>SI_add(" << alg << ",'" << name << "',[";
+    for (uint4 i = 0; i < MIN(intersections.size(), max_SVG_points); ++i) {
+      uint4 s1 = std::get<0>(intersections[i]);
+      uint4 s2 = std::get<1>(intersections[i]);
+      auto& p = std::get<2>(intersections[i]);
+      if (i) *SVG_text << (i % 8 ? "," : ",\n");
+      *SVG_text << p.getX() << ',' << p.getY() << ',' << s1 << ',' << s2;
+    }
+    *SVG_text << "]);</script>\n";
   }
 
 };

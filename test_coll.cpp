@@ -243,7 +243,9 @@ void write_SVG(std::ostream* svg_stream, const SegmentsAndRegOptions& opt, PSeg 
   switch (opt.seg_type) {//first draw segments
     case _Segment::intline: {
       CIntegerSegmentCollection<SimpleCounter> coll(opt, (TLineSegment1*)segs, (SimpleCounter *)nullptr);
-      return coll.coll_to_SVG(svg_stream);
+      coll.coll_to_SVG(svg_stream);
+      *svg_stream << "</svg>\n";
+      return;// the integer collection registers pairs only (points are not integer in general): nothing to draw
     }; break;
     case _Segment::line1: {
       CLine1SegmentCollection<SimpleCounter> coll(opt, segs, (SimpleCounter*)nullptr);
@@ -262,8 +264,9 @@ void write_SVG(std::ostream* svg_stream, const SegmentsAndRegOptions& opt, PSeg 
       coll.coll_to_SVG(svg_stream);
     }; break;
   };
+  *svg_stream << "</svg>\n";
   for (int4 a = sizeof(alg_list) / sizeof(alg_list[0]) - 1; a > -1; --a)
-    if (algs & alg_list[a]) {//draw intersections found by alg_list[a]
+    if (algs & alg_list[a]) {//write intersections found by alg_list[a] (svg_player.html draws them)
       auto alg = alg_list[a];
       CRegistratorFactory<TrueRegistrator> reg_factory;
       reg_factory.PrepareAlloc(opt.n);

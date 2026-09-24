@@ -37,51 +37,12 @@ along with Seg_int.  If not, see <http://www.gnu.org/licenses/>.
 #if defined(_WIN32)
 #include <limits>
 #endif
-const char* STYLE_temlate = R"WYX(
-<!DOCTYPE html>
-<html>
-<style>
-line{stroke:blue;
-stroke-width:1px;
-vector-effect: non-scaling-stroke;}
-path{stroke:blue;
-stroke-width:1px;
-fill:none;
-vector-effect: non-scaling-stroke;}
-.int_line{stroke:green;}
-.line1{stroke:cadetblue;}
-.line2{stroke:darkblue;}
-.edge{stroke:black;}
-.arc{stroke:teal;}
-circle{r:0.001;fill: gold;}
-.triv {r:0.0010;fill: purple;}
-.ssw {r:0.0016;fill: sandybrown;}
-.fast {r:0.0020;fill: orange;}
-.optimal {r:0.0024;fill: khaki;}
-.parallel {r:0.0028;fill: darkorange;}
-.mem_save {r:0.0032;fill: salmon;}
-</style>
-<script>
-var state=1;
-var dir=1;
-var zoom=function(){
-svg=document.getElementsByTagName('svg')[0];
-mul=1.25;
-if(dir<0) {mul=0.8;}
-var h=parseFloat(svg.getAttribute('height'));
-svg.setAttribute('height',h*mul+'%');
-var w=parseFloat(svg.getAttribute('width'));
-svg.setAttribute('width',w*mul+'%');
-state+=dir;
-if(state>=8){dir=-1;}
-if(state<=1){dir=1;}
-}
-</script>
-<body ondblclick='zoom()'>
-<!--inserthere-->
-</body>
-</html>
-)WYX";
+// Page template: svg_player.html is a C++ raw string literal, so it is #included as is and
+// also opens in a browser by itself (with demo data), which is handy for debugging the player.
+// MSVC limits a single string literal to 16380 bytes (C2026): keep svg_player.html below that.
+const char* STYLE_temlate =
+#include "svg_player.html"
+;
 
 const char* to_insert_SVG = "<!--inserthere-->";
 
@@ -237,7 +198,6 @@ void WriteSvgHtml(const Options& opt, PSeg seg_coll)
     return;
   svgf.write(STYLE_temlate, insert_pos - STYLE_temlate);
   svgf << svg.str();
-  svgf << "</svg>\n";
   svgf << insert_pos;
 };
 

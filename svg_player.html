@@ -1,0 +1,184 @@
+R"WYX(<!DOCTYPE html>
+<!--
+  seg_int intersections player. This file is a C++ raw string literal: seg_int.cpp #includes it
+  as the page template and writes the SVG with segments and the SI_add(...) data at the insert marker
+  in #view below.
+  Opened in a browser directly, it shows demo data. MSVC limits a string literal to 16380 bytes (C2026):
+  keep the file below that. Only ASCII here (use HTML entities / \u escapes).
+-->
+<html><head><meta charset="utf-8"><title>seg_int player</title>
+<style>
+body{margin:0;font:13px sans-serif;background:#fff}
+#bar,#st{position:fixed;left:0;right:0;background:#f2f2f2;white-space:nowrap;overflow:hidden;padding:0 6px}
+#bar{top:0;height:34px;display:flex;align-items:center;gap:3px;border-bottom:1px solid #ccc}
+#bar button{min-width:28px;height:24px;padding:0 5px;cursor:pointer}
+#bar i{width:1px;height:20px;background:#bbb;margin:0 5px}
+#pos{flex:1;min-width:60px}
+#alg{font-weight:bold;min-width:120px;text-align:center}
+#view{position:fixed;left:0;right:0;top:35px;bottom:23px;cursor:grab}
+#view svg{width:100%;height:100%;display:block}
+#st{bottom:0;height:22px;line-height:22px;border-top:1px solid #ccc}
+line,path{stroke:#8aa4b8;stroke-width:1px;fill:none;vector-effect:non-scaling-stroke}
+.hl{stroke:#e00!important;stroke-width:3px!important}
+.dots{stroke:var(--c);stroke-linecap:round;stroke-width:5px}
+.ov{vector-effect:none;stroke-linecap:round}
+#bar button.on{background:#cfe0f5}
+#cur{stroke:#e00;stroke-linecap:round;stroke-width:14px;opacity:.4}
+</style>
+<script>var SI=[];function SI_add(a,n,d){SI.push({a:a,n:n,d:d})}</script>
+</head><body>
+<div id="bar">
+<button id="bBeg" title="To start (Home)">|&#9664;</button>
+<button id="bBack" title="One step back (Left)">&#9666;</button>
+<button id="bPlay" title="Play / pause (Space)">&#9654;</button>
+<button id="bFwd" title="One step forward (Right)">&#9656;</button>
+<button id="bEnd" title="To end (End)">&#9654;|</button><i></i>
+<button id="bSlow" title="Slower ([)">&minus;</button><span id="spd"></span>
+<button id="bFast" title="Faster (])">+</button><i></i>
+<input id="pos" type="range" min="0" value="0"><span id="cnt"></span><i></i>
+<button id="bPrev" title="Previous algorithm (P)">&laquo;</button><span id="alg"></span>
+<button id="bNext" title="Next algorithm (N)">&raquo;</button><i></i>
+<button id="bOv" title="All points of all algorithms, concentric (A); play hides it">all algs</button>
+<label title="Highlight the two segments of the current intersection (H)"><input id="hlc" type="checkbox">highlight</label><i></i>
+<button id="bZo" title="Zoom out (-)">&minus;</button>
+<button id="bZi" title="Zoom in (+, mouse wheel)">+</button>
+<button id="bFit" title="Fit (0, double click)">fit</button>
+</div>
+<div id="view">
+<!--inserthere-->
+</div>
+<div id="st"></div>
+<script>
+(function(){
+var $=function(i){return document.getElementById(i)},NS='http://www.w3.org/2000/svg';
+function el(t,a,p){var e=document.createElementNS(NS,t);for(var k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e}
+// Opened directly, the C++ raw string delimiters end up as text nodes: remove them.
+function clean(){[].slice.call(document.body.childNodes).forEach(function(n){if(n.nodeType==3&&/WYX/.test(n.data))n.remove()})}
+clean();document.addEventListener('DOMContentLoaded',clean);
+var svg=document.querySelector('svg'),isDemo=!svg;
+if(isDemo)svg=demo();
+$('view').appendChild(svg);
+svg.removeAttribute('width');svg.removeAttribute('height');
+var vb0=svg.getAttribute('viewBox').trim().split(/[\s,]+/).map(Number),vb=vb0.slice();
+// The collection writes y upwards via transform='scale(1, -1)' on <svg>; move the flip into a <g>
+// so that zoom and pan work in plain viewBox coordinates.
+var W=el('g',{}),tr=svg.getAttribute('transform')||'';
+if(/scale\(\s*1\s*,\s*-1\s*\)/.test(tr)){svg.removeAttribute('transform');W.setAttribute('transform','matrix(1 0 0 -1 0 '+(2*vb0[1]+vb0[3])+')')}
+while(svg.firstChild)W.appendChild(svg.firstChild);
+svg.appendChild(W);
+var OV=el('g',{},W),D=el('g',{},W),Lv=el('path',{'class':'dots'},W),C=el('path',{id:'cur'},W);
+var COL={1:'#8e44ad',2:'#6d4c41',4:'#e67e22',8:'#16a085',16:'#1f5fbf',32:'#7f8c00'};
+var SP=[1,2,5,10,20,50,100,200,500,1000,2000,5000,10000,20000,50000,100000];
+var CH=1000,A=SI.slice().sort(function(a,b){return a.a-b.a}),ai=0,d=[],K=0,k=0,f=0,si=5,play=false,last=0,hl=[],ov=false;
+function pt(i,e){e=e||d;return 'M'+e[4*i]+' '+e[4*i+1]+'h0'}
+function run(a,b,e){var s='';for(var i=a;i<b;i++)s+=pt(i,e);return s}
+function col(a){return COL[a.a]||'#e67e22'}
+function setAlg(i){
+  ai=(i+A.length)%A.length;var a=A[ai];d=a.d;K=d.length/4;
+  while(D.firstChild)D.removeChild(D.firstChild);
+  svg.style.setProperty('--c',col(a));
+  $('pos').max=K;$('alg').textContent=a.n+(A.length>1?' ('+(ai+1)+'/'+A.length+')':'');
+  for(si=0;si<SP.length-1&&SP[si]*15<K;si++);
+  $('spd').textContent=SP[si]+'/s';
+  go(0);
+}
+function go(n,force){
+  f=Math.max(0,Math.min(K,n));var nk=Math.floor(f);
+  if(!force&&nk==k&&D.childNodes.length==Math.floor(k/CH)&&n>0)return;
+  k=nk;var c=Math.floor(k/CH),ch=D.childNodes;
+  while(ch.length>c)D.removeChild(D.lastChild);
+  while(ch.length<c){var j=ch.length;el('path',{'class':'dots',d:run(j*CH,(j+1)*CH)},D)}
+  Lv.setAttribute('d',run(c*CH,k));
+  hl.forEach(function(e){e.classList.remove('hl')});hl=[];
+  var s='';
+  if(k>0){
+    var i=k-1,s1=d[4*i+2],s2=d[4*i+3];C.setAttribute('d',pt(i));
+    if($('hlc').checked&&!ov)[s1,s2].forEach(function(q){var e=$('seg'+q)||$('arc'+q);if(e){e.classList.add('hl');hl.push(e)}});
+    s='#'+k+': '+s1+' \u00d7 '+s2+'  at ('+d[4*i]+', '+d[4*i+1]+')';
+  }else C.setAttribute('d','');
+  $('pos').value=k;$('cnt').textContent=' '+k+' / '+K+' ';
+  if(A[ai].a==16)s+='   [parallel: stripe by stripe, each stripe in its own order]';
+  if(isDemo)s+='   [demo data]';
+  if(!ov)$('st').textContent=s;
+}
+// Overview: all points of all algorithms at once, as concentric dots (the first algorithm is the
+// smallest and is drawn on top); dot size is in data units, so zooming in separates the dots.
+function showOv(on){
+  ov=on;if(on)setPlay(false);
+  if(on&&!OV.firstChild){
+    var r=0.001*Math.max(vb0[2],vb0[3]);
+    for(var j=A.length-1;j>=0;j--)el('path',{'class':'ov',d:run(0,A[j].d.length/4,A[j].d),style:'stroke:'+col(A[j])+';stroke-width:'+2*r*(1+0.4*j)},OV);
+  }
+  OV.style.display=on?'':'none';[D,Lv,C].forEach(function(e){e.style.display=on?'none':''});
+  $('bOv').classList.toggle('on',on);
+  if(on){
+    hl.forEach(function(e){e.classList.remove('hl')});hl=[];
+    $('st').innerHTML='all algorithms: '+A.map(function(a){return '<b style="color:'+col(a)+'">&#9679;</b> '+a.n+' ('+a.d.length/4+')'}).join(' &nbsp; ');
+  }else go(k,1);
+}
+function pl(){if(ov)showOv(false)}
+function tick(t){
+  if(!play)return;
+  if(last)f+=SP[si]*(t-last)/1000;last=t;
+  if(f>=K){go(K);setPlay(false);return}
+  go(f);requestAnimationFrame(tick);
+}
+function setPlay(p){
+  if(p&&k>=K)go(0);
+  play=p;last=0;f=k;$('bPlay').innerHTML=p?'&#10074;&#10074;':'&#9654;';
+  if(p)requestAnimationFrame(tick);
+}
+function step(n){setPlay(false);go(k+n)}
+function speed(n){si=Math.max(0,Math.min(SP.length-1,si+n));$('spd').textContent=SP[si]+'/s'}
+function setVB(){svg.setAttribute('viewBox',vb.join(' '))}
+function zoom(z,x,y){
+  if(x==null){x=vb[0]+vb[2]/2;y=vb[1]+vb[3]/2}
+  vb=[x-(x-vb[0])/z,y-(y-vb[1])/z,vb[2]/z,vb[3]/z];setVB();
+}
+function fit(){vb=vb0.slice();setVB()}
+function toVB(e){var p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(svg.getScreenCTM().inverse())}
+var on=function(i,fn){$(i).onclick=function(){fn();this.blur()}};// blur: keys must not re-press a focused button
+on('bBeg',function(){pl();setPlay(false);go(0)});on('bEnd',function(){pl();setPlay(false);go(K)});
+on('bBack',function(){pl();step(-1)});on('bFwd',function(){pl();step(1)});
+on('bPlay',function(){pl();setPlay(!play)});on('bOv',function(){showOv(!ov)});
+on('bSlow',function(){speed(-1)});on('bFast',function(){speed(1)});
+on('bPrev',function(){pl();setAlg(ai-1)});on('bNext',function(){pl();setAlg(ai+1)});
+on('bZi',function(){zoom(1.25)});on('bZo',function(){zoom(0.8)});on('bFit',fit);
+$('pos').oninput=function(){pl();go(+this.value);f=k};
+$('hlc').onchange=function(){this.blur();go(k,1)};
+var V=$('view'),drag=null;
+V.onwheel=function(e){e.preventDefault();var p=toVB(e);zoom(e.deltaY<0?1.25:0.8,p.x,p.y)};
+V.ondblclick=fit;
+V.onmousedown=function(e){drag={x:e.clientX,y:e.clientY,v:vb.slice(),s:svg.getScreenCTM().a};V.style.cursor='grabbing'};
+window.onmousemove=function(e){if(!drag)return;vb[0]=drag.v[0]-(e.clientX-drag.x)/drag.s;vb[1]=drag.v[1]-(e.clientY-drag.y)/drag.s;setVB()};
+window.onmouseup=function(){drag=null;V.style.cursor=''};
+document.onkeydown=function(e){
+  if(e.target.tagName=='INPUT'&&e.target.type!='checkbox'&&e.key!=' ')return;
+  var h={' ':'bPlay',ArrowLeft:'bBack',ArrowRight:'bFwd',Home:'bBeg',End:'bEnd','[':'bSlow',']':'bFast',
+    n:'bNext',p:'bPrev','+':'bZi','=':'bZi','-':'bZo','0':'bFit',a:'bOv',h:'hlc'}[e.key.length==1?e.key.toLowerCase():e.key];
+  if(h&&!$(h).disabled){e.preventDefault();$(h).click()}
+};
+if(A.length){setAlg(0);showOv(true)}
+else{['bBeg','bBack','bPlay','bFwd','bEnd','bPrev','bNext','pos','bOv','hlc'].forEach(function(i){$(i).disabled=true});
+  $('st').textContent='No intersection points in this file'}
+// Demo data: random segments, intersections in two orders.
+function demo(){
+  var n=40,S=[],s=el('svg',{viewBox:'0 0 1 1',transform:'scale(1, -1)'}),P=[],i,j,q;
+  for(i=0;i<n;i++){var x=Math.random()*.8,y=Math.random(),u=x+.05+Math.random()*.4,v=Math.random();
+    S.push([x,y,u,v]);el('line',{id:'seg'+i,x1:x,y1:y,x2:u,y2:v},s)}
+  for(i=0;i<n;i++)for(j=i+1;j<n;j++)if(q=X(S[i],S[j]))P.push(q[0],q[1],i,j);
+  SI_add(1,'trivial (demo)',P);
+  for(q=[],i=0;i<P.length;i+=4)q.push(P.slice(i,i+4));
+  q.sort(function(a,b){return a[0]-b[0]});
+  SI_add(2,'sorted by x (demo)',[].concat.apply([],q));
+  return s;
+}
+function X(a,b){
+  var rx=a[2]-a[0],ry=a[3]-a[1],sx=b[2]-b[0],sy=b[3]-b[1],dn=rx*sy-ry*sx;if(!dn)return null;
+  var qx=b[0]-a[0],qy=b[1]-a[1],t=(qx*sy-qy*sx)/dn,u=(qx*ry-qy*rx)/dn;
+  return t>=0&&t<=1&&u>=0&&u<=1?[+(a[0]+t*rx).toFixed(6),+(a[1]+t*ry).toFixed(6)]:null;
+}
+})();
+</script>
+</body></html>
+)WYX"
