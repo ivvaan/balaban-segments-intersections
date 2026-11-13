@@ -79,5 +79,9 @@ Implementation and API pointers
 Reference
 - Ivan J. Balaban, "An optimal algorithm for finding segments intersections", Proc. 11th ACM Symposium on Computational Geometry, 1995. Available from ACM Digital Library.
 
+## License
 
+Copyright (c) 2011-2026 Ivan Balaban.
 
+Distributed under the [Boost Software License, Version 1.0](LICENSE_1_0.txt) (SPDX: `BSL-1.0`).
+Versions released before this change were distributed under the GNU GPL v3 or later.
